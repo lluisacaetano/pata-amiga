@@ -61,6 +61,7 @@ flutter:
 
   assets:
     - assets/animais/
+    - assets/marca/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

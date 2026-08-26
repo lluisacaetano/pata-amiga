@@ -149,14 +149,20 @@ class _FeedAdocaoState extends State<FeedAdocao> {
         titleSpacing: 16,
         title: Row(
           children: [
-            const Text(
-              'PATA\nAMIGA',
-              style: TextStyle(
-                fontSize: 12,
-                height: 1.1,
-                fontWeight: FontWeight.bold,
-                color: Cores.principal,
-              ),
+            Row(
+              children: [
+                Image.asset('assets/marca/pata.png', width: 26),
+                const SizedBox(width: 6),
+                const Text(
+                  'PATA\nAMIGA',
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.1,
+                    fontWeight: FontWeight.bold,
+                    color: Cores.principal,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -219,12 +225,23 @@ class _FeedAdocaoState extends State<FeedAdocao> {
           ),
           Expanded(
             child: _animaisVisiveis.isEmpty
-                ? const Center(
+                ? Center(
                     child: Padding(
-                      padding: EdgeInsets.all(32),
-                      child: Text(
-                        'Nenhum animal encontrado.',
-                        style: TextStyle(color: Cores.textoFraco),
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.pets,
+                            size: 56,
+                            color: Cores.principal.withValues(alpha: 0.25),
+                          ),
+                          const SizedBox(height: 14),
+                          const Text(
+                            'Nenhum animal encontrado.',
+                            style: TextStyle(color: Cores.textoFraco),
+                          ),
+                        ],
                       ),
                     ),
                   )
