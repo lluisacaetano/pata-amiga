@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'telas/feed_adocao.dart';
+import 'tema/cores.dart';
 
 void main() {
   runApp(const AplicativoPataAmiga());
@@ -13,6 +14,7 @@ class AplicativoPataAmiga extends StatelessWidget {
     return MaterialApp(
       title: 'Pata Amiga',
       debugShowCheckedModeBanner: false,
+      theme: temaPataAmiga(),
       home: const FeedAdocao(),
     );
   }

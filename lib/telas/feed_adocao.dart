@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../tema/cores.dart';
+
 class FeedAdocao extends StatelessWidget {
   const FeedAdocao({super.key});
 
@@ -7,6 +9,7 @@ class FeedAdocao extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Cores.fundo,
         titleSpacing: 16,
         title: Row(
           children: [
@@ -16,6 +19,7 @@ class FeedAdocao extends StatelessWidget {
                 fontSize: 12,
                 height: 1.1,
                 fontWeight: FontWeight.bold,
+                color: Cores.principal,
               ),
             ),
             const SizedBox(width: 12),
@@ -27,8 +31,15 @@ class FeedAdocao extends StatelessWidget {
                     hintText: 'pesquisar',
                     prefixIcon: const Icon(Icons.search, size: 20),
                     contentPadding: EdgeInsets.zero,
+                    filled: true,
+                    fillColor: Cores.cartao,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(20),
+                      borderSide: const BorderSide(color: Cores.borda),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      borderSide: const BorderSide(color: Cores.borda),
                     ),
                   ),
                 ),
@@ -41,6 +52,8 @@ class FeedAdocao extends StatelessWidget {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: 0,
         type: BottomNavigationBarType.fixed,
+        selectedItemColor: Cores.principal,
+        unselectedItemColor: Cores.textoFraco,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.pets), label: 'adoção'),
           BottomNavigationBarItem(icon: Icon(Icons.map_outlined), label: 'mapa'),
