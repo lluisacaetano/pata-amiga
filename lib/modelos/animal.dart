@@ -1,3 +1,5 @@
+import 'dono.dart';
+
 enum TipoRegistro { adocao, perdido, resgate }
 
 extension RotuloTipo on TipoRegistro {
@@ -36,8 +38,7 @@ class Animal {
   final bool vacinado;
   final bool vermifugado;
   final String observacoes;
-  final String responsavel;
-  final String telefone;
+  final Dono dono;
   final String foto;
 
   const Animal({
@@ -56,8 +57,7 @@ class Animal {
     this.vacinado = false,
     this.vermifugado = false,
     this.observacoes = '',
-    required this.responsavel,
-    required this.telefone,
+    required this.dono,
     this.foto = '',
   });
 

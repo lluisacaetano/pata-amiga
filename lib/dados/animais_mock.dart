@@ -1,4 +1,5 @@
 import '../modelos/animal.dart';
+import 'donos_mock.dart';
 
 // Dados de exemplo usados enquanto o aplicativo não conversa com a API.
 const List<Animal> animaisMock = [
@@ -19,8 +20,7 @@ const List<Animal> animaisMock = [
     observacoes:
         'Convive bem com outros cachorros e já está acostumada com casa. '
         'Sente frio, precisa de roupinha no inverno.',
-    responsavel: 'Associação Protetora dos Animais',
-    telefone: '(37) 99999-0000',
+    dono: associacaoProtetora,
     foto: 'assets/animais/dora.jpg',
   ),
   Animal(
@@ -39,8 +39,7 @@ const List<Animal> animaisMock = [
     observacoes:
         'Muito ativo e obediente. Precisa de espaço para correr e de alguém '
         'com tempo para passear todos os dias.',
-    responsavel: 'Associação Protetora dos Animais',
-    telefone: '(37) 99999-0000',
+    dono: associacaoProtetora,
     foto: 'assets/animais/thor.jpg',
   ),
   Animal(
@@ -59,8 +58,7 @@ const List<Animal> animaisMock = [
     observacoes:
         'Filhote cheia de energia, acostumada com criança. Ainda está '
         'aprendendo a fazer as necessidades no lugar certo.',
-    responsavel: 'Marina Alves',
-    telefone: '(37) 98888-1111',
+    dono: marinaAlves,
     foto: 'assets/animais/mel.jpg',
   ),
   Animal(
@@ -80,8 +78,7 @@ const List<Animal> animaisMock = [
     observacoes:
         'Tranquilo e independente, passa boa parte do dia dormindo no sol. '
         'Indicado para apartamento, desde que as janelas tenham tela.',
-    responsavel: 'Associação Protetora dos Animais',
-    telefone: '(37) 99999-0000',
+    dono: associacaoProtetora,
     foto: 'assets/animais/simba.jpg',
   ),
   Animal(
@@ -100,8 +97,7 @@ const List<Animal> animaisMock = [
     observacoes:
         'Cresceu dentro de casa e não tem costume de rua. Se dá bem com '
         'outros gatos, mas estranha cachorro.',
-    responsavel: 'Marina Alves',
-    telefone: '(37) 98888-1111',
+    dono: marinaAlves,
     foto: 'assets/animais/fred.jpg',
   ),
   Animal(
@@ -118,8 +114,7 @@ const List<Animal> animaisMock = [
     observacoes:
         'Sumiu no bairro Santa Luzia no dia 18 de agosto. Estava de coleira '
         'vermelha e atende pelo nome.',
-    responsavel: 'Carlos Pereira',
-    telefone: '(37) 98777-2222',
+    dono: carlosPereira,
     foto: 'assets/animais/bidu.jpg',
   ),
   Animal(
@@ -136,8 +131,7 @@ const List<Animal> animaisMock = [
     observacoes:
         'Vista pela última vez perto da praça do bairro Centro. É medrosa e '
         'costuma se esconder embaixo de carro.',
-    responsavel: 'Joana Ribeiro',
-    telefone: '(37) 98666-3333',
+    dono: joanaRibeiro,
     foto: 'assets/animais/nina.jpg',
   ),
   Animal(
@@ -154,8 +148,7 @@ const List<Animal> animaisMock = [
     observacoes:
         'Fugiu pela janela no dia 22 de agosto, no bairro São Vicente. '
         'Estava com coleira rosa.',
-    responsavel: 'Beatriz Nogueira',
-    telefone: '(37) 98444-5555',
+    dono: beatrizNogueira,
     foto: 'assets/animais/amora.jpg',
   ),
   Animal(
@@ -172,8 +165,7 @@ const List<Animal> animaisMock = [
     observacoes:
         'Encontrado sozinho na avenida perto do posto. Precisa de lar '
         'temporário até conseguir adoção.',
-    responsavel: 'Luana Martins',
-    telefone: '(37) 98555-4444',
+    dono: luanaMartins,
     foto: 'assets/animais/filhote.jpg',
   ),
   Animal(
@@ -190,8 +182,7 @@ const List<Animal> animaisMock = [
     observacoes:
         'Filhote encontrada sozinha em um terreno baldio. Precisa de lar '
         'temporário e de acompanhamento veterinário.',
-    responsavel: 'Luana Martins',
-    telefone: '(37) 98555-4444',
+    dono: luanaMartins,
     foto: 'assets/animais/marie.jpg',
   ),
 ];
