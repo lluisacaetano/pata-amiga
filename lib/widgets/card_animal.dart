@@ -45,8 +45,45 @@ class CardAnimal extends StatelessWidget {
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
-            Text(animal.resumo, style: const TextStyle(color: Cores.textoFraco)),
-            const SizedBox(height: 10),
+            Text(
+              animal.resumo,
+              style: const TextStyle(color: Cores.textoFraco),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Icon(
+                  Icons.location_on_outlined,
+                  size: 15,
+                  color: Cores.principal,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '${animal.bairro}, ${animal.cidade}',
+                  style: const TextStyle(
+                    color: Cores.principal,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            // Em perdidos e resgates, onde e quando importa mais que o porte
+            if (animal.tipo != TipoRegistro.adocao &&
+                animal.observacoes.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                animal.observacoes,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Cores.texto, fontSize: 13),
+              ),
+            ],
+            // Separa o que se lê do que se toca
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 10),
+              child: Divider(height: 1, thickness: 1, color: Cores.borda),
+            ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [

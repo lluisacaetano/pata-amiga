@@ -7,6 +7,7 @@ import '../dados/animais_mock.dart';
 import '../modelos/animal.dart';
 import '../tema/cores.dart';
 import '../widgets/card_animal.dart';
+import '../widgets/chip_filtro.dart';
 
 class FeedAdocao extends StatefulWidget {
   const FeedAdocao({super.key});
@@ -21,6 +22,35 @@ class _FeedAdocaoState extends State<FeedAdocao> {
 
   // Chave usada para gravar as curtidas no armazenamento do aparelho
   static const _chaveCurtidos = 'curtidos';
+
+  // Aba aberta no momento, que decide quais animais o feed mostra
+  TipoRegistro _abaAtual = TipoRegistro.adocao;
+
+  // O que foi digitado no campo de pesquisa
+  final _pesquisa = TextEditingController();
+  String _busca = '';
+
+  @override
+  void dispose() {
+    _pesquisa.dispose();
+    super.dispose();
+  }
+
+  // Quantos animais existem em cada aba, independente da pesquisa
+  int _quantidade(TipoRegistro tipo) =>
+      animaisMock.where((animal) => animal.tipo == tipo).length;
+
+  List<Animal> get _animaisVisiveis {
+    final termo = _busca.trim().toLowerCase();
+    return animaisMock.where((animal) {
+      if (animal.tipo != _abaAtual) return false;
+      if (termo.isEmpty) return true;
+      return animal.nome.toLowerCase().contains(termo) ||
+          animal.raca.toLowerCase().contains(termo) ||
+          animal.especie.toLowerCase().contains(termo) ||
+          animal.cor.toLowerCase().contains(termo);
+    }).toList();
+  }
 
   @override
   void initState() {
@@ -48,6 +78,21 @@ class _FeedAdocaoState extends State<FeedAdocao> {
       );
   }
 
+  // Junta os cuidados marcados numa frase só, concordando com o sexo
+  String _saude(Animal animal) {
+    final a = animal.sexo == 'fêmea' ? 'a' : 'o';
+    final itens = [
+      if (animal.castrado) 'castrad$a',
+      if (animal.vacinado) 'vacinad$a',
+      if (animal.vermifugado) 'vermifugad$a',
+    ];
+    if (itens.isEmpty) return '';
+    final frase = itens.length == 1
+        ? itens.first
+        : '${itens.sublist(0, itens.length - 1).join(', ')} e ${itens.last}';
+    return frase[0].toUpperCase() + frase.substring(1);
+  }
+
   Future<void> _compartilhar(Animal animal) async {
     final situacao = switch (animal.tipo) {
       TipoRegistro.adocao => 'Disponível para adoção',
@@ -55,13 +100,22 @@ class _FeedAdocaoState extends State<FeedAdocao> {
       TipoRegistro.resgate => 'Precisa de resgate',
     };
 
-    final texto =
-        '${animal.nome}, ${animal.sexo}, porte ${animal.porte}, '
-        '${animal.idade}, em ${animal.cidade}.\n'
-        '$situacao.\n\n'
-        'Responsável: ${animal.dono.nome}\n'
-        'Telefone: ${animal.dono.telefone}\n\n'
-        'Divulgado pelo Pata Amiga.';
+    final saude = _saude(animal);
+
+    final texto = [
+      animal.nome,
+      '${animal.especie}, ${animal.raca}, ${animal.sexo}, '
+          'porte ${animal.porte}, ${animal.idade}, ${animal.cor}',
+      '${animal.bairro}, ${animal.cidade}',
+      if (saude.isNotEmpty) saude,
+      '',
+      '$situacao.',
+      if (animal.observacoes.isNotEmpty) animal.observacoes,
+      '',
+      'Contato: ${animal.dono.nome}, ${animal.dono.telefone}',
+      '',
+      'Divulgado pelo Pata Amiga',
+    ].join('\n');
 
     // O compartilhamento só aceita arquivo, e a foto é um asset, então converte
     final imagem = await rootBundle.load(animal.foto);
@@ -71,9 +125,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
       name: '${animal.nome}.jpg',
     );
 
-    await SharePlus.instance.share(
-      ShareParams(text: texto, files: [arquivo]),
-    );
+    await SharePlus.instance.share(ShareParams(text: texto, files: [arquivo]));
   }
 
   Future<void> _alternarCurtida(Animal animal) async {
@@ -111,9 +163,21 @@ class _FeedAdocaoState extends State<FeedAdocao> {
               child: SizedBox(
                 height: 40,
                 child: TextField(
+                  controller: _pesquisa,
+                  onChanged: (valor) => setState(() => _busca = valor),
                   decoration: InputDecoration(
                     hintText: 'pesquisar',
                     prefixIcon: const Icon(Icons.search, size: 20),
+                    suffixIcon: _busca.isEmpty
+                        ? null
+                        : IconButton(
+                            icon: const Icon(Icons.close, size: 18),
+                            tooltip: 'Limpar pesquisa',
+                            onPressed: () {
+                              _pesquisa.clear();
+                              setState(() => _busca = '');
+                            },
+                          ),
                     contentPadding: EdgeInsets.zero,
                     filled: true,
                     fillColor: Cores.cartao,
@@ -132,39 +196,78 @@ class _FeedAdocaoState extends State<FeedAdocao> {
           ],
         ),
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        itemCount: animaisMock.length,
-        itemBuilder: (context, indice) {
-          final animal = animaisMock[indice];
-          return CardAnimal(
-            animal: animal,
-            curtido: _curtidos.contains(animal.nome),
-            aoCurtir: () => _alternarCurtida(animal),
-            aoCompartilhar: () => _compartilhar(animal),
-            aoConversar: _emBreve,
-            aoTocar: _emBreve,
-          );
-        },
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            clipBehavior: Clip.none,
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            child: Row(
+              children: [
+                for (final tipo in TipoRegistro.values) ...[
+                  ChipFiltro(
+                    rotulo: tipo.rotulo,
+                    quantidade: _quantidade(tipo),
+                    selecionado: _abaAtual == tipo,
+                    aoTocar: () => setState(() => _abaAtual = tipo),
+                  ),
+                  const SizedBox(width: 18),
+                ],
+              ],
+            ),
+          ),
+          Expanded(
+            child: _animaisVisiveis.isEmpty
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(32),
+                      child: Text(
+                        'Nenhum animal encontrado.',
+                        style: TextStyle(color: Cores.textoFraco),
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                    itemCount: _animaisVisiveis.length,
+                    itemBuilder: (context, indice) {
+                      final animal = _animaisVisiveis[indice];
+                      return CardAnimal(
+                        animal: animal,
+                        curtido: _curtidos.contains(animal.nome),
+                        aoCurtir: () => _alternarCurtida(animal),
+                        aoCompartilhar: () => _compartilhar(animal),
+                        aoConversar: _emBreve,
+                        aoTocar: _emBreve,
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: 0,
         type: BottomNavigationBarType.fixed,
+        backgroundColor: Cores.cartao,
         onTap: (indice) {
           if (indice != 0) _emBreve();
         },
         selectedItemColor: Cores.principal,
         unselectedItemColor: Cores.textoFraco,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.pets), label: 'adoção'),
-          BottomNavigationBarItem(icon: Icon(Icons.map_outlined), label: 'mapa'),
+          BottomNavigationBarItem(icon: Icon(Icons.pets), label: 'Adoção'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.map_outlined),
+            label: 'Mapa',
+          ),
           BottomNavigationBarItem(
             icon: Icon(Icons.report_outlined),
-            label: 'reportar',
+            label: 'Reportar',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
-            label: 'perfil',
+            label: 'Perfil',
           ),
         ],
       ),

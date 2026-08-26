@@ -31,6 +31,7 @@ class Animal {
   final String idade;
   final String peso;
   final String cor;
+  final String bairro;
   final String cidade;
   final TipoRegistro tipo;
   final StatusAnimal status;
@@ -50,6 +51,7 @@ class Animal {
     required this.idade,
     required this.peso,
     required this.cor,
+    required this.bairro,
     required this.cidade,
     required this.tipo,
     this.status = StatusAnimal.disponivel,
@@ -62,5 +64,9 @@ class Animal {
   });
 
   // Descrição curta do animal, exibida embaixo do nome no card do feed.
-  String get resumo => '$sexo · porte $porte · $idade · $cidade';
+  String get resumo =>
+      [sexo, 'porte $porte', idade].map(_comMaiuscula).join(' · ');
+
+  static String _comMaiuscula(String texto) =>
+      texto.isEmpty ? texto : texto[0].toUpperCase() + texto.substring(1);
 }
