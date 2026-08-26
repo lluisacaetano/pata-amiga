@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../dados/animais_mock.dart';
 import '../tema/cores.dart';
+import '../widgets/card_animal.dart';
 
 class FeedAdocao extends StatelessWidget {
   const FeedAdocao({super.key});
@@ -48,7 +50,12 @@ class FeedAdocao extends StatelessWidget {
           ],
         ),
       ),
-      body: const SizedBox.expand(),
+      body: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        itemCount: animaisMock.length,
+        itemBuilder: (context, indice) =>
+            CardAnimal(animal: animaisMock[indice]),
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: 0,
         type: BottomNavigationBarType.fixed,
