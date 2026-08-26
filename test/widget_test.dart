@@ -1,30 +1,35 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:pata_amiga/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('o aplicativo abre na aba de adoção', (tester) async {
+    await tester.pumpWidget(const AplicativoPataAmiga());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.text('DORA'), findsOneWidget);
+    // Bidu está cadastrado como perdido, então não aparece nesta aba
+    expect(find.text('BIDU'), findsNothing);
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+  testWidgets('trocar de aba recarrega o feed', (tester) async {
+    await tester.pumpWidget(const AplicativoPataAmiga());
+
+    await tester.tap(find.text('Perdidos'));
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('BIDU'), findsOneWidget);
+    expect(find.text('DORA'), findsNothing);
+  });
+
+  testWidgets('curtir preenche o coração do card', (tester) async {
+    await tester.pumpWidget(const AplicativoPataAmiga());
+
+    expect(find.byIcon(Icons.favorite), findsNothing);
+
+    await tester.tap(find.byIcon(Icons.favorite_border).first);
+    await tester.pump();
+
+    expect(find.byIcon(Icons.favorite), findsOneWidget);
   });
 }
