@@ -8,6 +8,7 @@ import '../dados/animais_mock.dart';
 import '../modelos/animal.dart';
 import '../modelos/dono.dart';
 import '../tema/cores.dart';
+import '../widgets/barra_inferior.dart';
 import '../widgets/card_animal.dart';
 import '../widgets/escolha_de_tipo.dart';
 import 'cadastro_animal.dart';
@@ -65,16 +66,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
 
   // Enquanto a funcionalidade não existe, o toque avisa em vez de não fazer
   // nada, para o usuário saber que o botão não está quebrado
-  void _emBreve() {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        const SnackBar(
-          content: Text('Esta tela entra em uma próxima sprint.'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-  }
+  void _emBreve() => avisarProximaSprint(context);
 
   // Junta os cuidados marcados numa frase só, concordando com o sexo
   String _saude(Animal animal) {
@@ -286,30 +278,10 @@ class _FeedAdocaoState extends State<FeedAdocao> {
         tooltip: 'Cadastrar animal',
         child: const Icon(Icons.add),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 0,
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Cores.cartao,
-        onTap: (indice) {
+      bottomNavigationBar: BarraInferior(
+        aoTocar: (indice) {
           if (indice != 0) _emBreve();
         },
-        selectedItemColor: Cores.principal,
-        unselectedItemColor: Cores.textoFraco,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.pets), label: 'Adoção'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.map_outlined),
-            label: 'Mapa',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.report_outlined),
-            label: 'Reportar',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            label: 'Perfil',
-          ),
-        ],
       ),
     );
   }
