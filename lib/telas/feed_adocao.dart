@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../dados/animais_mock.dart';
 import '../modelos/animal.dart';
+import '../modelos/dono.dart';
 import '../tema/cores.dart';
 import '../widgets/card_animal.dart';
 import '../widgets/escolha_de_tipo.dart';
+import 'cadastro_animal.dart';
 
 class FeedAdocao extends StatefulWidget {
   const FeedAdocao({super.key});
@@ -43,8 +46,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
       if (termo.isEmpty) return true;
       return animal.nome.toLowerCase().contains(termo) ||
           animal.raca.toLowerCase().contains(termo) ||
-          animal.especie.toLowerCase().contains(termo) ||
-          animal.cor.toLowerCase().contains(termo);
+          animal.especie.toLowerCase().contains(termo);
     }).toList();
   }
 
@@ -87,6 +89,32 @@ class _FeedAdocaoState extends State<FeedAdocao> {
         ? itens.first
         : '${itens.sublist(0, itens.length - 1).join(', ')} e ${itens.last}';
     return frase[0].toUpperCase() + frase.substring(1);
+  }
+
+  // Abre a conversa direto no WhatsApp do responsável
+  Future<void> _chamarNoWhatsApp(Animal animal) async {
+    final mensageiro = ScaffoldMessenger.of(context);
+    final texto = Uri.encodeComponent(
+      'Olá! Vi ${animal.nome} no Pata Amiga e queria saber mais.',
+    );
+    final endereco = Uri.parse(
+      'https://wa.me/${animal.dono.numeroNoWhatsApp}?text=$texto',
+    );
+
+    final abriu = await launchUrl(
+      endereco,
+      mode: LaunchMode.externalApplication,
+    );
+    if (!abriu) {
+      mensageiro
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Não foi possível abrir o WhatsApp neste aparelho.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+    }
   }
 
   Future<void> _compartilhar(Animal animal) async {
@@ -168,7 +196,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
                   controller: _pesquisa,
                   onChanged: (valor) => setState(() => _busca = valor),
                   decoration: InputDecoration(
-                    hintText: 'pesquisar',
+                    hintText: 'Pesquisar',
                     prefixIcon: const Icon(Icons.search, size: 20),
                     suffixIcon: _busca.isEmpty
                         ? null
@@ -233,7 +261,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
                     ),
                   )
                 : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 88),
                     itemCount: _animaisVisiveis.length,
                     itemBuilder: (context, indice) {
                       final animal = _animaisVisiveis[indice];
@@ -242,13 +270,21 @@ class _FeedAdocaoState extends State<FeedAdocao> {
                         curtido: _curtidos.contains(animal.nome),
                         aoCurtir: () => _alternarCurtida(animal),
                         aoCompartilhar: () => _compartilhar(animal),
-                        aoConversar: _emBreve,
+                        aoChamarNoWhatsApp: () => _chamarNoWhatsApp(animal),
                         aoTocar: _emBreve,
                       );
                     },
                   ),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const CadastroAnimal())),
+        backgroundColor: Cores.principal,
+        foregroundColor: Colors.white,
+        tooltip: 'Cadastrar animal',
+        child: const Icon(Icons.add),
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: 0,
