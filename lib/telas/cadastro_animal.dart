@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../modelos/animal.dart';
 import '../tema/cores.dart';
@@ -86,29 +87,26 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Cores.fundo,
-        leadingWidth: 116,
-        leading: const Padding(
-          padding: EdgeInsets.only(left: 16),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [_Marca()]),
+        leadingWidth: 64,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12),
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            tooltip: 'Voltar',
+            color: Cores.principal,
+            onPressed: () => Navigator.maybePop(context),
+          ),
         ),
         centerTitle: true,
         title: const Text(
-          'Cadastrar animal',
+          'CADASTRAR ANIMAL',
           style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.8,
             color: Cores.principal,
           ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back),
-            tooltip: 'Voltar',
-            color: Cores.texto,
-            onPressed: () => Navigator.maybePop(context),
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -205,13 +203,15 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
                       linhas: 3,
                       comErro: _faltando(_observacoes),
                     ),
-                    const SizedBox(height: 14),
-                    _Campo(
-                      rotulo: 'Necessidades especiais',
-                      controlador: _necessidades,
-                      exemplo: 'Remédio de uso contínuo, deficiência, dieta',
-                      linhas: 2,
-                    ),
+                    if (_tipo != TipoRegistro.resgate) ...[
+                      const SizedBox(height: 14),
+                      _Campo(
+                        rotulo: 'Necessidades especiais',
+                        controlador: _necessidades,
+                        exemplo: 'Remédio de uso contínuo, deficiência, dieta',
+                        linhas: 2,
+                      ),
+                    ],
                     if (_tipo == TipoRegistro.adocao) ...[
                       const SizedBox(height: 16),
                       const _Rotulo('Cuidados'),
@@ -296,6 +296,8 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
                       controlador: _telefone,
                       exemplo: '(37) 90000-0000',
                       comErro: _faltando(_telefone),
+                      teclado: TextInputType.phone,
+                      formatadores: [_MascaraDeTelefone()],
                     ),
                   ],
                 ),
@@ -500,6 +502,8 @@ class _Campo extends StatelessWidget {
   final Widget? acao;
   final int linhas;
   final bool comErro;
+  final TextInputType? teclado;
+  final List<TextInputFormatter>? formatadores;
 
   const _Campo({
     required this.rotulo,
@@ -509,6 +513,8 @@ class _Campo extends StatelessWidget {
     this.acao,
     this.linhas = 1,
     this.comErro = false,
+    this.teclado,
+    this.formatadores,
   });
 
   @override
@@ -521,6 +527,8 @@ class _Campo extends StatelessWidget {
         TextField(
           controller: controlador,
           maxLines: linhas,
+          keyboardType: teclado,
+          inputFormatters: formatadores,
           textCapitalization: TextCapitalization.sentences,
           style: const TextStyle(fontSize: 15),
           decoration: _caixa(exemplo, comErro: comErro, acao: acao),
@@ -616,30 +624,6 @@ class _Rotulo extends StatelessWidget {
   }
 }
 
-class _Marca extends StatelessWidget {
-  const _Marca();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Image.asset('assets/marca/pata.png', width: 26),
-        const SizedBox(width: 6),
-        const Text(
-          'PATA\nAMIGA',
-          style: TextStyle(
-            fontSize: 12,
-            height: 1.1,
-            fontWeight: FontWeight.bold,
-            color: Cores.principal,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _Cuidado extends StatelessWidget {
   final String rotulo;
   final bool marcado;
@@ -680,6 +664,32 @@ class _Cuidado extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// Vai desenhando (DD) NNNNN-NNNN conforme se digita, e recusa o que não é dígito
+class _MascaraDeTelefone extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue antigo,
+    TextEditingValue novo,
+  ) {
+    final digitos = novo.text.replaceAll(RegExp(r'\D'), '');
+    final limitado = digitos.length > 11 ? digitos.substring(0, 11) : digitos;
+
+    final escrita = StringBuffer();
+    for (var i = 0; i < limitado.length; i++) {
+      if (i == 0) escrita.write('(');
+      if (i == 2) escrita.write(') ');
+      if (limitado.length >= 10 && i == limitado.length - 4) escrita.write('-');
+      escrita.write(limitado[i]);
+    }
+
+    final texto = escrita.toString();
+    return TextEditingValue(
+      text: texto,
+      selection: TextSelection.collapsed(offset: texto.length),
     );
   }
 }
