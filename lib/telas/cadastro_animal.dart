@@ -322,7 +322,15 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
           ],
         ),
       ),
-      bottomNavigationBar: const BarraInferior(),
+      bottomNavigationBar: BarraInferior(
+        aoTocar: (indice) {
+          if (indice == 0) {
+            Navigator.maybePop(context);
+          } else {
+            avisarProximaSprint(context);
+          }
+        },
+      ),
     );
   }
 }

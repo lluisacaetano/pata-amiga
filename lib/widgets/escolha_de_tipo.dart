@@ -52,8 +52,13 @@ class EscolhaDeTipo extends StatelessWidget {
                 ? Colors.white
                 : Cores.texto,
           ),
-          textStyle: const WidgetStatePropertyAll(
-            TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          textStyle: WidgetStateProperty.resolveWith(
+            (estados) => TextStyle(
+              fontSize: 14,
+              fontWeight: estados.contains(WidgetState.selected)
+                  ? FontWeight.w600
+                  : FontWeight.w500,
+            ),
           ),
           side: const WidgetStatePropertyAll(BorderSide(color: Cores.borda)),
           shape: WidgetStatePropertyAll(
