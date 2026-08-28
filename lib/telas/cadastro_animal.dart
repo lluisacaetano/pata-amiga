@@ -3,13 +3,8 @@ import 'package:flutter/material.dart';
 import '../modelos/animal.dart';
 import '../tema/cores.dart';
 import '../widgets/barra_inferior.dart';
+import '../widgets/escolha_de_tipo.dart';
 import '../widgets/foto_animal.dart';
-
-String _rotuloTipo(TipoRegistro tipo) => switch (tipo) {
-  TipoRegistro.adocao => 'Adoção',
-  TipoRegistro.perdido => 'Perdido',
-  TipoRegistro.resgate => 'Resgate',
-};
 
 String _comMaiuscula(String texto) =>
     texto.isEmpty ? texto : texto[0].toUpperCase() + texto.substring(1);
@@ -131,25 +126,11 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
                   const SizedBox(height: 16),
                   const _Rotulo('Tipo'),
                   const SizedBox(height: 6),
-                  SizedBox(
-                    width: double.infinity,
-                    child: SegmentedButton<TipoRegistro>(
-                      segments: [
-                        for (final opcao in TipoRegistro.values)
-                          ButtonSegment(
-                            value: opcao,
-                            label: Text(_rotuloTipo(opcao)),
-                          ),
-                      ],
-                      selected: _tipo == null
-                          ? const <TipoRegistro>{}
-                          : {_tipo!},
-                      emptySelectionAllowed: true,
-                      showSelectedIcon: false,
-                      onSelectionChanged: (escolha) =>
-                          setState(() => _tipo = escolha.first),
-                      style: _estiloDoTipo,
-                    ),
+                  EscolhaDeTipo(
+                    escolhido: _tipo,
+                    aoEscolher: (escolha) => setState(() => _tipo = escolha),
+                    rotulo: rotuloSingular,
+                    fundoDaOpcao: Cores.fundo,
                   ),
                   if (_tipo != null) ...[
                     const SizedBox(height: 16),
@@ -440,25 +421,6 @@ class _Miniatura extends StatelessWidget {
     return SizedBox(width: 72, child: FotoAnimal(caminho: caminho, altura: 72));
   }
 }
-
-final _estiloDoTipo = ButtonStyle(
-  backgroundColor: WidgetStateProperty.resolveWith(
-    (estados) =>
-        estados.contains(WidgetState.selected) ? Cores.principal : Cores.fundo,
-  ),
-  foregroundColor: WidgetStateProperty.resolveWith(
-    (estados) => estados.contains(WidgetState.selected)
-        ? Colors.white
-        : Cores.textoFraco,
-  ),
-  textStyle: const WidgetStatePropertyAll(
-    TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-  ),
-  side: const WidgetStatePropertyAll(BorderSide(color: Cores.borda)),
-  shape: WidgetStatePropertyAll(
-    RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-  ),
-);
 
 class _Cartao extends StatelessWidget {
   final Widget child;
