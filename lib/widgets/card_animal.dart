@@ -10,7 +10,7 @@ class CardAnimal extends StatelessWidget {
   final bool curtido;
   final VoidCallback aoCurtir;
   final VoidCallback aoCompartilhar;
-  final VoidCallback aoConversar;
+  final VoidCallback aoChamarNoWhatsApp;
   final VoidCallback aoTocar;
 
   const CardAnimal({
@@ -19,7 +19,7 @@ class CardAnimal extends StatelessWidget {
     required this.curtido,
     required this.aoCurtir,
     required this.aoCompartilhar,
-    required this.aoConversar,
+    required this.aoChamarNoWhatsApp,
     required this.aoTocar,
   });
 
@@ -38,7 +38,10 @@ class CardAnimal extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            FotoAnimal(caminho: animal.foto),
+            LayoutBuilder(
+              builder: (context, restricoes) =>
+                  FotoAnimal(caminho: animal.foto, altura: restricoes.maxWidth),
+            ),
             const SizedBox(height: 12),
             Text(
               animal.nome.toUpperCase(),
@@ -94,14 +97,14 @@ class CardAnimal extends StatelessWidget {
                   aoTocar: aoCurtir,
                 ),
                 _Acao(
+                  icone: Icons.chat_bubble_outline,
+                  rotulo: 'WhatsApp',
+                  aoTocar: aoChamarNoWhatsApp,
+                ),
+                _Acao(
                   icone: Icons.share_outlined,
                   rotulo: 'compartilhar',
                   aoTocar: aoCompartilhar,
-                ),
-                _Acao(
-                  icone: Icons.chat_bubble_outline,
-                  rotulo: 'conversar',
-                  aoTocar: aoConversar,
                 ),
               ],
             ),
