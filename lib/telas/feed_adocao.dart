@@ -7,7 +7,7 @@ import '../dados/animais_mock.dart';
 import '../modelos/animal.dart';
 import '../tema/cores.dart';
 import '../widgets/card_animal.dart';
-import '../widgets/chip_filtro.dart';
+import '../widgets/escolha_de_tipo.dart';
 
 class FeedAdocao extends StatefulWidget {
   const FeedAdocao({super.key});
@@ -35,10 +35,6 @@ class _FeedAdocaoState extends State<FeedAdocao> {
     _pesquisa.dispose();
     super.dispose();
   }
-
-  // Quantos animais existem em cada aba, independente da pesquisa
-  int _quantidade(TipoRegistro tipo) =>
-      animaisMock.where((animal) => animal.tipo == tipo).length;
 
   List<Animal> get _animaisVisiveis {
     final termo = _busca.trim().toLowerCase();
@@ -205,22 +201,13 @@ class _FeedAdocaoState extends State<FeedAdocao> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            clipBehavior: Clip.none,
+          Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-            child: Row(
-              children: [
-                for (final tipo in TipoRegistro.values) ...[
-                  ChipFiltro(
-                    rotulo: tipo.rotulo,
-                    quantidade: _quantidade(tipo),
-                    selecionado: _abaAtual == tipo,
-                    aoTocar: () => setState(() => _abaAtual = tipo),
-                  ),
-                  const SizedBox(width: 18),
-                ],
-              ],
+            child: EscolhaDeTipo(
+              escolhido: _abaAtual,
+              aoEscolher: (escolha) => setState(() => _abaAtual = escolha),
+              rotulo: rotuloPlural,
+              fundoDaOpcao: Cores.cartao,
             ),
           ),
           Expanded(
