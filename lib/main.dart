@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'telas/feed_adocao.dart';
+import 'routes/app_router.dart';
 import 'tema/cores.dart';
 
 void main() {
@@ -15,7 +15,8 @@ class AplicativoPataAmiga extends StatelessWidget {
       title: 'Pata Amiga',
       debugShowCheckedModeBanner: false,
       theme: temaPataAmiga(),
-      home: const FeedAdocao(),
+      initialRoute: AppRoutes.feed,
+      routes: AppRoutes.routes,
     );
   }
 }

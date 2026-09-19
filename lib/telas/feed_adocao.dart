@@ -11,8 +11,9 @@ import '../tema/cores.dart';
 import '../widgets/barra_inferior.dart';
 import '../widgets/card_animal.dart';
 import '../widgets/escolha_de_tipo.dart';
-import 'cadastro_animal.dart';
-import 'detalhes_animal.dart';
+import '../routes/app_router.dart';
+//import 'cadastro_animal.dart';
+//import 'detalhes_animal.dart';
 
 class FeedAdocao extends StatefulWidget {
   const FeedAdocao({super.key});
@@ -268,11 +269,12 @@ class _FeedAdocaoState extends State<FeedAdocao> {
                         aoCompartilhar: () => _compartilhar(animal),
                         aoChamarNoWhatsApp: () => _chamarNoWhatsApp(animal),
                         aoTocar: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => DetalhesAnimal(animal: animal),
-                            ),
-                          );
+                          Navigator.pushNamed(
+                          context,
+                          AppRoutes.detalhesAnimal,
+                          arguments: animal,
+                        );
+                          
                         },
                       );
                     },
@@ -281,8 +283,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.of(context)
-            .push(MaterialPageRoute(builder: (_) => const CadastroAnimal())),
+        onPressed: () => Navigator.pushNamed(context, AppRoutes.cadastroAnimal),
         backgroundColor: Cores.principal,
         foregroundColor: Colors.white,
         tooltip: 'Cadastrar animal',
