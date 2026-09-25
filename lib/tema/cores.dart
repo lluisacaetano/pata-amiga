@@ -21,6 +21,7 @@ ThemeData temaPataAmiga() {
       surface: Cores.cartao,
     ),
     textTheme: base.textTheme.apply(
+      fontFamily: 'Roboto',
       bodyColor: Cores.texto,
       displayColor: Cores.texto,
     ),
@@ -28,6 +29,12 @@ ThemeData temaPataAmiga() {
     appBarTheme: const AppBarTheme(
       scrolledUnderElevation: 0,
       surfaceTintColor: Colors.transparent,
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFFD97855),
+        foregroundColor: Colors.white,
+      ),
     ),
   );
 }

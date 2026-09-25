@@ -1,0 +1,113 @@
+import 'package:flutter/material.dart';
+
+import 'auth_components.dart';
+import 'cadastro_screen.dart';
+import 'recuperar_senha.dart';
+
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _emailController = TextEditingController();
+  final _senhaController = TextEditingController();
+  bool _mostrarSenha = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: AuthBackground(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const AuthBrandMark(size: 64),
+            const SizedBox(height: 10),
+            Image.asset(
+              'assets/desenhos/cachorro_lingua.png',
+              height: 104,
+              fit: BoxFit.contain,
+              semanticLabel: 'Ilustração de um cachorro',
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Que bom te ver novamente!',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'Roboto',
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF24543A),
+              ),
+            ),
+            const SizedBox(height: 22),
+            AuthField(
+              label: 'E-mail',
+              hint: 'Digite seu e-mail',
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              prefixIcon: Icons.mail_outline,
+            ),
+            const SizedBox(height: 16),
+            AuthField(
+              label: 'Senha',
+              hint: 'Digite sua senha',
+              controller: _senhaController,
+              prefixIcon: Icons.lock_outline,
+              obscureText: !_mostrarSenha,
+              suffixIcon: _mostrarSenha
+                  ? Icons.visibility_off
+                  : Icons.visibility,
+              onSuffixPressed: () =>
+                  setState(() => _mostrarSenha = !_mostrarSenha),
+            ),
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const RecoverPasswordScreen(),
+                  ),
+                ),
+                child: const Text('Esqueci a senha'),
+              ),
+            ),
+            const SizedBox(height: 10),
+            AuthButton(
+              label: 'Entrar',
+              onPressed: () {
+                Navigator.of(context).pushReplacementNamed('/home');
+              },
+            ),
+            const SizedBox(height: 12),
+            AuthButton(
+              label: '',
+              primary: false,
+              leading: const GoogleWordmark(),
+              onPressed: () {},
+            ),
+            const SizedBox(height: 18),
+            Center(
+              child: TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                ),
+                child: const Text('Não tem conta? Criar conta'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _senhaController.dispose();
+    super.dispose();
+  }
+}

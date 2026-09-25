@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 import '../modelos/animal.dart';
 import '../telas/feed_adocao.dart';
 import '../telas/detalhes_animal.dart';
-import '../telas/cadastro_animal.dart';
+import '../telas/cadastro_login_animal.dart';
 
 class AppRoutes {
-  static const feed = '/';
+  static const feed = '/feed';
   static const detalhesAnimal = '/detalhes-animal';
   static const cadastroAnimal = '/cadastro-animal';
 
