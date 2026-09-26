@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
+import 'provider/usuario_provider.dart';
+import 'package:provider/provider.dart';
 import 'routes/app_router.dart';
 import 'tema/cores.dart';
 
 void main() {
-  runApp(const AplicativoPataAmiga());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => UsuarioProvider(),
+      child: const AplicativoPataAmiga(),
+    ),
+  );
 }
 
 class AplicativoPataAmiga extends StatelessWidget {
