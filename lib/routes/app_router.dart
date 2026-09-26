@@ -5,11 +5,13 @@ import '../modelos/animal.dart';
 import '../telas/feed_adocao.dart';
 import '../telas/detalhes_animal.dart';
 import '../telas/cadastro_animal.dart';
+import '../telas/perfil_usuario.dart';
 
 class AppRoutes {
   static const feed = '/';
   static const detalhesAnimal = '/detalhes-animal';
   static const cadastroAnimal = '/cadastro-animal';
+  static const perfilUsuario = '/perfil-usuario';
 
   static Map<String, WidgetBuilder> get routes => {
     feed: (_) => const FeedAdocao(),
@@ -18,5 +20,6 @@ class AppRoutes {
       return DetalhesAnimal(animal: animal);
     },
     cadastroAnimal: (_) => const CadastroAnimal(),
+    perfilUsuario: (_) => const PerfilUsuario(),
   };
 }
