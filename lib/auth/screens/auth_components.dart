@@ -58,6 +58,7 @@ class AuthField extends StatelessWidget {
   final bool obscureText;
   final IconData? suffixIcon;
   final VoidCallback? onSuffixPressed;
+  final String? Function(String?)? validator;
 
   const AuthField({
     super.key,
@@ -69,6 +70,7 @@ class AuthField extends StatelessWidget {
     this.obscureText = false,
     this.suffixIcon,
     this.onSuffixPressed,
+    this.validator,
   });
 
   @override
@@ -91,10 +93,11 @@ class AuthField extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        TextField(
+        TextFormField(
           controller: controller,
           keyboardType: keyboardType,
           obscureText: obscureText,
+          validator: validator,
           style: const TextStyle(
             fontFamily: 'Roboto',
             fontSize: 16,

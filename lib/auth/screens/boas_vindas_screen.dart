@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'auth_components.dart';
+import '../../routes/route_names.dart';
 
 class BoasVindasScreen extends StatelessWidget {
   const BoasVindasScreen({super.key});
@@ -45,13 +46,14 @@ class BoasVindasScreen extends StatelessWidget {
             const SizedBox(height: 28),
             AuthButton(
               label: 'Entrar',
-              onPressed: () => Navigator.of(context).pushNamed('/login'),
+              onPressed: () => Navigator.of(context).pushNamed(AppRoutes.login),
             ),
             const SizedBox(height: 12),
             AuthButton(
               label: 'Criar conta',
               primary: false,
-              onPressed: () => Navigator.of(context).pushNamed('/cadastro'),
+              onPressed: () =>
+                  Navigator.of(context).pushNamed(AppRoutes.register),
             ),
           ],
         ),
