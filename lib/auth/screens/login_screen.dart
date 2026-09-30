@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'auth_components.dart';
+import '../../telas/onboarding_screen.dart';
 import '../../routes/route_names.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -26,21 +27,21 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const AuthBrandMark(size: 64),
-              const SizedBox(height: 10),
+              const SizedBox(height: 2),
               Image.asset(
-                'assets/desenhos/cachorro_lingua.png',
-                height: 104,
+                'assets/desenhos/animais_login.png',
+                height: 220,
                 fit: BoxFit.contain,
                 semanticLabel: 'Ilustração de um cachorro',
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 3),
               const Text(
                 'Que bom te ver novamente!',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontFamily: 'Roboto',
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
+                  fontFamily: 'Nunito',
+                  fontSize: 34,
+                  fontWeight: FontWeight.w900,
                   color: Color(0xFF24543A),
                 ),
               ),
@@ -89,9 +90,9 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 10),
               AuthButton(
                 label: 'Entrar',
-                onPressed: () {
+                onPressed: () async {
                   if (!_formKey.currentState!.validate()) return;
-                  Navigator.of(context).pushReplacementNamed(AppRoutes.feed);
+                  await navegarAposAutenticacao(context);
                 },
               ),
               const SizedBox(height: 12),

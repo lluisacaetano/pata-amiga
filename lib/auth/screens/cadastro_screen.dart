@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'auth_components.dart';
-import '../../routes/route_names.dart';
+import '../../telas/onboarding_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -170,20 +170,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 12),
               AuthButton(
                 label: 'Criar conta',
-                onPressed: () {
+                onPressed: () async {
                   final camposValidos = _formKey.currentState!.validate();
                   setState(() => _mostrarErroTermos = !_aceitouTermos);
                   if (!camposValidos || !_aceitouTermos) return;
-                  Navigator.of(
-                    context,
-                  ).pushNamedAndRemoveUntil(AppRoutes.feed, (route) => false);
+                  await navegarAposAutenticacao(context);
                 },
               ),
               const SizedBox(height: 8),
               Center(
                 child: TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Já tem conta? Entrar'),
+                  child: const Text('Já tem conta? Entrar', style: TextStyle(fontSize: 16)),
                 ),
               ),
             ],

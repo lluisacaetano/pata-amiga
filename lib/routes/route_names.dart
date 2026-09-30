@@ -7,4 +7,5 @@ abstract final class AppRoutes {
   static const home = '/home';
   static const details = '/detalhes-animal';
   static const registerAnimal = '/cadastro-animal';
+  static const onboarding = '/onboarding';
 }
