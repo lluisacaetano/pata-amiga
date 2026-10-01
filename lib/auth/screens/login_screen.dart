@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'auth_components.dart';
 import '../../telas/onboarding_screen.dart';
 import '../../routes/route_names.dart';
+import '../../widgets/mascaras.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -21,6 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: AuthBackground(
+        comVoltar: true,
         child: Form(
           key: _formKey,
           child: Column(
@@ -51,6 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 hint: 'Digite seu e-mail',
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
+                inputFormatters: [MascaraDeEmail()],
                 prefixIcon: Icons.mail_outline,
                 validator: (value) {
                   final email = value?.trim() ?? '';

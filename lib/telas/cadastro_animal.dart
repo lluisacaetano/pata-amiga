@@ -14,6 +14,7 @@ import '../widgets/barra_inferior.dart';
 import '../widgets/cuidado.dart';
 import '../widgets/escolha_de_tipo.dart';
 import '../widgets/foto_animal.dart';
+import '../widgets/mascaras.dart';
 
 String _comMaiuscula(String texto) =>
     texto.isEmpty ? texto : texto[0].toUpperCase() + texto.substring(1);
@@ -505,7 +506,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
                       exemplo: '(37) 90000-0000',
                       comErro: _faltando(_telefone),
                       teclado: TextInputType.phone,
-                      formatadores: [_MascaraDeTelefone()],
+                      formatadores: [MascaraDeTelefone()],
                     ),
                   ],
                 ),
@@ -1038,27 +1039,3 @@ class _Cuidado extends StatelessWidget {
 }
 
 // Vai desenhando (DD) NNNNN-NNNN conforme se digita, e recusa o que não é dígito
-class _MascaraDeTelefone extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue antigo,
-    TextEditingValue novo,
-  ) {
-    final digitos = novo.text.replaceAll(RegExp(r'\D'), '');
-    final limitado = digitos.length > 11 ? digitos.substring(0, 11) : digitos;
-
-    final escrita = StringBuffer();
-    for (var i = 0; i < limitado.length; i++) {
-      if (i == 0) escrita.write('(');
-      if (i == 2) escrita.write(') ');
-      if (limitado.length >= 10 && i == limitado.length - 4) escrita.write('-');
-      escrita.write(limitado[i]);
-    }
-
-    final texto = escrita.toString();
-    return TextEditingValue(
-      text: texto,
-      selection: TextSelection.collapsed(offset: texto.length),
-    );
-  }
-}
