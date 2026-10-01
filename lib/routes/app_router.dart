@@ -10,6 +10,7 @@ import '../telas/home_screen.dart';
 import '../telas/feed_adocao.dart';
 import '../telas/detalhes_animal.dart';
 import '../telas/cadastro_login_animal.dart';
+import '../telas/onboarding_screen.dart';
 import 'route_names.dart';
 
 export 'route_names.dart';
@@ -22,6 +23,10 @@ class AppRoutesConfig {
     AppRoutes.recoverPassword: (_) => const RecoverPasswordScreen(),
     AppRoutes.home: (_) => const SuaTelaHome(),
     AppRoutes.feed: (_) => const FeedAdocao(),
+    AppRoutes.onboarding: (context) => OnboardingScreen(
+      onFinish: () =>
+          Navigator.of(context).pushReplacementNamed(AppRoutes.feed),
+    ),
     AppRoutes.details: (context) {
       final animal = ModalRoute.of(context)?.settings.arguments;
       if (animal is! Animal) {

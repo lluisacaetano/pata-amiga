@@ -7,6 +7,7 @@ import 'estado/estado_pata_amiga.dart';
 import 'tema/cores.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const AplicativoPataAmiga());
 }
 

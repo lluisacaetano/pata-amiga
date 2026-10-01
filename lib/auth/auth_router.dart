@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/auth_components.dart';
 import 'screens/boas_vindas_screen.dart';
 import '../telas/home_screen.dart'; // Sua tela principal
+import '../telas/onboarding_screen.dart';
 
 // Nome da classe traduzido: AuthRouter -> RoteadorAutenticacao
 class RoteadorAutenticacao extends StatefulWidget {
@@ -19,6 +20,7 @@ class _EstadoRoteadorAutenticacao extends State<RoteadorAutenticacao> {
   // Variáveis em português
   bool _estaLogado = false;
   bool _estaCarregando = true;
+  bool _mostrarOnboarding = false;
 
   @override
   void initState() {
@@ -30,9 +32,14 @@ class _EstadoRoteadorAutenticacao extends State<RoteadorAutenticacao> {
   Future<void> _verificarStatusLogin() async {
     final preferencias = await SharedPreferences.getInstance();
     final emailLogado = preferencias.getString('loggedInEmail');
+    final onboardingConcluido = emailLogado == null
+        ? true
+        : await OnboardingStorage.jaViu();
+    if (!mounted) return;
 
     setState(() {
       _estaLogado = emailLogado != null;
+      _mostrarOnboarding = emailLogado != null && !onboardingConcluido;
       _estaCarregando = false;
     });
   }
@@ -54,6 +61,13 @@ class _EstadoRoteadorAutenticacao extends State<RoteadorAutenticacao> {
     }
 
     if (_estaLogado) {
+      if (_mostrarOnboarding) {
+        return OnboardingScreen(
+          onFinish: () {
+            if (mounted) setState(() => _mostrarOnboarding = false);
+          },
+        );
+      }
       // passa a função de encerrar sessão para a tela principal
       return HomeScreen(onLogout: _encerrarSessao);
     }
