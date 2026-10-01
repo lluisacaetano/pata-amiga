@@ -48,8 +48,6 @@ class AppRoutesConfig {
     },
 
     AppRoutes.registerAnimal: (_) => const CadastroAnimal(),
-
-    // Perfil do usuário
-    AppRoutes.profile: (_) => const PerfilUsuario(),
+    AppRoutes.perfilUsuario: (_) => const PerfilUsuario(),
   };
 }

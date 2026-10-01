@@ -1,14 +1,20 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-
+import 'provider/usuario_provider.dart';
+import 'package:provider/provider.dart';
 import 'routes/app_router.dart';
 import 'estado/estado_pata_amiga.dart';
 import 'tema/cores.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const AplicativoPataAmiga());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => UsuarioProvider(),
+      child: const AplicativoPataAmiga(),
+    ),
+  );
 }
 
 class AplicativoPataAmiga extends StatefulWidget {
