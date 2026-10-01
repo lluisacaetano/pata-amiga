@@ -5,6 +5,8 @@ import '../modelos/usuario.dart';
 class UsuarioProvider extends ChangeNotifier {
   Usuario _usuario = Usuario(
     nome: 'Usuário',
+    email: '',
+    senha: '',
     telefone: '',
   );
 
@@ -17,6 +19,8 @@ class UsuarioProvider extends ChangeNotifier {
   }) {
     _usuario = Usuario(
       nome: nome,
+      email: _usuario.email,
+      senha: _usuario.senha,
       telefone: telefone,
       foto: foto,
     );

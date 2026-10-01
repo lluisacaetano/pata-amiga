@@ -1,23 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../tema/cores.dart';
+
 import '../provider/usuario_provider.dart';
+import '../tema/cores.dart';
+import 'editar_perfil.dart';
 
 class PerfilUsuario extends StatelessWidget {
   const PerfilUsuario({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final usuarioProvider = context.watch<UsuarioProvider>();
-    final usuario = usuarioProvider.usuario;
+    // Fica observando o UsuarioProvider.
+    // Quando o usuário for alterado, esta tela será reconstruída.
+    final usuario = context.watch<UsuarioProvider>().usuario;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text(
           'Meu Perfil',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
       ),
@@ -28,29 +29,20 @@ class PerfilUsuario extends StatelessWidget {
           children: [
             const SizedBox(height: 20),
 
-            
             CircleAvatar(
               radius: 55,
               backgroundColor: Cores.principal.withValues(alpha: 0.15),
-              child: const Icon(
-                Icons.person,
-                size: 60,
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            TextButton.icon(
-              onPressed: () {
-             
-              },
-              icon: const Icon(Icons.camera_alt_outlined),
-              label: const Text('Alterar foto'),
+              backgroundImage: usuario.foto != null && usuario.foto!.isNotEmpty
+                  ? NetworkImage(usuario.foto!)
+                  : null,
+              child: usuario.foto == null || usuario.foto!.isEmpty
+                  ? const Icon(Icons.person, size: 60, color: Cores.principal)
+                  : null,
             ),
 
             const SizedBox(height: 25),
 
-            
+            //nome do usuario
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -62,6 +54,7 @@ class PerfilUsuario extends StatelessWidget {
             const SizedBox(height: 8),
 
             TextFormField(
+              key: ValueKey(usuario.nome),
               initialValue: usuario.nome,
               readOnly: true,
               decoration: const InputDecoration(
@@ -72,7 +65,7 @@ class PerfilUsuario extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            
+            // telefone do usuario
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -84,6 +77,7 @@ class PerfilUsuario extends StatelessWidget {
             const SizedBox(height: 8),
 
             TextFormField(
+              key: ValueKey(usuario.telefone),
               initialValue: usuario.telefone,
               readOnly: true,
               decoration: const InputDecoration(
@@ -94,11 +88,17 @@ class PerfilUsuario extends StatelessWidget {
 
             const Spacer(),
 
+            //botao de editar perfil
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () {
-                 
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const EditarPerfil(),
+                    ),
+                  );
                 },
                 icon: const Icon(Icons.edit_outlined),
                 label: const Text('Editar perfil'),

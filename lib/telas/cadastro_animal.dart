@@ -467,6 +467,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
           ],
         ),
       ),
+      //barra inferior com botão de voltar, não funciona 
       bottomNavigationBar: BarraInferior(
         aoTocar: (indice) {
           if (indice == 0) {
