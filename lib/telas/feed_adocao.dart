@@ -276,8 +276,13 @@ class _FeedAdocaoState extends State<FeedAdocao> {
         child: const Icon(Icons.add),
       ),
       bottomNavigationBar: BarraInferior(
+        atual: 0,
         aoTocar: (indice) {
-          if (indice != 0) avisarProximaSprint(context);
+          if (indice == 3) {
+            Navigator.pushNamed(context, AppRoutes.perfilUsuario);
+          } else if (indice != 0) {
+            avisarProximaSprint(context);
+          }
         },
       ),
     );
