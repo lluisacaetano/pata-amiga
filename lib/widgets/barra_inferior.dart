@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../tema/cores.dart';
 
-// O aviso que as telas ainda não construídas dão quando alguém toca nelas
+// O aviso que as telas ainda não construídas dão quando alguém toca nelas.
+// Enquanto a funcionalidade não existe, o toque avisa em vez de não fazer
+// nada, para o usuário saber que o botão não está quebrado
 void avisarProximaSprint(BuildContext context) {
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
