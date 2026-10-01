@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../tema/cores.dart';
 
@@ -62,6 +63,7 @@ class AuthField extends StatelessWidget {
   final IconData? suffixIcon;
   final VoidCallback? onSuffixPressed;
   final String? Function(String?)? validator;
+  final List<TextInputFormatter>? inputFormatters;
 
   const AuthField({
     super.key,
@@ -74,6 +76,7 @@ class AuthField extends StatelessWidget {
     this.suffixIcon,
     this.onSuffixPressed,
     this.validator,
+    this.inputFormatters,
   });
 
   @override
@@ -99,6 +102,7 @@ class AuthField extends StatelessWidget {
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
           obscureText: obscureText,
           validator: validator,
           style: const TextStyle(

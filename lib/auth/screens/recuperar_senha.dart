@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'auth_components.dart';
+import '../../widgets/mascaras.dart';
 
 class RecoverPasswordScreen extends StatefulWidget {
   const RecoverPasswordScreen({super.key});
@@ -48,6 +49,7 @@ class _RecoverPasswordScreenState extends State<RecoverPasswordScreen> {
               hint: 'Digite seu e-mail',
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
+              inputFormatters: [MascaraDeEmail()],
               prefixIcon: Icons.mail_outline,
             ),
             const SizedBox(height: 20),
