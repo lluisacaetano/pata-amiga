@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class EstadoPataAmiga extends ChangeNotifier {
+  // Chave usada para gravar as curtidas no armazenamento do aparelho
   static const _chaveCurtidos = 'curtidos';
 
+  // Guarda o nome dos animais que o usuário curtiu
   final Set<String> _curtidos = {};
   bool _descartado = false;
 

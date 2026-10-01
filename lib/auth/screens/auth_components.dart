@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../tema/cores.dart';
 
 class AuthBackground extends StatelessWidget {
   final Widget child;
+  // A mesma seta de voltar do cadastro do animal, no canto de cima
+  final bool comVoltar;
 
-  const AuthBackground({super.key, required this.child});
+  const AuthBackground({
+    super.key,
+    required this.child,
+    this.comVoltar = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -21,14 +28,29 @@ class AuthBackground extends StatelessWidget {
         ),
       ),
       child: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(22, 16, 22, 28),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: child,
+        child: Stack(
+          children: [
+            Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(22, 16, 22, 28),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: child,
+                ),
+              ),
             ),
-          ),
+            if (comVoltar)
+              Positioned(
+                top: 4,
+                left: 12,
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  tooltip: 'Voltar',
+                  color: Cores.principal,
+                  onPressed: () => Navigator.maybePop(context),
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -62,6 +84,7 @@ class AuthField extends StatelessWidget {
   final IconData? suffixIcon;
   final VoidCallback? onSuffixPressed;
   final String? Function(String?)? validator;
+  final List<TextInputFormatter>? inputFormatters;
 
   const AuthField({
     super.key,
@@ -74,6 +97,7 @@ class AuthField extends StatelessWidget {
     this.suffixIcon,
     this.onSuffixPressed,
     this.validator,
+    this.inputFormatters,
   });
 
   @override
@@ -99,6 +123,7 @@ class AuthField extends StatelessWidget {
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
           obscureText: obscureText,
           validator: validator,
           style: const TextStyle(
