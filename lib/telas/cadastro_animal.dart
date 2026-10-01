@@ -8,11 +8,13 @@ import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../modelos/animal.dart';
+import '../modelos/dono.dart';
 import '../tema/cores.dart';
 import '../widgets/barra_inferior.dart';
 import '../widgets/cuidado.dart';
 import '../widgets/escolha_de_tipo.dart';
 import '../widgets/foto_animal.dart';
+import '../widgets/mascaras.dart';
 
 String _comMaiuscula(String texto) =>
     texto.isEmpty ? texto : texto[0].toUpperCase() + texto.substring(1);
@@ -196,6 +198,68 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
   }
 
   void _removerFoto(int indice) => setState(() => _fotos.removeAt(indice));
+
+  // Os mesmos campos que ficam vermelhos quando faltam
+  bool get _completo =>
+      _tipo != null &&
+      _especie != null &&
+      _porte != null &&
+      [
+        _idade,
+        _observacoes,
+        _localizacao,
+        _responsavel,
+        _telefone,
+      ].every((campo) => campo.text.trim().isNotEmpty);
+
+  // O campo de localização pede rua, bairro e cidade, nesta ordem, então a
+  // cidade é o último pedaço e o bairro o penúltimo
+  ({String bairro, String cidade}) _bairroECidade() {
+    final partes = _localizacao.text
+        .split(',')
+        .map((parte) => parte.trim())
+        .where((parte) => parte.isNotEmpty)
+        .toList();
+    if (partes.length < 2) {
+      return (bairro: partes.isEmpty ? '' : partes.first, cidade: 'Formiga');
+    }
+    return (bairro: partes[partes.length - 2], cidade: partes.last);
+  }
+
+  // Devolve o animal ao feed, que é quem o põe na lista
+  void _cadastrar() {
+    setState(() => _tentouCadastrar = true);
+    if (!_completo) return;
+
+    final lugar = _bairroECidade();
+    final nome = _nome.text.trim();
+    final animal = Animal(
+      nome: nome.isEmpty ? _nomePadrao : nome,
+      especie: _especie!,
+      raca: _raca.text.trim(),
+      sexo: _sexo ?? 'não informado',
+      porte: _porte!,
+      idade: _idade.text.trim(),
+      peso: '',
+      cor: '',
+      bairro: lugar.bairro,
+      cidade: lugar.cidade,
+      tipo: _tipo!,
+      castrado: _castrado,
+      vacinado: _vacinado,
+      vermifugado: _vermifugado,
+      observacoes: _observacoes.text.trim(),
+      necessidadesEspeciais: _necessidades.text.trim(),
+      dono: Dono(
+        nome: _responsavel.text.trim(),
+        telefone: _telefone.text.trim(),
+      ),
+      fotos: _fotos.map((foto) => foto.path).toList(),
+      publicadoEm: DateTime.now(),
+    );
+
+    Navigator.pop(context, animal);
+  }
 
   @override
   void dispose() {
@@ -442,14 +506,14 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
                       exemplo: '(37) 90000-0000',
                       comErro: _faltando(_telefone),
                       teclado: TextInputType.phone,
-                      formatadores: [_MascaraDeTelefone()],
+                      formatadores: [MascaraDeTelefone()],
                     ),
                   ],
                 ),
               ),
             const SizedBox(height: 8),
             FilledButton.icon(
-              onPressed: () => setState(() => _tentouCadastrar = true),
+              onPressed: _cadastrar,
               icon: const Icon(Icons.pets, size: 18),
               label: const Text('Cadastrar'),
               style: FilledButton.styleFrom(
@@ -975,27 +1039,3 @@ class _Cuidado extends StatelessWidget {
 }
 
 // Vai desenhando (DD) NNNNN-NNNN conforme se digita, e recusa o que não é dígito
-class _MascaraDeTelefone extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue antigo,
-    TextEditingValue novo,
-  ) {
-    final digitos = novo.text.replaceAll(RegExp(r'\D'), '');
-    final limitado = digitos.length > 11 ? digitos.substring(0, 11) : digitos;
-
-    final escrita = StringBuffer();
-    for (var i = 0; i < limitado.length; i++) {
-      if (i == 0) escrita.write('(');
-      if (i == 2) escrita.write(') ');
-      if (limitado.length >= 10 && i == limitado.length - 4) escrita.write('-');
-      escrita.write(limitado[i]);
-    }
-
-    final texto = escrita.toString();
-    return TextEditingValue(
-      text: texto,
-      selection: TextSelection.collapsed(offset: texto.length),
-    );
-  }
-}

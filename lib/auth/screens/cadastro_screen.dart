@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'auth_components.dart';
 import '../../telas/onboarding_screen.dart';
+import '../../widgets/mascaras.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -27,6 +28,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: AuthBackground(
+        comVoltar: true,
         child: Form(
           key: _formKey,
           child: Column(
@@ -60,6 +62,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 hint: 'Digite seu e-mail',
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
+                inputFormatters: [MascaraDeEmail()],
                 prefixIcon: Icons.mail_outline,
                 validator: (value) {
                   final email = value?.trim() ?? '';
@@ -76,6 +79,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 hint: 'Digite seu telefone',
                 controller: _telefoneController,
                 keyboardType: TextInputType.phone,
+                inputFormatters: [MascaraDeTelefone()],
                 prefixIcon: Icons.phone_outlined,
                 validator: (value) {
                   final telefone = (value ?? '').replaceAll(RegExp(r'\D'), '');
