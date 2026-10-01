@@ -28,6 +28,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: AuthBackground(
+        comVoltar: true,
         child: Form(
           key: _formKey,
           child: Column(

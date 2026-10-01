@@ -22,6 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: AuthBackground(
+        comVoltar: true,
         child: Form(
           key: _formKey,
           child: Column(
