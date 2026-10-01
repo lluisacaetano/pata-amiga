@@ -2,16 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../dados/animais_mock.dart';
 import '../modelos/animal.dart';
 import '../modelos/dono.dart';
+import '../routes/route_names.dart';
 import '../tema/cores.dart';
 import '../widgets/barra_inferior.dart';
 import '../widgets/card_animal.dart';
 import '../widgets/escolha_de_tipo.dart';
 import '../routes/app_router.dart';
+
 //import 'cadastro_animal.dart';
 //import 'detalhes_animal.dart';
 
@@ -42,9 +43,37 @@ class _FeedAdocaoState extends State<FeedAdocao> {
     super.dispose();
   }
 
+  Future<void> _abrirCadastroAnimal() async {
+    final animal = (await Navigator.pushNamed(
+      context,
+      AppRoutes.registerAnimal,
+    )) as Animal?;
+    if (!mounted || animal == null) return;
+
+    setState(() => _animaisCriados.insert(0, animal));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${animal.nome} foi adicionado ao feed.')),
+    );
+  }
+
+  Future<void> _abrirDetalhes(Animal animal) async {
+    final animalRetornado = (await Navigator.pushNamed(
+      context,
+      AppRoutes.details,
+      arguments: animal,
+    )) as Animal?;
+    if (!mounted || animalRetornado == null) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Você voltou dos detalhes de ${animalRetornado.nome}.'),
+      ),
+    );
+  }
+
   List<Animal> get _animaisVisiveis {
     final termo = _busca.trim().toLowerCase();
-    final encontrados = animaisMock.where((animal) {
+    final encontrados = [...animaisMock, ..._animaisCriados].where((animal) {
       if (animal.tipo != _abaAtual) return false;
       if (termo.isEmpty) return true;
       return animal.nome.toLowerCase().contains(termo) ||
@@ -55,23 +84,6 @@ class _FeedAdocaoState extends State<FeedAdocao> {
     encontrados.sort((a, b) => b.publicadoEm.compareTo(a.publicadoEm));
     return encontrados;
   }
-
-  @override
-  void initState() {
-    super.initState();
-    _carregarCurtidas();
-  }
-
-  Future<void> _carregarCurtidas() async {
-    final armazenamento = await SharedPreferences.getInstance();
-    final salvos = armazenamento.getStringList(_chaveCurtidos) ?? [];
-    if (!mounted) return;
-    setState(() => _curtidos = salvos.toSet());
-  }
-
-  // Enquanto a funcionalidade não existe, o toque avisa em vez de não fazer
-  // nada, para o usuário saber que o botão não está quebrado
-  void _emBreve() => avisarProximaSprint(context);
 
   // Junta os cuidados marcados numa frase só, concordando com o sexo
   String _saude(Animal animal) {
@@ -290,16 +302,8 @@ class _FeedAdocaoState extends State<FeedAdocao> {
         child: const Icon(Icons.add),
       ),
       bottomNavigationBar: BarraInferior(
-        atual: 0,
         aoTocar: (indice) {
-          if (indice == 3) {
-            Navigator.pushNamed(
-              context,
-              AppRoutes.perfilUsuario,
-            );
-          } else if (indice != 0) {
-            _emBreve();
-          }
+          if (indice != 0) _emBreve();
         },
       ),
     );
