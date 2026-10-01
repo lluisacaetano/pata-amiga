@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../estado/estado_pata_amiga.dart';
 import '../modelos/animal.dart';
 import '../tema/cores.dart';
 import 'foto_animal.dart';
@@ -7,8 +8,6 @@ import 'foto_animal.dart';
 // Card de um animal no feed.
 class CardAnimal extends StatelessWidget {
   final Animal animal;
-  final bool curtido;
-  final VoidCallback aoCurtir;
   final VoidCallback aoCompartilhar;
   final VoidCallback aoChamarNoWhatsApp;
   final VoidCallback aoTocar;
@@ -16,8 +15,6 @@ class CardAnimal extends StatelessWidget {
   const CardAnimal({
     super.key,
     required this.animal,
-    required this.curtido,
-    required this.aoCurtir,
     required this.aoCompartilhar,
     required this.aoChamarNoWhatsApp,
     required this.aoTocar,
@@ -25,6 +22,9 @@ class CardAnimal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final estado = PataAmigaScope.of(context);
+    final curtido = estado.estaCurtido(animal.nome);
+
     return GestureDetector(
       onTap: aoTocar,
       child: Container(
@@ -72,10 +72,7 @@ class CardAnimal extends StatelessWidget {
                 // Há quanto tempo foi publicado, na mesma linha do local
                 Text(
                   ' · ${animal.publicadoHa(DateTime.now())}',
-                  style: const TextStyle(
-                    color: Cores.textoFraco,
-                    fontSize: 13,
-                  ),
+                  style: const TextStyle(color: Cores.textoFraco, fontSize: 13),
                 ),
               ],
             ),
@@ -102,7 +99,7 @@ class CardAnimal extends StatelessWidget {
                   icone: curtido ? Icons.favorite : Icons.favorite_border,
                   rotulo: 'curtir',
                   destacado: curtido,
-                  aoTocar: aoCurtir,
+                  aoTocar: () => estado.alternarCurtida(animal.nome),
                 ),
                 _Acao(
                   icone: Icons.chat_bubble_outline,

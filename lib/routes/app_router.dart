@@ -2,24 +2,40 @@
 import 'package:flutter/material.dart';
 
 import '../modelos/animal.dart';
+import '../auth/auth_router.dart';
+import '../auth/screens/cadastro_screen.dart';
+import '../auth/screens/login_screen.dart';
+import '../auth/screens/recuperar_senha.dart';
+import '../telas/home_screen.dart';
 import '../telas/feed_adocao.dart';
 import '../telas/detalhes_animal.dart';
-import '../telas/cadastro_animal.dart';
+import '../telas/cadastro_login_animal.dart';
+import '../telas/onboarding_screen.dart';
 import '../telas/perfil_usuario.dart';
+import 'route_names.dart';
 
-class AppRoutes {
-  static const feed = '/';
-  static const detalhesAnimal = '/detalhes-animal';
-  static const cadastroAnimal = '/cadastro-animal';
-  static const perfilUsuario = '/perfil-usuario';
+export 'route_names.dart';
 
+class AppRoutesConfig {
   static Map<String, WidgetBuilder> get routes => {
-    feed: (_) => const FeedAdocao(),
-    detalhesAnimal: (context) {
-      final animal = ModalRoute.of(context)!.settings.arguments as Animal;
+    AppRoutes.welcome: (_) => const AuthRouter(),
+    AppRoutes.login: (_) => const LoginScreen(),
+    AppRoutes.register: (_) => const RegisterScreen(),
+    AppRoutes.recoverPassword: (_) => const RecoverPasswordScreen(),
+    AppRoutes.home: (_) => const SuaTelaHome(),
+    AppRoutes.feed: (_) => const FeedAdocao(),
+    AppRoutes.onboarding: (context) => OnboardingScreen(
+      onFinish: () =>
+          Navigator.of(context).pushReplacementNamed(AppRoutes.feed),
+    ),
+    AppRoutes.details: (context) {
+      final animal = ModalRoute.of(context)?.settings.arguments;
+      if (animal is! Animal) {
+        throw ArgumentError('A rota de detalhes precisa receber um Animal.');
+      }
       return DetalhesAnimal(animal: animal);
     },
-    cadastroAnimal: (_) => const CadastroAnimal(),
-    perfilUsuario: (_) => const PerfilUsuario(),
+    AppRoutes.registerAnimal: (_) => const CadastroAnimal(),
+    AppRoutes.perfilUsuario: (_) => const PerfilUsuario(),
   };
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'telas/cadastro_animal.dart';
+import 'telas/cadastro_login_animal.dart';
 import 'tema/cores.dart';
 
 // Entrada temporária, só para abrir a tela de cadastro no emulador enquanto ela não está ligada ao feed

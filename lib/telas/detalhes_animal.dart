@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../estado/estado_pata_amiga.dart';
 import '../modelos/animal.dart';
 import '../modelos/dono.dart';
 import '../tema/cores.dart';
@@ -42,6 +43,9 @@ class DetalhesAnimal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final estado = PataAmigaScope.of(context);
+    final estaCurtido = estado.estaCurtido(animal.nome);
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Cores.fundo,
@@ -52,7 +56,7 @@ class DetalhesAnimal extends StatelessWidget {
             icon: const Icon(Icons.arrow_back),
             tooltip: 'Voltar',
             color: Cores.principal,
-            onPressed: () => Navigator.maybePop(context),
+            onPressed: () => Navigator.maybePop(context, animal),
           ),
         ),
         centerTitle: true,
@@ -65,6 +69,15 @@ class DetalhesAnimal extends StatelessWidget {
             color: Cores.principal,
           ),
         ),
+        actions: [
+          IconButton(
+            tooltip: estaCurtido
+                ? 'Remover dos curtidos'
+                : 'Adicionar aos curtidos',
+            onPressed: () => estado.alternarCurtida(animal.nome),
+            icon: Icon(estaCurtido ? Icons.favorite : Icons.favorite_border),
+          ),
+        ],
       ),
 
       body: SingleChildScrollView(
@@ -106,7 +119,7 @@ class DetalhesAnimal extends StatelessWidget {
           BarraInferior(
             aoTocar: (indice) {
               if (indice == 0) {
-                Navigator.maybePop(context);
+                Navigator.maybePop(context, animal);
               } else {
                 avisarProximaSprint(context);
               }
