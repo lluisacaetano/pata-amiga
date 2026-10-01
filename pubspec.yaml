@@ -46,7 +46,6 @@ dependencies:
   geocoding: ^5.0.0
   flutter_native_splash: ^2.4.8
   provider: ^6.1.5+1
-  mask_text_input_formatter: ^2.9.0
 
 dev_dependencies:
   flutter_test:

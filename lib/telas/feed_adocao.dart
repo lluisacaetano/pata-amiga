@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../dados/animais_mock.dart';
 import '../modelos/animal.dart';
-import '../routes/app_router.dart';
+import '../modelos/dono.dart';
+import '../routes/route_names.dart';
 import '../tema/cores.dart';
 import '../widgets/barra_inferior.dart';
 import '../widgets/card_animal.dart';
 import '../widgets/escolha_de_tipo.dart';
+import '../routes/app_router.dart';
+
+//import 'cadastro_animal.dart';
+//import 'detalhes_animal.dart';
 
 class FeedAdocao extends StatefulWidget {
   const FeedAdocao({super.key});
@@ -20,27 +24,14 @@ class FeedAdocao extends StatefulWidget {
 }
 
 class _FeedAdocaoState extends State<FeedAdocao> {
-  // Guarda os animais cadastrados pelo usuário durante a execução.
-  final List<Animal> _animaisCriados = [];
-
-  // Guarda o nome dos animais que o usuário curtiu.
-  final Set<String> _curtidos = {};
-
-  // Chave usada para gravar as curtidas no armazenamento do aparelho.
-  static const _chaveCurtidos = 'curtidos';
-
-  // Aba aberta no momento.
+  // Aba aberta no momento, que decide quais animais o feed mostra
   TipoRegistro _abaAtual = TipoRegistro.adocao;
 
-  // Campo de pesquisa.
+  final List<Animal> _animaisCriados = [];
+
+  // O que foi digitado no campo de pesquisa
   final _pesquisa = TextEditingController();
   String _busca = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _carregarCurtidas();
-  }
 
   @override
   void dispose() {
@@ -48,44 +39,25 @@ class _FeedAdocaoState extends State<FeedAdocao> {
     super.dispose();
   }
 
-  // Carrega as curtidas salvas no aparelho.
-  Future<void> _carregarCurtidas() async {
-    final armazenamento = await SharedPreferences.getInstance();
-    final curtidosSalvos = armazenamento.getStringList(_chaveCurtidos) ?? [];
-
-    if (!mounted) return;
-
-    setState(() {
-      _curtidos.addAll(curtidosSalvos);
-    });
-  }
-
-  // Abre a tela de cadastro de animal.
   Future<void> _abrirCadastroAnimal() async {
     final animal = (await Navigator.pushNamed(
       context,
       AppRoutes.registerAnimal,
     )) as Animal?;
-
     if (!mounted || animal == null) return;
 
-    setState(() {
-      _animaisCriados.insert(0, animal);
-    });
-
+    setState(() => _animaisCriados.insert(0, animal));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('${animal.nome} foi adicionado ao feed.')),
     );
   }
 
-  // Abre os detalhes de um animal.
   Future<void> _abrirDetalhes(Animal animal) async {
     final animalRetornado = (await Navigator.pushNamed(
       context,
       AppRoutes.details,
       arguments: animal,
     )) as Animal?;
-
     if (!mounted || animalRetornado == null) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -95,68 +67,49 @@ class _FeedAdocaoState extends State<FeedAdocao> {
     );
   }
 
-  // Animais que devem aparecer no feed.
   List<Animal> get _animaisVisiveis {
     final termo = _busca.trim().toLowerCase();
-
     final encontrados = [...animaisMock, ..._animaisCriados].where((animal) {
-      if (animal.tipo != _abaAtual) {
-        return false;
-      }
-
-      if (termo.isEmpty) {
-        return true;
-      }
-
+      if (animal.tipo != _abaAtual) return false;
+      if (termo.isEmpty) return true;
       return animal.nome.toLowerCase().contains(termo) ||
           animal.raca.toLowerCase().contains(termo) ||
           animal.especie.toLowerCase().contains(termo);
     }).toList();
-
-    // Mostra primeiro o animal publicado mais recentemente.
+    // O feed é cronológico decrescente: o que foi publicado por último abre
     encontrados.sort((a, b) => b.publicadoEm.compareTo(a.publicadoEm));
-
     return encontrados;
   }
 
-  // Junta os cuidados do animal em uma frase.
+  // Junta os cuidados marcados numa frase só, concordando com o sexo
   String _saude(Animal animal) {
     final a = animal.sexo == 'fêmea' ? 'a' : 'o';
-
     final itens = [
       if (animal.castrado) 'castrad$a',
       if (animal.vacinado) 'vacinad$a',
       if (animal.vermifugado) 'vermifugad$a',
     ];
-
-    if (itens.isEmpty) {
-      return '';
-    }
-
+    if (itens.isEmpty) return '';
     final frase = itens.length == 1
         ? itens.first
         : '${itens.sublist(0, itens.length - 1).join(', ')} e ${itens.last}';
-
     return frase[0].toUpperCase() + frase.substring(1);
   }
 
-  // Abre o WhatsApp do responsável pelo animal.
+  // Abre a conversa direto no WhatsApp do responsável
   Future<void> _chamarNoWhatsApp(Animal animal) async {
     final mensageiro = ScaffoldMessenger.of(context);
-
     final texto = Uri.encodeComponent(
       'Olá! Vi ${animal.nome} no Pata Amiga e queria saber mais.',
     );
-
     final endereco = Uri.parse(
-      'https://wa.me/${animal.dono.telefone}?text=$texto',
+      'https://wa.me/${animal.dono.numeroNoWhatsApp}?text=$texto',
     );
 
     final abriu = await launchUrl(
       endereco,
       mode: LaunchMode.externalApplication,
     );
-
     if (!abriu) {
       mensageiro
         ..hideCurrentSnackBar()
@@ -169,7 +122,6 @@ class _FeedAdocaoState extends State<FeedAdocao> {
     }
   }
 
-  // Compartilha os dados do animal.
   Future<void> _compartilhar(Animal animal) async {
     final situacao = switch (animal.tipo) {
       TipoRegistro.adocao => 'Disponível para adoção',
@@ -194,8 +146,8 @@ class _FeedAdocaoState extends State<FeedAdocao> {
       'Divulgado pelo Pata Amiga',
     ].join('\n');
 
+    // O compartilhamento só aceita arquivo, e a foto é um asset, então converte
     final imagem = await rootBundle.load(animal.foto);
-
     final arquivo = XFile.fromData(
       imagem.buffer.asUint8List(),
       mimeType: 'image/jpeg',
@@ -203,21 +155,6 @@ class _FeedAdocaoState extends State<FeedAdocao> {
     );
 
     await SharePlus.instance.share(ShareParams(text: texto, files: [arquivo]));
-  }
-
-  // Alterna a curtida de um animal.
-  Future<void> _alternarCurtida(Animal animal) async {
-    setState(() {
-      if (_curtidos.contains(animal.nome)) {
-        _curtidos.remove(animal.nome);
-      } else {
-        _curtidos.add(animal.nome);
-      }
-    });
-
-    final armazenamento = await SharedPreferences.getInstance();
-
-    await armazenamento.setStringList(_chaveCurtidos, _curtidos.toList());
   }
 
   @override
@@ -249,11 +186,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
                 height: 40,
                 child: TextField(
                   controller: _pesquisa,
-                  onChanged: (valor) {
-                    setState(() {
-                      _busca = valor;
-                    });
-                  },
+                  onChanged: (valor) => setState(() => _busca = valor),
                   decoration: InputDecoration(
                     hintText: 'Pesquisar',
                     prefixIcon: const Icon(Icons.search, size: 20),
@@ -264,10 +197,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
                             tooltip: 'Limpar pesquisa',
                             onPressed: () {
                               _pesquisa.clear();
-
-                              setState(() {
-                                _busca = '';
-                              });
+                              setState(() => _busca = '');
                             },
                           ),
                     contentPadding: EdgeInsets.zero,
@@ -288,7 +218,6 @@ class _FeedAdocaoState extends State<FeedAdocao> {
           ],
         ),
       ),
-
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -296,16 +225,11 @@ class _FeedAdocaoState extends State<FeedAdocao> {
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
             child: EscolhaDeTipo(
               escolhido: _abaAtual,
-              aoEscolher: (escolha) {
-                setState(() {
-                  _abaAtual = escolha;
-                });
-              },
+              aoEscolher: (escolha) => setState(() => _abaAtual = escolha),
               rotulo: rotuloPlural,
               fundoDaOpcao: Cores.cartao,
             ),
           ),
-
           Expanded(
             child: _animaisVisiveis.isEmpty
                 ? Center(
@@ -333,25 +257,17 @@ class _FeedAdocaoState extends State<FeedAdocao> {
                     itemCount: _animaisVisiveis.length,
                     itemBuilder: (context, indice) {
                       final animal = _animaisVisiveis[indice];
-
                       return CardAnimal(
                         animal: animal,
-                        aoCompartilhar: () {
-                          _compartilhar(animal);
-                        },
-                        aoChamarNoWhatsApp: () {
-                          _chamarNoWhatsApp(animal);
-                        },
-                        aoTocar: () {
-                          _abrirDetalhes(animal);
-                        },
+                        aoCompartilhar: () => _compartilhar(animal),
+                        aoChamarNoWhatsApp: () => _chamarNoWhatsApp(animal),
+                        aoTocar: () => _abrirDetalhes(animal),
                       );
                     },
                   ),
           ),
         ],
       ),
-
       floatingActionButton: FloatingActionButton(
         onPressed: _abrirCadastroAnimal,
         backgroundColor: Cores.principal,
@@ -359,12 +275,11 @@ class _FeedAdocaoState extends State<FeedAdocao> {
         tooltip: 'Cadastrar animal',
         child: const Icon(Icons.add),
       ),
-
       bottomNavigationBar: BarraInferior(
         atual: 0,
         aoTocar: (indice) {
           if (indice == 3) {
-            Navigator.pushNamed(context, AppRoutes.profile);
+            Navigator.pushNamed(context, AppRoutes.perfilUsuario);
           } else if (indice != 0) {
             avisarProximaSprint(context);
           }

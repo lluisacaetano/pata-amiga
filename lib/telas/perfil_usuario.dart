@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -33,7 +36,9 @@ class PerfilUsuario extends StatelessWidget {
               radius: 55,
               backgroundColor: Cores.principal.withValues(alpha: 0.15),
               backgroundImage: usuario.foto != null && usuario.foto!.isNotEmpty
-                  ? NetworkImage(usuario.foto!)
+                  ? (kIsWeb
+                        ? NetworkImage(usuario.foto!)
+                        : FileImage(File(usuario.foto!)) as ImageProvider)
                   : null,
               child: usuario.foto == null || usuario.foto!.isEmpty
                   ? const Icon(Icons.person, size: 60, color: Cores.principal)

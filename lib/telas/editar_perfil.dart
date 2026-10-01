@@ -2,11 +2,11 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import 'package:provider/provider.dart';
 
 import '../provider/usuario_provider.dart';
 import '../tema/cores.dart';
+import '../widgets/mascaras.dart';
 
 class EditarPerfil extends StatefulWidget {
   const EditarPerfil({super.key});
@@ -26,12 +26,6 @@ class _EditarPerfilState extends State<EditarPerfil> {
   Uint8List? _fotoBytes;
 
   final ImagePicker _imagePicker = ImagePicker();
-
-  // Máscara do telefone: (##) #####-####
-  final _mascaraTelefone = MaskTextInputFormatter(
-    mask: '(##) #####-####',
-    filter: {'#': RegExp(r'[0-9]')},
-  );
 
   @override
   void initState() {
@@ -165,7 +159,8 @@ class _EditarPerfilState extends State<EditarPerfil> {
               controller: _telefoneController,
               keyboardType: TextInputType.phone,
               inputFormatters: [
-                _mascaraTelefone,
+                // a mesma máscara do resto do app: (37) 99999-0000
+                MascaraDeTelefone(),
               ],
               decoration: const InputDecoration(
                 labelText: 'Telefone',
