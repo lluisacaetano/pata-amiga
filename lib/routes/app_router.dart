@@ -12,6 +12,7 @@ import '../telas/detalhes_animal.dart';
 import '../telas/cadastro_animal.dart';
 import '../telas/onboarding_screen.dart';
 import '../telas/perfil_usuario.dart';
+import '../telas/tela_mapa.dart'; // NOVO
 import 'route_names.dart';
 
 export 'route_names.dart';
@@ -49,5 +50,7 @@ class AppRoutesConfig {
 
     AppRoutes.registerAnimal: (_) => const CadastroAnimal(),
     AppRoutes.perfilUsuario: (_) => const PerfilUsuario(),
+
+    AppRoutes.mapa: (_) => const PaginaMapa(), // NOVO
   };
 }

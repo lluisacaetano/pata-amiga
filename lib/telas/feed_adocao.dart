@@ -278,13 +278,15 @@ class _FeedAdocaoState extends State<FeedAdocao> {
       bottomNavigationBar: BarraInferior(
         atual: 0,
         aoTocar: (indice) {
-          if (indice == 3) {
+          if (indice == 1) {
+          Navigator.pushNamed(context, AppRoutes.mapa);
+          } else if (indice == 3) {
             Navigator.pushNamed(context, AppRoutes.perfilUsuario);
           } else if (indice != 0) {
-            avisarProximaSprint(context);
-          }
-        },
-      ),
+        avisarProximaSprint(context);
+    }
+  },
+),
     );
   }
 }
