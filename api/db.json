@@ -19,8 +19,15 @@
       "vermifugado": true,
       "observacoes": "Brincalhão e muito carinhoso.",
       "necessidadesEspeciais": "",
-      "dono": { "nome": "Maria", "telefone": "13999990000" },
-      "fotos": ["assets/animais/thor-1.jpg", "assets/animais/thor-2.jpg", "assets/animais/thor-3.jpg"],
+      "dono": {
+        "nome": "Maria",
+        "telefone": "13999990000"
+      },
+      "fotos": [
+        "assets/animais/thor-1.jpg",
+        "assets/animais/thor-2.jpg",
+        "assets/animais/thor-3.jpg"
+      ],
       "publicadoEm": "2026-10-10T12:00:00.000",
       "latitude": null,
       "longitude": null
@@ -44,8 +51,15 @@
       "vermifugado": true,
       "observacoes": "Tranquilo, ótimo com crianças.",
       "necessidadesEspeciais": "",
-      "dono": { "nome": "Ana", "telefone": "13999992222" },
-      "fotos": ["assets/animais/bidu-1.jpg", "assets/animais/bidu-2.jpg", "assets/animais/bidu-3.jpg"],
+      "dono": {
+        "nome": "Ana",
+        "telefone": "13999992222"
+      },
+      "fotos": [
+        "assets/animais/bidu-1.jpg",
+        "assets/animais/bidu-2.jpg",
+        "assets/animais/bidu-3.jpg"
+      ],
       "publicadoEm": "2026-10-12T12:00:00.000",
       "latitude": null,
       "longitude": null
@@ -69,8 +83,15 @@
       "vermifugado": false,
       "observacoes": "Calma e adora colo.",
       "necessidadesEspeciais": "",
-      "dono": { "nome": "João", "telefone": "13999991111" },
-      "fotos": ["assets/animais/amora-1.jpg", "assets/animais/amora-2.jpg", "assets/animais/amora-3.jpg"],
+      "dono": {
+        "nome": "João",
+        "telefone": "13999991111"
+      },
+      "fotos": [
+        "assets/animais/amora-1.jpg",
+        "assets/animais/amora-2.jpg",
+        "assets/animais/amora-3.jpg"
+      ],
       "publicadoEm": "2026-10-13T12:00:00.000",
       "latitude": null,
       "longitude": null
@@ -94,8 +115,15 @@
       "vermifugado": true,
       "observacoes": "Sumiu de casa na terça à noite. Usa coleira azul e atende pelo nome.",
       "necessidadesEspeciais": "",
-      "dono": { "nome": "Carla", "telefone": "13999993333" },
-      "fotos": ["assets/animais/simba-1.jpg", "assets/animais/simba-2.jpg", "assets/animais/simba-3.jpg"],
+      "dono": {
+        "nome": "Carla",
+        "telefone": "13999993333"
+      },
+      "fotos": [
+        "assets/animais/simba-1.jpg",
+        "assets/animais/simba-2.jpg",
+        "assets/animais/simba-3.jpg"
+      ],
       "publicadoEm": "2026-10-11T12:00:00.000",
       "latitude": null,
       "longitude": null
@@ -119,8 +147,15 @@
       "vermifugado": true,
       "observacoes": "Fugiu durante os fogos. Tem medo de barulho e pode estar escondida.",
       "necessidadesEspeciais": "Usa remédio contínuo para o coração.",
-      "dono": { "nome": "Paulo", "telefone": "13999994444" },
-      "fotos": ["assets/animais/nina-1.jpg", "assets/animais/nina-2.jpg", "assets/animais/nina-3.jpg"],
+      "dono": {
+        "nome": "Paulo",
+        "telefone": "13999994444"
+      },
+      "fotos": [
+        "assets/animais/nina-1.jpg",
+        "assets/animais/nina-2.jpg",
+        "assets/animais/nina-3.jpg"
+      ],
       "publicadoEm": "2026-10-13T18:00:00.000",
       "latitude": null,
       "longitude": null
@@ -144,8 +179,15 @@
       "vermifugado": false,
       "observacoes": "Encontrado na avenida, magro e assustado. Aceita carinho e água.",
       "necessidadesEspeciais": "Precisa de avaliação veterinária.",
-      "dono": { "nome": "Rita", "telefone": "13999995555" },
-      "fotos": ["assets/animais/fred-1.jpg", "assets/animais/fred-2.jpg", "assets/animais/fred-3.jpg"],
+      "dono": {
+        "nome": "Rita",
+        "telefone": "13999995555"
+      },
+      "fotos": [
+        "assets/animais/fred-1.jpg",
+        "assets/animais/fred-2.jpg",
+        "assets/animais/fred-3.jpg"
+      ],
       "publicadoEm": "2026-10-12T20:00:00.000",
       "latitude": null,
       "longitude": null
@@ -169,8 +211,15 @@
       "vermifugado": false,
       "observacoes": "Estava presa em um terreno baldio. Está com um machucado na pata.",
       "necessidadesEspeciais": "Curativo na pata traseira.",
-      "dono": { "nome": "Lucas", "telefone": "13999996666" },
-      "fotos": ["assets/animais/mel-1.jpg", "assets/animais/mel-2.jpg", "assets/animais/mel-3.jpg"],
+      "dono": {
+        "nome": "Lucas",
+        "telefone": "13999996666"
+      },
+      "fotos": [
+        "assets/animais/mel-1.jpg",
+        "assets/animais/mel-2.jpg",
+        "assets/animais/mel-3.jpg"
+      ],
       "publicadoEm": "2026-10-14T09:00:00.000",
       "latitude": null,
       "longitude": null

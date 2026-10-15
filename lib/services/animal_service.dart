@@ -8,6 +8,7 @@ class AnimalService {
   static const _baseUrl = 'http://10.0.2.2:3000';
 
   Future<List<Animal>> buscarAnimais() async {
+    
     final resp = await http
         .get(Uri.parse('$_baseUrl/animais'))
         .timeout(const Duration(seconds: 8));
@@ -20,4 +21,18 @@ class AnimalService {
         .map((e) => Animal.fromJson(e as Map<String, dynamic>))
         .toList();
   }
+    Future<void> criarAnimal(Animal animal) async {
+    final resp = await http
+        .post(
+          Uri.parse('$_baseUrl/animais'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(animal.toJson()),
+        )
+        .timeout(const Duration(seconds: 8));
+
+    if (resp.statusCode != 200 && resp.statusCode != 201) {
+      throw Exception('Erro ${resp.statusCode}');
+    }
+  }
+
 }

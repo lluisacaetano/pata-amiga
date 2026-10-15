@@ -4,7 +4,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 
-// este import se o VS Code avisar que ele não é usado.
+
 
 import '../modelos/animal.dart';
 import '../modelos/dono.dart';
@@ -18,15 +18,7 @@ import '../routes/app_router.dart';
 import '../services/animal_service.dart';
 import '../services/cache_service.dart';
 
-//import 'cadastro_animal.dart';
-//import 'detalhes_animal.dart';
 
-// [SPRINT 3 - NOVO] Os estados da lista de animais, que a tela mostra de
-// formas diferentes:
-//   carregando = primeira busca, ainda sem cache (spinner)
-//   cache      = mostrando dados salvos no aparelho (podem estar desatualizados)
-//   atualizado = a API respondeu agora (dado fresco)
-//   erro       = sem internet E sem cache salvo
 enum EstadoFeed { carregando, cache, atualizado, erro }
 
 class FeedAdocao extends StatefulWidget {
@@ -134,7 +126,8 @@ class _FeedAdocaoState extends State<FeedAdocao> {
         '${dois(data.hour)}:${dois(data.minute)}';
   }
 
-  Future<void> _abrirCadastroAnimal() async {
+  /*
+   Future<void> _abrirCadastroAnimal() async {
     final animal = (await Navigator.pushNamed(
       context,
       AppRoutes.registerAnimal,
@@ -145,6 +138,39 @@ class _FeedAdocaoState extends State<FeedAdocao> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('${animal.nome} foi adicionado ao feed.')),
     );
+  }
+  */
+
+    Future<void> _abrirCadastroAnimal() async {
+    final animal = (await Navigator.pushNamed(
+      context,
+      AppRoutes.registerAnimal,
+    )) as Animal?;
+    if (!mounted || animal == null) return;
+
+    
+    try {
+      await _api.criarAnimal(animal);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${animal.nome} foi salvo na API.')),
+      );
+      // Busca a lista de novo: o animal volta com o id da API e o cache
+      // local também é atualizado.
+      await _carregar();
+    } catch (_) {
+     
+      if (!mounted) return;
+      setState(() => _animaisCriados.insert(0, animal));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${animal.nome} foi adicionado só neste aparelho. '
+            'Não foi possível enviar à API.',
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _abrirDetalhes(Animal animal) async {
@@ -314,7 +340,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
         return _faixa(
           cor: Colors.green,
           icone: Icons.cloud_done,
-          texto: 'Atualizado às ${_formatarData(_dataCache)}.',
+          texto: 'Atualizado em ${_formatarData(_dataCache)}.',
         );
       case EstadoFeed.carregando:
       case EstadoFeed.erro:
