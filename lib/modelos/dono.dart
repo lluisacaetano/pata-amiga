@@ -4,6 +4,22 @@ class Dono {
   final String telefone;
 
   const Dono({required this.nome, required this.telefone});
+
+  // [SPRINT 3 - NOVO] Cria um Dono a partir de um Map (JSON).
+  // Usado pelo Animal.fromJson, porque o dono vem aninhado dentro do animal:
+  // "dono": { "nome": "Maria", "telefone": "13999990000" }
+  factory Dono.fromJson(Map<String, dynamic> json) => Dono(
+        nome: json['nome'] as String,
+        telefone: json['telefone'] as String,
+      );
+
+  // [SPRINT 3 - NOVO] Converte o Dono em Map para ser salvo no cache.
+  // Usado pelo Animal.toJson. Se criarem um campo novo no Dono, incluam aqui
+  // e no fromJson acima, senão ele some quando o app ler do cache offline.
+  Map<String, dynamic> toJson() => {
+        'nome': nome,
+        'telefone': telefone,
+      };
 }
 
 extension ContatoNoWhatsApp on Dono {

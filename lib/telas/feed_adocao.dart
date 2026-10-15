@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../dados/animais_mock.dart';
+
+// este import se o VS Code avisar que ele não é usado.
+
 import '../modelos/animal.dart';
 import '../modelos/dono.dart';
 import '../routes/route_names.dart';
@@ -12,9 +14,20 @@ import '../widgets/barra_inferior.dart';
 import '../widgets/card_animal.dart';
 import '../widgets/escolha_de_tipo.dart';
 import '../routes/app_router.dart';
+// [SPRINT 3 - NOVO] Camada de dados: API e cache local
+import '../services/animal_service.dart';
+import '../services/cache_service.dart';
 
 //import 'cadastro_animal.dart';
 //import 'detalhes_animal.dart';
+
+// [SPRINT 3 - NOVO] Os estados da lista de animais, que a tela mostra de
+// formas diferentes:
+//   carregando = primeira busca, ainda sem cache (spinner)
+//   cache      = mostrando dados salvos no aparelho (podem estar desatualizados)
+//   atualizado = a API respondeu agora (dado fresco)
+//   erro       = sem internet E sem cache salvo
+enum EstadoFeed { carregando, cache, atualizado, erro }
 
 class FeedAdocao extends StatefulWidget {
   const FeedAdocao({super.key});
@@ -33,10 +46,92 @@ class _FeedAdocaoState extends State<FeedAdocao> {
   final _pesquisa = TextEditingController();
   String _busca = '';
 
+  // [SPRINT 3 - NOVO] Serviços de dados
+  final _api = AnimalService();
+  final _cache = CacheService();
+
+  // [SPRINT 3 - NOVO] Animais que vieram da API ou do cache.
+  // Substitui a lista fixa animaisMock.
+  List<Animal> _animaisApi = [];
+
+  // [SPRINT 3 - NOVO] Estado atual da tela e dados que o banner usa
+  EstadoFeed _estado = EstadoFeed.carregando;
+  DateTime? _dataCache; // quando os dados foram salvos / atualizados
+  bool _atualizando = false; // true enquanto há uma busca na API em andamento
+
+  // [SPRINT 3 - NOVO] Busca os animais ao abrir a tela
+  @override
+  void initState() {
+    super.initState();
+    _carregar();
+  }
+
   @override
   void dispose() {
     _pesquisa.dispose();
     super.dispose();
+  }
+
+  // [SPRINT 3 - NOVO] Fluxo principal da sprint:
+  //   1. Se existe cache, mostra na hora (estado: cache)
+  //      Se não existe, estado: carregando
+  //   2. Tenta a API
+  //        sucesso -> mostra, SOBRESCREVE o cache (estado: atualizado)
+  //        falha   -> com cache, continua no estado cache
+  //                   sem cache, estado erro
+  // É chamado ao abrir a tela e pelo botão "Tentar atualizar".
+  Future<void> _carregar() async {
+    final salvos = await _cache.lerAnimais();
+    final dataSalva = await _cache.dataDoCache();
+    if (!mounted) return;
+
+    setState(() {
+      _atualizando = true;
+      if (salvos != null) {
+        _animaisApi = salvos;
+        _dataCache = dataSalva;
+        _estado = EstadoFeed.cache;
+      } else {
+        _estado = EstadoFeed.carregando;
+      }
+    });
+
+    try {
+      final novos = await _api.buscarAnimais();
+      await _cache.salvarAnimais(novos); // o cache nunca fica congelado
+      if (!mounted) return;
+      setState(() {
+        _animaisApi = novos;
+        _dataCache = DateTime.now();
+        _estado = EstadoFeed.atualizado;
+        _atualizando = false;
+      });
+    } catch (_) {
+      // Sem internet, servidor fora do ar ou timeout
+      if (!mounted) return;
+      setState(() {
+        _atualizando = false;
+        if (salvos == null) _estado = EstadoFeed.erro;
+        // Se havia cache, o estado continua "cache"
+      });
+      if (salvos != null) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('Não foi possível atualizar. Mostrando dados salvos.'),
+            ),
+          );
+      }
+    }
+  }
+
+  // [SPRINT 3 - NOVO] Formata a data do cache, ex.: "14/10 às 21:05"
+  String _formatarData(DateTime? data) {
+    if (data == null) return 'data desconhecida';
+    String dois(int n) => n.toString().padLeft(2, '0');
+    return '${dois(data.day)}/${dois(data.month)} às '
+        '${dois(data.hour)}:${dois(data.minute)}';
   }
 
   Future<void> _abrirCadastroAnimal() async {
@@ -69,7 +164,8 @@ class _FeedAdocaoState extends State<FeedAdocao> {
 
   List<Animal> get _animaisVisiveis {
     final termo = _busca.trim().toLowerCase();
-    final encontrados = [...animaisMock, ..._animaisCriados].where((animal) {
+    // [SPRINT 3 - ALTERADO] antes: [...animaisMock, ..._animaisCriados]
+    final encontrados = [..._animaisApi, ..._animaisCriados].where((animal) {
       if (animal.tipo != _abaAtual) return false;
       if (termo.isEmpty) return true;
       return animal.nome.toLowerCase().contains(termo) ||
@@ -146,15 +242,161 @@ class _FeedAdocaoState extends State<FeedAdocao> {
       'Divulgado pelo Pata Amiga',
     ].join('\n');
 
-    // O compartilhamento só aceita arquivo, e a foto é um asset, então converte
-    final imagem = await rootBundle.load(animal.foto);
-    final arquivo = XFile.fromData(
-      imagem.buffer.asUint8List(),
-      mimeType: 'image/jpeg',
-      name: '${animal.nome}.jpg',
-    );
+    // [SPRINT 3 - ALTERADO] Só anexa a foto se o animal tiver uma.
+    // Antes, rootBundle.load('') dava erro com animal sem foto vindo da API.
+    final arquivos = <XFile>[];
+    if (animal.foto.isNotEmpty) {
+      // O compartilhamento só aceita arquivo, e a foto é um asset, então converte
+      final imagem = await rootBundle.load(animal.foto);
+      arquivos.add(
+        XFile.fromData(
+          imagem.buffer.asUint8List(),
+          mimeType: 'image/jpeg',
+          name: '${animal.nome}.jpg',
+        ),
+      );
+    }
 
-    await SharePlus.instance.share(ShareParams(text: texto, files: [arquivo]));
+    await SharePlus.instance.share(ShareParams(text: texto, files: arquivos));
+  }
+
+  // [SPRINT 3 - NOVO] Faixa colorida do banner de estado
+  Widget _faixa({
+    required Color cor,
+    required IconData icone,
+    required String texto,
+    Widget? acao,
+  }) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: cor.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cor.withValues(alpha: 0.6)),
+      ),
+      child: Row(
+        children: [
+          Icon(icone, size: 20, color: cor),
+          const SizedBox(width: 8),
+          Expanded(child: Text(texto, style: const TextStyle(fontSize: 13))),
+          if (acao != null) acao,
+        ],
+      ),
+    );
+  }
+
+  // [SPRINT 3 - NOVO] Banner que diz ao usuário de onde vêm os dados.
+  // É isto que a Sprint Review precisa mostrar em modo avião.
+  Widget _bannerDeEstado() {
+    switch (_estado) {
+      case EstadoFeed.cache:
+        // Busca em andamento: ainda não é "sem conexão", só está atualizando
+        if (_atualizando) {
+          return _faixa(
+            cor: Colors.blueGrey,
+            icone: Icons.sync,
+            texto: 'Atualizando... mostrando dados salvos enquanto isso.',
+          );
+        }
+        // A busca falhou: mostra o aviso de dado possivelmente desatualizado
+        return _faixa(
+          cor: Colors.orange,
+          icone: Icons.cloud_off,
+          texto: 'Dados salvos em ${_formatarData(_dataCache)}. '
+              'Podem estar desatualizados.',
+          acao: TextButton(
+            onPressed: _carregar,
+            child: const Text('Tentar atualizar'),
+          ),
+        );
+      case EstadoFeed.atualizado:
+        return _faixa(
+          cor: Colors.green,
+          icone: Icons.cloud_done,
+          texto: 'Atualizado às ${_formatarData(_dataCache)}.',
+        );
+      case EstadoFeed.carregando:
+      case EstadoFeed.erro:
+        return const SizedBox.shrink();
+    }
+  }
+
+  // [SPRINT 3 - NOVO] Corpo da tela conforme o estado.
+  // A lista de animais é a mesma de antes; só ganhou os casos
+  // carregando e erro à sua volta.
+  Widget _corpo() {
+    if (_estado == EstadoFeed.carregando) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_estado == EstadoFeed.erro) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.wifi_off,
+                size: 56,
+                color: Cores.principal.withValues(alpha: 0.25),
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                'Sem conexão e sem dados salvos.\n'
+                'Conecte-se à internet para carregar os animais.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Cores.textoFraco),
+              ),
+              const SizedBox(height: 14),
+              ElevatedButton(
+                onPressed: _carregar,
+                child: const Text('Tentar novamente'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final animais = _animaisVisiveis;
+    if (animais.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.pets,
+                size: 56,
+                color: Cores.principal.withValues(alpha: 0.25),
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                'Nenhum animal encontrado.',
+                style: TextStyle(color: Cores.textoFraco),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 88),
+      itemCount: animais.length,
+      itemBuilder: (context, indice) {
+        final animal = animais[indice];
+        return CardAnimal(
+          animal: animal,
+          aoCompartilhar: () => _compartilhar(animal),
+          aoChamarNoWhatsApp: () => _chamarNoWhatsApp(animal),
+          aoTocar: () => _abrirDetalhes(animal),
+        );
+      },
+    );
   }
 
   @override
@@ -230,42 +472,10 @@ class _FeedAdocaoState extends State<FeedAdocao> {
               fundoDaOpcao: Cores.cartao,
             ),
           ),
-          Expanded(
-            child: _animaisVisiveis.isEmpty
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.pets,
-                            size: 56,
-                            color: Cores.principal.withValues(alpha: 0.25),
-                          ),
-                          const SizedBox(height: 14),
-                          const Text(
-                            'Nenhum animal encontrado.',
-                            style: TextStyle(color: Cores.textoFraco),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 88),
-                    itemCount: _animaisVisiveis.length,
-                    itemBuilder: (context, indice) {
-                      final animal = _animaisVisiveis[indice];
-                      return CardAnimal(
-                        animal: animal,
-                        aoCompartilhar: () => _compartilhar(animal),
-                        aoChamarNoWhatsApp: () => _chamarNoWhatsApp(animal),
-                        aoTocar: () => _abrirDetalhes(animal),
-                      );
-                    },
-                  ),
-          ),
+          // [SPRINT 3 - NOVO] Banner de estado (cache / atualizado)
+          _bannerDeEstado(),
+          // [SPRINT 3 - ALTERADO] O Expanded com a lista agora vem do _corpo()
+          Expanded(child: _corpo()),
         ],
       ),
       floatingActionButton: FloatingActionButton(
@@ -279,14 +489,14 @@ class _FeedAdocaoState extends State<FeedAdocao> {
         atual: 0,
         aoTocar: (indice) {
           if (indice == 1) {
-          Navigator.pushNamed(context, AppRoutes.mapa);
+            Navigator.pushNamed(context, AppRoutes.mapa);
           } else if (indice == 3) {
             Navigator.pushNamed(context, AppRoutes.perfilUsuario);
           } else if (indice != 0) {
-        avisarProximaSprint(context);
-    }
-  },
-),
+            avisarProximaSprint(context);
+          }
+        },
+      ),
     );
   }
 }

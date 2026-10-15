@@ -90,6 +90,68 @@ class Animal {
     this.longitude,
   });
 
+  // [SPRINT 3 - NOVO] Cria um Animal a partir do JSON da API ou do cache local.
+  // Usado por AnimalService (lê a API) e CacheService (lê o cache offline).
+  // Campos com `?? ''` ou `?? false` são opcionais: JSON incompleto não quebra.
+  // Se um campo novo for criado no model, lembrar de incluir aqui e no toJson.
+  factory Animal.fromJson(Map<String, dynamic> json) => Animal(
+        nome: json['nome'] as String,
+        especie: json['especie'] as String,
+        raca: json['raca'] as String? ?? '',
+        sexo: json['sexo'] as String,
+        porte: json['porte'] as String,
+        idade: json['idade'] as String,
+        peso: json['peso'] as String? ?? '',
+        cor: json['cor'] as String? ?? '',
+        bairro: json['bairro'] as String,
+        cidade: json['cidade'] as String,
+        // Enums chegam como texto com o nome do valor ("adocao", "disponivel")
+        tipo: TipoRegistro.values.byName(json['tipo'] as String),
+        status: StatusAnimal.values
+            .byName(json['status'] as String? ?? 'disponivel'),
+        castrado: json['castrado'] as bool? ?? false,
+        vacinado: json['vacinado'] as bool? ?? false,
+        vermifugado: json['vermifugado'] as bool? ?? false,
+        observacoes: json['observacoes'] as String? ?? '',
+        necessidadesEspeciais: json['necessidadesEspeciais'] as String? ?? '',
+        // O dono é um objeto aninhado: usa o Dono.fromJson (dono.dart)
+        dono: Dono.fromJson(json['dono'] as Map<String, dynamic>),
+        fotos: List<String>.from(json['fotos'] as List? ?? []),
+        // A data chega como texto ISO 8601 (ex.: 2026-10-14T12:00:00.000)
+        publicadoEm: DateTime.parse(json['publicadoEm'] as String),
+        // `num?` porque o JSON pode trazer inteiro ou decimal, ou null
+        latitude: (json['latitude'] as num?)?.toDouble(),
+        longitude: (json['longitude'] as num?)?.toDouble(),
+      );
+
+  // [SPRINT 3 - NOVO] Converte o Animal em Map para o CacheService salvar
+  // no SharedPreferences. Tem que espelhar o fromJson: se um campo faltar
+  // aqui, ele some quando o app ler do cache em modo avião.
+  Map<String, dynamic> toJson() => {
+        'nome': nome,
+        'especie': especie,
+        'raca': raca,
+        'sexo': sexo,
+        'porte': porte,
+        'idade': idade,
+        'peso': peso,
+        'cor': cor,
+        'bairro': bairro,
+        'cidade': cidade,
+        'tipo': tipo.name,
+        'status': status.name,
+        'castrado': castrado,
+        'vacinado': vacinado,
+        'vermifugado': vermifugado,
+        'observacoes': observacoes,
+        'necessidadesEspeciais': necessidadesEspeciais,
+        'dono': dono.toJson(),
+        'fotos': fotos,
+        'publicadoEm': publicadoEm.toIso8601String(),
+        'latitude': latitude,
+        'longitude': longitude,
+      };
+
   // A capa do animal é a primeira foto
   String get foto => fotos.isEmpty ? '' : fotos.first;
 
