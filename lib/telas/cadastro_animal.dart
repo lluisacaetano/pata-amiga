@@ -15,7 +15,6 @@ import '../widgets/cuidado.dart';
 import '../widgets/escolha_de_tipo.dart';
 import '../widgets/foto_animal.dart';
 import '../widgets/mascaras.dart';
-import '../routes/route_names.dart';
 
 String _comMaiuscula(String texto) =>
     texto.isEmpty ? texto : texto[0].toUpperCase() + texto.substring(1);
@@ -532,17 +531,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
           ],
         ),
       ),
-      bottomNavigationBar: BarraInferior(
-        aoTocar: (indice) {
-          if (indice == 0) {
-            Navigator.maybePop(context);
-          } else if (indice == 3) {
-            Navigator.pushNamed(context, AppRoutes.perfilUsuario);
-          } else {
-            avisarProximaSprint(context);
-          }
-        },
-      ),
+      bottomNavigationBar: BarraInferior(),
     );
   }
 }

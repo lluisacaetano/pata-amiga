@@ -19,7 +19,12 @@ import '../services/cache_service.dart';
 enum EstadoFeed { carregando, cache, atualizado, erro }
 
 class FeedAdocao extends StatefulWidget {
-  const FeedAdocao({super.key});
+  // Os dois são opcionais: o app usa os de verdade, e os testes passam
+  // versões falsas para não depender da API no ar
+  final AnimalService? api;
+  final CacheService? cache;
+
+  const FeedAdocao({super.key, this.api, this.cache});
 
   @override
   State<FeedAdocao> createState() => _FeedAdocaoState();
@@ -36,8 +41,8 @@ class _FeedAdocaoState extends State<FeedAdocao> {
   String _busca = '';
 
   // [SPRINT 3 - NOVO] Serviços de dados
-  final _api = AnimalService();
-  final _cache = CacheService();
+  late final _api = widget.api ?? AnimalService();
+  late final _cache = widget.cache ?? CacheService();
 
   // [SPRINT 3 - NOVO] Animais que vieram da API ou do cache.
   // Substitui a lista fixa animaisMock.
@@ -165,6 +170,14 @@ class _FeedAdocaoState extends State<FeedAdocao> {
 
     await estado.registrarCadastro(animal);
     if (!mounted) return;
+    // O animal novo tem que aparecer na hora: abre a aba do tipo dele e
+    // limpa a busca, que poderia escondê-lo. Como o feed vai do mais recente
+    // para o mais antigo, ele fica no topo
+    _pesquisa.clear();
+    setState(() {
+      _abaAtual = animal.tipo;
+      _busca = '';
+    });
     if (salvoNaApi) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${animal.nome} foi salvo na API.')),
@@ -371,7 +384,9 @@ class _FeedAdocaoState extends State<FeedAdocao> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_estado == EstadoFeed.erro) {
+    // Sem conexão e sem cache, mas com animal cadastrado neste aparelho, o
+    // feed mostra esse animal em vez da tela de erro
+    if (_estado == EstadoFeed.erro && _animaisCriados.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
@@ -526,18 +541,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
         tooltip: 'Cadastrar animal',
         child: const Icon(Icons.add),
       ),
-      bottomNavigationBar: BarraInferior(
-        atual: 0,
-        aoTocar: (indice) {
-          if (indice == 1) {
-            Navigator.pushNamed(context, AppRoutes.mapa);
-          } else if (indice == 3) {
-            Navigator.pushNamed(context, AppRoutes.perfilUsuario);
-          } else if (indice != 0) {
-            avisarProximaSprint(context);
-          }
-        },
-      ),
+      bottomNavigationBar: BarraInferior(),
     );
   }
 }

@@ -10,7 +10,6 @@ import '../widgets/cuidado.dart';
 import '../widgets/escolha_de_tipo.dart';
 import '../widgets/galeria_animal.dart';
 import '../widgets/etiqueta.dart';
-import '../routes/route_names.dart';
 
 class DetalhesAnimal extends StatelessWidget {
   final Animal animal;
@@ -119,15 +118,7 @@ class DetalhesAnimal extends StatelessWidget {
             ),
           ),
           BarraInferior(
-            aoTocar: (indice) {
-              if (indice == 0) {
-                Navigator.maybePop(context, animal);
-              } else if (indice == 3) {
-                Navigator.pushNamed(context, AppRoutes.perfilUsuario);
-              } else {
-                avisarProximaSprint(context);
-              }
-            },
+            aoIrParaInicio: () => Navigator.maybePop(context, animal),
           ),
         ],
       ),

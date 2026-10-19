@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../routes/route_names.dart';
 import '../tema/cores.dart';
 
 // O aviso que as telas ainda não construídas dão quando alguém toca nelas.
@@ -16,11 +17,43 @@ void avisarProximaSprint(BuildContext context) {
     );
 }
 
+// O que cada item da barra faz, igual em todas as telas. Fica aqui, num
+// lugar só, para que uma tela nova entre na barra já funcionando: foi por
+// cada tela ter a própria cópia que o Mapa ficou "em próxima sprint" fora
+// do feed depois de pronto
+void navegarPelaBarra(
+  BuildContext context,
+  int indice, {
+  required int atual,
+  VoidCallback? aoIrParaInicio,
+}) {
+  // Início sempre volta ao feed: detalhes e cadastro também o marcam
+  if (indice == atual && indice != 0) return;
+  final navegador = Navigator.of(context);
+  switch (indice) {
+    case 0:
+      // O feed é sempre a primeira tela depois do login
+      if (aoIrParaInicio != null) {
+        aoIrParaInicio();
+      } else {
+        navegador.popUntil((rota) => rota.isFirst);
+      }
+    case 1:
+      navegador.pushNamed(AppRoutes.mapa);
+    case 3:
+      navegador.pushNamed(AppRoutes.perfilUsuario);
+    default:
+      avisarProximaSprint(context);
+  }
+}
+
 class BarraInferior extends StatelessWidget {
   final int atual;
-  final ValueChanged<int>? aoTocar;
+  // Só para quem precisa voltar ao feed de outro jeito, como os detalhes,
+  // que devolvem o animal ao sair
+  final VoidCallback? aoIrParaInicio;
 
-  const BarraInferior({super.key, this.atual = 0, this.aoTocar});
+  const BarraInferior({super.key, this.atual = 0, this.aoIrParaInicio});
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +61,12 @@ class BarraInferior extends StatelessWidget {
       currentIndex: atual,
       type: BottomNavigationBarType.fixed,
       backgroundColor: Cores.cartao,
-      onTap: aoTocar,
+      onTap: (indice) => navegarPelaBarra(
+        context,
+        indice,
+        atual: atual,
+        aoIrParaInicio: aoIrParaInicio,
+      ),
       selectedItemColor: Cores.principal,
       unselectedItemColor: Cores.textoFraco,
       items: const [

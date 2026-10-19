@@ -152,16 +152,7 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
                   ),
         ],
       ),
-      bottomNavigationBar: BarraInferior(
-        atual: 3,
-        aoTocar: (indice) {
-          if (indice == 0) {
-            _voltarAoFeed();
-          } else if (indice != 3) {
-            avisarProximaSprint(context);
-          }
-        },
-      ),
+      bottomNavigationBar: BarraInferior(atual: 3),
     );
   }
 }

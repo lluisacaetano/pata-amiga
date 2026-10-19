@@ -3,7 +3,6 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
-import '../routes/route_names.dart';
 import '../tema/cores.dart';
 import '../widgets/barra_inferior.dart';
 
@@ -33,18 +32,7 @@ class PaginaMapa extends StatelessWidget {
         title: const Text('Mapa'),
       ),
       body: const TelaMapa(),
-      bottomNavigationBar: BarraInferior(
-        atual: 1,
-        aoTocar: (indice) {
-          if (indice == 0) {
-            Navigator.pop(context); // volta para o feed
-          } else if (indice == 3) {
-            Navigator.pushNamed(context, AppRoutes.perfilUsuario);
-          } else if (indice != 1) {
-            avisarProximaSprint(context);
-          }
-        },
-      ),
+      bottomNavigationBar: BarraInferior(atual: 1),
     );
   }
 }

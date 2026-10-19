@@ -10,6 +10,9 @@ import 'package:pata_amiga/estado/estado_pata_amiga.dart';
 import 'package:pata_amiga/modelos/animal.dart';
 import 'package:pata_amiga/provider/usuario_provider.dart';
 import 'package:pata_amiga/routes/app_router.dart';
+import 'package:pata_amiga/services/animal_service.dart';
+import 'package:pata_amiga/telas/feed_adocao.dart';
+import 'package:pata_amiga/widgets/barra_inferior.dart';
 
 class _GaleriaVazia extends ImagePickerPlatform {
   @override
@@ -17,6 +20,49 @@ class _GaleriaVazia extends ImagePickerPlatform {
     required ImageSource source,
     ImagePickerOptions options = const ImagePickerOptions(),
   }) async => null;
+}
+
+// API falsa: o feed lê e grava aqui, sem depender do servidor no ar
+class _ApiFalsa extends AnimalService {
+  _ApiFalsa(List<Animal> animais, {this.fora = false}) : animais = [...animais];
+
+  final List<Animal> animais;
+  final bool fora;
+
+  @override
+  Future<List<Animal>> buscarAnimais() async {
+    if (fora) throw Exception('sem conexão');
+    return [...animais];
+  }
+
+  @override
+  Future<void> criarAnimal(Animal animal) async {
+    if (fora) throw Exception('sem conexão');
+    animais.add(animal);
+  }
+}
+
+// Faz o papel do formulário de cadastro: volta na hora com o animal pronto
+class _CadastroPronto extends StatefulWidget {
+  const _CadastroPronto(this.animal);
+
+  final Animal animal;
+
+  @override
+  State<_CadastroPronto> createState() => _CadastroProntoState();
+}
+
+class _CadastroProntoState extends State<_CadastroPronto> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => Navigator.pop(context, widget.animal),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => const Scaffold();
 }
 
 void main() {
@@ -38,7 +84,10 @@ void main() {
         notifier: estado,
         child: MaterialApp(
           initialRoute: AppRoutes.feed,
-          routes: AppRoutesConfig.routes,
+          routes: {
+            ...AppRoutesConfig.routes,
+            AppRoutes.feed: (_) => FeedAdocao(api: _ApiFalsa(animaisMock)),
+          },
         ),
       ),
     );
@@ -67,9 +116,6 @@ void main() {
     expect(find.text('Mapa'), findsOneWidget);
     expect(find.text('Reportar'), findsOneWidget);
     expect(find.text('Perfil'), findsOneWidget);
-    await tester.tap(find.text('Mapa'));
-    await tester.pumpAndSettle();
-    expect(find.text('Esta tela entra em uma próxima sprint.'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Cadastrar animal'));
     await tester.pumpAndSettle();
@@ -256,5 +302,121 @@ void main() {
     expect(terminou, 1);
     await tester.pump(const Duration(seconds: 3));
     expect(terminou, 1);
+  });
+
+  // US 05: o animal cadastrado aparece na listagem logo depois de salvo,
+  // mesmo vindo de outra aba e com uma busca digitada
+  Future<void> cadastrarPeloFeed(
+    WidgetTester tester, {
+    required _ApiFalsa api,
+    required Animal novo,
+  }) async {
+    SharedPreferences.setMockInitialValues({});
+    // Mais largo que um celular: a fonte dos testes é mais larga que a do
+    // aparelho, e as linhas do card do feed não encolhem
+    tester.view.physicalSize = const Size(1600, 2400);
+    tester.view.devicePixelRatio = 2.75;
+    addTearDown(tester.view.reset);
+    final estado = EstadoPataAmiga();
+    addTearDown(estado.dispose);
+
+    await tester.pumpWidget(
+      PataAmigaScope(
+        notifier: estado,
+        child: MaterialApp(
+          home: FeedAdocao(api: api),
+          routes: {AppRoutes.registerAnimal: (_) => _CadastroPronto(novo)},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Está na aba Adoção, com uma busca que não bate com o animal novo
+    await tester.enterText(find.byType(TextField).first, 'thor');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Cadastrar animal'));
+    await tester.pumpAndSettle();
+  }
+
+  Animal perdidoNovo() => Animal.fromJson({
+    ...animaisMock.first.toJson(),
+    'nome': 'Pipoca',
+    'tipo': TipoRegistro.perdido.name,
+    'publicadoEm': DateTime.now().toIso8601String(),
+  });
+
+  testWidgets('animal salvo na API aparece na hora, na aba do tipo dele', (
+    tester,
+  ) async {
+    final api = _ApiFalsa(animaisMock);
+    await cadastrarPeloFeed(tester, api: api, novo: perdidoNovo());
+
+    expect(api.animais.any((animal) => animal.nome == 'Pipoca'), isTrue);
+    expect(find.text('PIPOCA'), findsOneWidget);
+    expect(find.text('Pipoca foi salvo na API.'), findsOneWidget);
+  });
+
+  testWidgets('sem API, o animal fica no aparelho e aparece na hora', (
+    tester,
+  ) async {
+    final api = _ApiFalsa(animaisMock, fora: true);
+    await cadastrarPeloFeed(tester, api: api, novo: perdidoNovo());
+
+    expect(find.text('PIPOCA'), findsOneWidget);
+    expect(
+      find.text(
+        'Pipoca foi adicionado só neste aparelho. '
+        'Não foi possível enviar à API.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  // A barra inferior faz o mesmo em todas as telas
+  Widget appComBarra() => MaterialApp(
+    home: const Scaffold(
+      body: Text('FEED FALSO'),
+      bottomNavigationBar: BarraInferior(),
+    ),
+    routes: {
+      AppRoutes.mapa: (_) => const Scaffold(
+        body: Text('MAPA FALSO'),
+        bottomNavigationBar: BarraInferior(atual: 1),
+      ),
+      AppRoutes.perfilUsuario: (_) => const Scaffold(
+        body: Text('PERFIL FALSO'),
+        bottomNavigationBar: BarraInferior(atual: 3),
+      ),
+    },
+  );
+
+  testWidgets('Mapa abre o mapa a partir de qualquer tela da barra', (
+    tester,
+  ) async {
+    await tester.pumpWidget(appComBarra());
+    await tester.tap(find.text('Perfil'));
+    await tester.pumpAndSettle();
+    expect(find.text('PERFIL FALSO'), findsOneWidget);
+
+    await tester.tap(find.text('Mapa'));
+    await tester.pumpAndSettle();
+    expect(find.text('MAPA FALSO'), findsOneWidget);
+    expect(find.text('Esta tela entra em uma próxima sprint.'), findsNothing);
+  });
+
+  testWidgets('Início volta ao feed mesmo com outras telas no caminho', (
+    tester,
+  ) async {
+    await tester.pumpWidget(appComBarra());
+    await tester.tap(find.text('Perfil'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mapa'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Início'));
+    await tester.pumpAndSettle();
+    expect(find.text('FEED FALSO'), findsOneWidget);
+    expect(find.text('PERFIL FALSO'), findsNothing);
   });
 }
