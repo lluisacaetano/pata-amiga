@@ -9,6 +9,7 @@ import '../widgets/barra_inferior.dart';
 import '../widgets/cuidado.dart';
 import '../widgets/escolha_de_tipo.dart';
 import '../widgets/galeria_animal.dart';
+import '../widgets/etiqueta.dart';
 import '../routes/route_names.dart';
 
 class DetalhesAnimal extends StatelessWidget {
@@ -180,10 +181,10 @@ class _Ficha extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              _Etiqueta(rotuloSingular(animal.tipo)),
+              Etiqueta(rotuloSingular(animal.tipo)),
               if (animal.status == StatusAnimal.adotado) ...[
                 const SizedBox(width: 6),
-                _Etiqueta(animal.status.rotulo, cheia: true),
+                Etiqueta(animal.status.rotulo, cheia: true),
               ],
             ],
           ),
@@ -367,33 +368,6 @@ class _Divisoria extends StatelessWidget {
     padding: EdgeInsets.symmetric(vertical: 14),
     child: Divider(height: 1, thickness: 1, color: Cores.borda),
   );
-}
-
-// etiqueta ao lado do nome: o tipo do registro, e o adotado quando for o caso
-class _Etiqueta extends StatelessWidget {
-  final String texto;
-  final bool cheia;
-
-  const _Etiqueta(this.texto, {this.cheia = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: cheia ? Cores.principal : Cores.principalClara,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        comMaiuscula(texto),
-        style: TextStyle(
-          color: cheia ? Colors.white : Cores.principal,
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
 }
 
 // O que este animal precisa e os outros não, logo abaixo dos selos de cuidado.

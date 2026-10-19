@@ -1,17 +1,22 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
 import 'provider/usuario_provider.dart';
+
 import 'package:provider/provider.dart';
+
 import 'routes/app_router.dart';
 import 'estado/estado_pata_amiga.dart';
 import 'tema/cores.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final usuarioProvider = UsuarioProvider();
+  await usuarioProvider.restaurarSessao();
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => UsuarioProvider(),
+    ChangeNotifierProvider.value(
+      value: usuarioProvider,
       child: const AplicativoPataAmiga(),
     ),
   );

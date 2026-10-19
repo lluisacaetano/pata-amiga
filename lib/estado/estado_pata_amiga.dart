@@ -1,15 +1,37 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../modelos/animal.dart';
 
 class EstadoPataAmiga extends ChangeNotifier {
   // Chave usada para gravar as curtidas no armazenamento do aparelho
   static const _chaveCurtidos = 'curtidos';
+  static const _chaveMeusCadastros = 'meus_cadastros';
 
   // Guarda o nome dos animais que o usuário curtiu
   final Set<String> _curtidos = {};
+  List<Animal> _animais = [];
+  final List<Animal> _meusCadastros = [];
   bool _descartado = false;
 
   bool estaCurtido(String nome) => _curtidos.contains(nome);
+
+  List<Animal> get meusCadastros => List.unmodifiable(_meusCadastros);
+
+  List<Animal> get animaisCurtidos => _animais
+      .where(
+        (animal) =>
+            _curtidos.contains(animal.nome) &&
+            animal.status != StatusAnimal.adotado,
+      )
+      .toList(growable: false);
+
+  void atualizarAnimais(List<Animal> animais) {
+    _animais = List.unmodifiable(animais);
+    notifyListeners();
+  }
 
   Future<void> carregarCurtidos() async {
     final armazenamento = await SharedPreferences.getInstance();
@@ -17,11 +39,48 @@ class EstadoPataAmiga extends ChangeNotifier {
     _curtidos
       ..clear()
       ..addAll(armazenamento.getStringList(_chaveCurtidos) ?? const []);
+    final registrosSalvos = armazenamento.getString(_chaveMeusCadastros);
+    if (registrosSalvos != null) {
+      try {
+        final registros = jsonDecode(registrosSalvos) as List;
+        _meusCadastros
+          ..clear()
+          ..addAll(
+            registros.map(
+              (registro) => Animal.fromJson(registro as Map<String, dynamic>),
+            ),
+          );
+      } on FormatException {
+        _meusCadastros.clear();
+      } on TypeError {
+        _meusCadastros.clear();
+      }
+    }
     notifyListeners();
+  }
+
+  Future<void> registrarCadastro(Animal animal) async {
+    _meusCadastros.removeWhere((registro) => registro.nome == animal.nome);
+    _meusCadastros.insert(0, animal);
+    notifyListeners();
+
+    final armazenamento = await SharedPreferences.getInstance();
+    await armazenamento.setString(
+      _chaveMeusCadastros,
+      jsonEncode(_meusCadastros.map((registro) => registro.toJson()).toList()),
+    );
   }
 
   Future<void> alternarCurtida(String nome) async {
     if (!_curtidos.add(nome)) _curtidos.remove(nome);
+    notifyListeners();
+
+    final armazenamento = await SharedPreferences.getInstance();
+    await armazenamento.setStringList(_chaveCurtidos, _curtidos.toList());
+  }
+
+  Future<void> removerCurtida(String nome) async {
+    if (!_curtidos.remove(nome)) return;
     notifyListeners();
 
     final armazenamento = await SharedPreferences.getInstance();

@@ -3,9 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-
-
-
+import '../estado/estado_pata_amiga.dart';
 import '../modelos/animal.dart';
 import '../modelos/dono.dart';
 import '../routes/route_names.dart';
@@ -17,7 +15,6 @@ import '../routes/app_router.dart';
 // [SPRINT 3 - NOVO] Camada de dados: API e cache local
 import '../services/animal_service.dart';
 import '../services/cache_service.dart';
-
 
 enum EstadoFeed { carregando, cache, atualizado, erro }
 
@@ -87,6 +84,10 @@ class _FeedAdocaoState extends State<FeedAdocao> {
         _estado = EstadoFeed.carregando;
       }
     });
+    if (salvos != null) {
+      PataAmigaScope.of(context)
+          .atualizarAnimais([..._animaisApi, ..._animaisCriados]);
+    }
 
     try {
       final novos = await _api.buscarAnimais();
@@ -98,6 +99,8 @@ class _FeedAdocaoState extends State<FeedAdocao> {
         _estado = EstadoFeed.atualizado;
         _atualizando = false;
       });
+      PataAmigaScope.of(context)
+          .atualizarAnimais([..._animaisApi, ..._animaisCriados]);
     } catch (_) {
       // Sem internet, servidor fora do ar ou timeout
       if (!mounted) return;
@@ -111,7 +114,9 @@ class _FeedAdocaoState extends State<FeedAdocao> {
           ..hideCurrentSnackBar()
           ..showSnackBar(
             const SnackBar(
-              content: Text('Não foi possível atualizar. Mostrando dados salvos.'),
+              content: Text(
+                'Não foi possível atualizar. Mostrando dados salvos.',
+              ),
             ),
           );
       }
@@ -141,36 +146,45 @@ class _FeedAdocaoState extends State<FeedAdocao> {
   }
   */
 
-    Future<void> _abrirCadastroAnimal() async {
+  Future<void> _abrirCadastroAnimal() async {
     final animal = (await Navigator.pushNamed(
       context,
       AppRoutes.registerAnimal,
     )) as Animal?;
     if (!mounted || animal == null) return;
 
-    
+    final estado = PataAmigaScope.of(context);
+
+    var salvoNaApi = false;
     try {
       await _api.criarAnimal(animal);
-      if (!mounted) return;
+      salvoNaApi = true;
+    } catch (_) {
+      // A API pode estar indisponível; o registro continua visível neste aparelho.
+    }
+
+    await estado.registrarCadastro(animal);
+    if (!mounted) return;
+    if (salvoNaApi) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${animal.nome} foi salvo na API.')),
       );
       // Busca a lista de novo: o animal volta com o id da API e o cache
       // local também é atualizado.
       await _carregar();
-    } catch (_) {
-     
-      if (!mounted) return;
-      setState(() => _animaisCriados.insert(0, animal));
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '${animal.nome} foi adicionado só neste aparelho. '
-            'Não foi possível enviar à API.',
-          ),
-        ),
-      );
+      return;
     }
+
+    setState(() => _animaisCriados.insert(0, animal));
+    estado.atualizarAnimais([..._animaisApi, ..._animaisCriados]);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '${animal.nome} foi adicionado só neste aparelho. '
+          'Não foi possível enviar à API.',
+        ),
+      ),
+    );
   }
 
   Future<void> _abrirDetalhes(Animal animal) async {
@@ -329,7 +343,8 @@ class _FeedAdocaoState extends State<FeedAdocao> {
         return _faixa(
           cor: Colors.orange,
           icone: Icons.cloud_off,
-          texto: 'Dados salvos em ${_formatarData(_dataCache)}. '
+          texto:
+              'Dados salvos em ${_formatarData(_dataCache)}. '
               'Podem estar desatualizados.',
           acao: TextButton(
             onPressed: _carregar,

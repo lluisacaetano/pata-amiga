@@ -14,6 +14,33 @@ String rotuloPlural(TipoRegistro tipo) {
   return rotulo[0].toUpperCase() + rotulo.substring(1);
 }
 
+// Estilo das abas do app: a escolhida cheia no verde, as outras no fundo
+// claro com borda. Usado no feed, no cadastro e no perfil, para que toda
+// aba do app tenha a mesma cara
+ButtonStyle estiloDasAbas(Color fundoDaOpcao) => ButtonStyle(
+  backgroundColor: WidgetStateProperty.resolveWith(
+    (estados) => estados.contains(WidgetState.selected)
+        ? Cores.principal
+        : fundoDaOpcao,
+  ),
+  foregroundColor: WidgetStateProperty.resolveWith(
+    (estados) =>
+        estados.contains(WidgetState.selected) ? Colors.white : Cores.texto,
+  ),
+  textStyle: WidgetStateProperty.resolveWith(
+    (estados) => TextStyle(
+      fontSize: 14,
+      fontWeight: estados.contains(WidgetState.selected)
+          ? FontWeight.w600
+          : FontWeight.w500,
+    ),
+  ),
+  side: const WidgetStatePropertyAll(BorderSide(color: Cores.borda)),
+  shape: WidgetStatePropertyAll(
+    RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  ),
+);
+
 class EscolhaDeTipo extends StatelessWidget {
   final TipoRegistro? escolhido;
   final ValueChanged<TipoRegistro> aoEscolher;
@@ -41,30 +68,7 @@ class EscolhaDeTipo extends StatelessWidget {
         emptySelectionAllowed: true,
         showSelectedIcon: false,
         onSelectionChanged: (escolha) => aoEscolher(escolha.first),
-        style: ButtonStyle(
-          backgroundColor: WidgetStateProperty.resolveWith(
-            (estados) => estados.contains(WidgetState.selected)
-                ? Cores.principal
-                : fundoDaOpcao,
-          ),
-          foregroundColor: WidgetStateProperty.resolveWith(
-            (estados) => estados.contains(WidgetState.selected)
-                ? Colors.white
-                : Cores.texto,
-          ),
-          textStyle: WidgetStateProperty.resolveWith(
-            (estados) => TextStyle(
-              fontSize: 14,
-              fontWeight: estados.contains(WidgetState.selected)
-                  ? FontWeight.w600
-                  : FontWeight.w500,
-            ),
-          ),
-          side: const WidgetStatePropertyAll(BorderSide(color: Cores.borda)),
-          shape: WidgetStatePropertyAll(
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
+        style: estiloDasAbas(fundoDaOpcao),
       ),
     );
   }

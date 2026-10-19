@@ -3,7 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'screens/auth_components.dart';
 import 'screens/boas_vindas_screen.dart';
-import '../telas/home_screen.dart'; // Sua tela principal
+import 'screens/de_volta_screen.dart';
+import '../telas/feed_adocao.dart';
 import '../telas/onboarding_screen.dart';
 
 // Nome da classe traduzido: AuthRouter -> RoteadorAutenticacao
@@ -21,6 +22,8 @@ class _EstadoRoteadorAutenticacao extends State<RoteadorAutenticacao> {
   bool _estaLogado = false;
   bool _estaCarregando = true;
   bool _mostrarOnboarding = false;
+  // Quem reabre o app já logado passa poucos segundos pela recepção
+  bool _mostrarDeVolta = true;
 
   @override
   void initState() {
@@ -44,16 +47,6 @@ class _EstadoRoteadorAutenticacao extends State<RoteadorAutenticacao> {
     });
   }
 
-  // Método responsável por fazer o encerramento da sessão (logout)
-  void _encerrarSessao() {
-    SharedPreferences.getInstance().then((preferencias) {
-      preferencias.remove('loggedInEmail');
-      setState(() {
-        _estaLogado = false;
-      });
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_estaCarregando) {
@@ -68,8 +61,18 @@ class _EstadoRoteadorAutenticacao extends State<RoteadorAutenticacao> {
           },
         );
       }
-      // passa a função de encerrar sessão para a tela principal
-      return HomeScreen(onLogout: _encerrarSessao);
+      // Com a sessão salva, uma recepção rápida e depois o feed, como logo
+      // depois do login. A saída da conta fica no perfil
+      return AnimatedSwitcher(
+        duration: const Duration(milliseconds: 400),
+        child: _mostrarDeVolta
+            ? DeVoltaScreen(
+                aoTerminar: () {
+                  if (mounted) setState(() => _mostrarDeVolta = false);
+                },
+              )
+            : const FeedAdocao(),
+      );
     }
 
     return const BoasVindasScreen();

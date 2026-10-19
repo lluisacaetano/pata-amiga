@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import 'auth_components.dart';
 import '../../telas/onboarding_screen.dart';
 import '../../widgets/mascaras.dart';
+import '../../provider/usuario_provider.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -178,6 +180,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   final camposValidos = _formKey.currentState!.validate();
                   setState(() => _mostrarErroTermos = !_aceitouTermos);
                   if (!camposValidos || !_aceitouTermos) return;
+                  await context.read<UsuarioProvider>().registrarUsuario(
+                    nome: _nomeController.text,
+                    email: _emailController.text,
+                    telefone: _telefoneController.text,
+                  );
+                  if (!context.mounted) return;
                   await navegarAposAutenticacao(context);
                 },
               ),
@@ -185,7 +193,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               Center(
                 child: TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Já tem conta? Entrar', style: TextStyle(fontSize: 16)),
+                  child: const Text(
+                    'Já tem conta? Entrar',
+                    style: TextStyle(fontSize: 16),
+                  ),
                 ),
               ),
             ],

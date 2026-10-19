@@ -30,9 +30,17 @@ ThemeData temaPataAmiga() {
       scrolledUnderElevation: 0,
       surfaceTintColor: Colors.transparent,
     ),
+    // A ação do aviso, como o "Desfazer", no verde claro da paleta
+    snackBarTheme: const SnackBarThemeData(
+      actionTextColor: Cores.principalClara,
+    ),
+    popupMenuTheme: const PopupMenuThemeData(
+      color: Cores.cartao,
+      surfaceTintColor: Colors.transparent,
+    ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFFD97855),
+        backgroundColor: Cores.principal,
         foregroundColor: Colors.white,
       ),
     ),
