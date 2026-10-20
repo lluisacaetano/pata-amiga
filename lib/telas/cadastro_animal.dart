@@ -8,6 +8,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../dados/bairros_formiga.dart';
 import '../modelos/animal.dart';
 import '../modelos/dono.dart';
 import '../provider/usuario_provider.dart';
@@ -58,6 +59,12 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
   bool _tentouCadastrar = false;
   final _seletorDeFotos = ImagePicker();
   bool _buscandoLocalizacao = false;
+  bool _salvando = false;
+  // O ponto lido pelo GPS e a rua e o bairro que ele gerou. A coordenada só
+  // vai para o animal se a rua e o bairro continuarem os mesmos: mudados à
+  // mão, ela já não corresponde ao que está escrito
+  ({double latitude, double longitude})? _coordenada;
+  ({String rua, String bairro})? _enderecoDaCoordenada;
   final List<XFile> _fotos = [];
   bool _castrado = false;
   bool _vacinado = false;
@@ -71,7 +78,11 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
   final _idade = TextEditingController();
   final _observacoes = TextEditingController();
   final _necessidades = TextEditingController();
-  final _localizacao = TextEditingController();
+  final _rua = TextEditingController();
+  // O bairro sai da lista de Formiga; "Outro" abre o campo para escrever
+  String? _bairroEscolhido;
+  final _buscaDoBairro = TextEditingController();
+  final _outroBairro = TextEditingController();
   final _responsavel = TextEditingController();
   final _telefone = TextEditingController();
 
@@ -116,15 +127,27 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
       final posicao = await Geolocator.getCurrentPosition(
         locationSettings: _ajustesDeLocalizacao(),
       );
+      // O serviço de endereços depende da internet; sem prazo, a mira fica
+      // girando para sempre quando a conexão está ruim
       final lugares = await Geocoding()
-          .placemarkFromCoordinates(posicao.latitude, posicao.longitude);
+          .placemarkFromCoordinates(posicao.latitude, posicao.longitude)
+          .timeout(const Duration(seconds: 10));
       if (lugares.isEmpty) {
         _avisar('Não achei o endereço deste ponto. Insira o endereço manualmente.');
         return;
       }
 
       if (!mounted) return;
-      setState(() => _localizacao.text = _enderecoDe(lugares.first));
+      final endereco = _enderecoDe(lugares.first);
+      setState(() {
+        _rua.text = endereco.rua;
+        _escolherBairroDoGps(endereco.bairro);
+        _coordenada = (
+          latitude: posicao.latitude,
+          longitude: posicao.longitude,
+        );
+        _enderecoDaCoordenada = endereco;
+      });
     } on TimeoutException {
       _avisar('A localização demorou demais. Insira o endereço manualmente.');
     } on Exception {
@@ -143,20 +166,35 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     return const LocationSettings(timeLimit: prazo);
   }
 
-  // O rótulo do campo pede rua, bairro e cidade, nesta ordem
-  String _enderecoDe(Placemark lugar) {
-    final partes = <String>[];
-    void juntar(String? parte) {
-      final texto = parte?.trim() ?? '';
-      if (texto.isNotEmpty && !partes.contains(texto)) partes.add(texto);
-    }
-
-    juntar(lugar.thoroughfare);
-    juntar(lugar.subThoroughfare);
-    juntar(lugar.subLocality);
-    juntar(lugar.locality);
-    return partes.join(', ');
+  // A rua leva o número quando o GPS o encontra; a cidade não entra, porque
+  // o app é de Formiga
+  ({String rua, String bairro}) _enderecoDe(Placemark lugar) {
+    final rua = lugar.thoroughfare?.trim() ?? '';
+    final numero = lugar.subThoroughfare?.trim() ?? '';
+    return (
+      rua: numero.isEmpty || rua.isEmpty ? rua : '$rua, $numero',
+      bairro: lugar.subLocality?.trim() ?? '',
+    );
   }
+
+  // O GPS escreve o bairro do jeito dele: se bater com a lista, ele já vem
+  // escolhido; se não bater, vai para "Outro" com o nome que o GPS deu
+  void _escolherBairroDoGps(String bairro) {
+    if (bairro.isEmpty) return;
+    final daLista = bairroDaLista(bairro);
+    if (daLista != null) {
+      _bairroEscolhido = daLista;
+      _buscaDoBairro.text = daLista;
+    } else {
+      _bairroEscolhido = outroBairro;
+      _buscaDoBairro.text = outroBairro;
+      _outroBairro.text = bairro;
+    }
+  }
+
+  String get _bairro => _bairroEscolhido == outroBairro
+      ? _outroBairro.text.trim()
+      : _bairroEscolhido ?? '';
 
   void _avisar(String mensagem) {
     if (!mounted) return;
@@ -222,32 +260,56 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
       [
         _idade,
         _observacoes,
-        _localizacao,
+        _rua,
         _responsavel,
         _telefone,
-      ].every((campo) => campo.text.trim().isNotEmpty);
-
-  // O campo de localização pede rua, bairro e cidade, nesta ordem, então a
-  // cidade é o último pedaço e o bairro o penúltimo
-  ({String bairro, String cidade}) _bairroECidade() {
-    final partes = _localizacao.text
-        .split(',')
-        .map((parte) => parte.trim())
-        .where((parte) => parte.isNotEmpty)
-        .toList();
-    if (partes.length < 2) {
-      return (bairro: partes.isEmpty ? '' : partes.first, cidade: 'Formiga');
-    }
-    return (bairro: partes[partes.length - 2], cidade: partes.last);
-  }
+      ].every((campo) => campo.text.trim().isNotEmpty) &&
+      _bairro.isNotEmpty;
 
   // Devolve o animal ao feed, que é quem o põe na lista
-  void _cadastrar() {
+  // Sem a mira, o endereço digitado vira um ponto da rua, para o animal
+  // também aparecer no mapa. Se o serviço não achar ou demorar, o cadastro
+  // segue sem ponto: o mapa é um extra, não pode travar o cadastro
+  Future<({double latitude, double longitude})?> _pontoDaRua(
+    String rua,
+    String bairro,
+  ) async {
+    try {
+      final achados = await Geocoding()
+          .locationFromAddress('$rua, $bairro, Formiga, MG, Brasil')
+          .timeout(const Duration(seconds: 8));
+      if (achados.isEmpty) return null;
+      return (
+        latitude: achados.first.latitude,
+        longitude: achados.first.longitude,
+      );
+    } on Exception {
+      return null;
+    }
+  }
+
+  Future<void> _cadastrar() async {
+    if (_salvando) return;
     setState(() => _tentouCadastrar = true);
     if (!_completo) return;
 
-    final lugar = _bairroECidade();
     final nome = _nome.text.trim();
+    final rua = _rua.text.trim();
+    final bairro = _bairro;
+    // Se o GPS não achou o bairro, a pessoa o escolhe sem invalidar o ponto
+    final lido = _enderecoDaCoordenada;
+    final mesmoLugar =
+        lido != null &&
+        rua == lido.rua &&
+        (lido.bairro.isEmpty ||
+            mesmoBairro(bairro, lido.bairro));
+    var coordenada = mesmoLugar ? _coordenada : null;
+    if (coordenada == null) {
+      setState(() => _salvando = true);
+      coordenada = await _pontoDaRua(rua, bairro);
+      if (!mounted) return;
+      setState(() => _salvando = false);
+    }
     final animal = Animal(
       nome: nome.isEmpty ? _nomePadrao : nome,
       especie: _especie!,
@@ -257,8 +319,9 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
       idade: _idade.text.trim(),
       peso: '',
       cor: '',
-      bairro: lugar.bairro,
-      cidade: lugar.cidade,
+      rua: rua,
+      bairro: bairro,
+      cidade: 'Formiga',
       tipo: _tipo!,
       castrado: _castrado,
       vacinado: _vacinado,
@@ -271,6 +334,8 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
       ),
       fotos: _fotos.map((foto) => foto.path).toList(),
       publicadoEm: DateTime.now(),
+      latitude: coordenada?.latitude,
+      longitude: coordenada?.longitude,
     );
 
     Navigator.pop(context, animal);
@@ -284,7 +349,9 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
       _idade,
       _observacoes,
       _necessidades,
-      _localizacao,
+      _rua,
+      _buscaDoBairro,
+      _outroBairro,
       _responsavel,
       _telefone,
     ]) {
@@ -477,10 +544,10 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
                   ),
                   const SizedBox(height: 16),
                   _Campo(
-                    rotulo: 'Localização',
-                    controlador: _localizacao,
-                    exemplo: 'Rua, Bairro e Cidade',
-                    comErro: _faltando(_localizacao),
+                    rotulo: 'Rua e número',
+                    controlador: _rua,
+                    exemplo: 'Informe a rua e o número',
+                    comErro: _faltando(_rua),
                     acao: IconButton(
                       onPressed:
                           _buscandoLocalizacao ? null : _usarMinhaLocalizacao,
@@ -496,6 +563,22 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
                       tooltip: 'Usar minha localização',
                     ),
                   ),
+                  const SizedBox(height: 14),
+                  _SelecaoDeBairro(
+                    controlador: _buscaDoBairro,
+                    comErro: _tentouCadastrar && _bairroEscolhido == null,
+                    aoEscolher: (bairro) =>
+                        setState(() => _bairroEscolhido = bairro),
+                  ),
+                  if (_bairroEscolhido == outroBairro) ...[
+                    const SizedBox(height: 14),
+                    _Campo(
+                      rotulo: 'Qual é o bairro?',
+                      controlador: _outroBairro,
+                      exemplo: 'Informe o nome do bairro',
+                      comErro: _faltando(_outroBairro),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -528,9 +611,18 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
               ),
             const SizedBox(height: 8),
             FilledButton.icon(
-              onPressed: _cadastrar,
-              icon: const Icon(Icons.pets, size: 18),
-              label: const Text('Cadastrar'),
+              onPressed: _salvando ? null : _cadastrar,
+              icon: _salvando
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.pets, size: 18),
+              label: Text(_salvando ? 'Localizando a rua…' : 'Cadastrar'),
               style: FilledButton.styleFrom(
                 backgroundColor: Cores.principal,
                 minimumSize: const Size.fromHeight(52),
@@ -997,6 +1089,158 @@ class _Selecao extends StatelessWidget {
         ),
         if (comErro) const _Recado('Campo obrigatório', erro: true),
       ],
+    );
+  }
+}
+
+// O select do bairro: a caixa é a mesma dos outros campos, e digitar
+// filtra a lista. "Outro" fica sempre no fim, para o bairro que faltar
+class _SelecaoDeBairro extends StatefulWidget {
+  final TextEditingController controlador;
+  final bool comErro;
+  final ValueChanged<String?> aoEscolher;
+
+  const _SelecaoDeBairro({
+    required this.controlador,
+    required this.comErro,
+    required this.aoEscolher,
+  });
+
+  @override
+  State<_SelecaoDeBairro> createState() => _SelecaoDeBairroState();
+}
+
+class _SelecaoDeBairroState extends State<_SelecaoDeBairro> {
+  final _foco = FocusNode();
+
+  @override
+  void dispose() {
+    _foco.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controlador = widget.controlador;
+    final comErro = widget.comErro;
+    final aoEscolher = widget.aoEscolher;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _Rotulo('Bairro'),
+        const SizedBox(height: 6),
+        LayoutBuilder(
+          builder: (context, restricoes) => RawAutocomplete<String>(
+            textEditingController: controlador,
+            focusNode: _foco,
+            // Sem nenhum bairro achado a lista sumiria, e com ela o
+            // "Outro bairro"; o marcador mantém o rodapé aparecendo
+            optionsBuilder: (digitado) {
+              final achados = filtrarBairros(digitado.text);
+              return achados.isEmpty ? const [outroBairro] : achados;
+            },
+            onSelected: (bairro) {
+              FocusScope.of(context).unfocus();
+              aoEscolher(bairro);
+            },
+            fieldViewBuilder: (context, controlador, foco, aoEnviar) =>
+                TextField(
+                  controller: controlador,
+                  focusNode: foco,
+                  style: const TextStyle(fontSize: 15),
+                  textCapitalization: TextCapitalization.words,
+                  // Só conta como escolhido o que bate com a lista
+                  onChanged: (texto) => aoEscolher(bairroDaLista(texto)),
+                  decoration: _caixa(
+                    'Digite para buscar o bairro',
+                    comErro: comErro,
+                    acao: const Icon(
+                      Icons.keyboard_arrow_down,
+                      color: Cores.textoFraco,
+                    ),
+                  ),
+                ),
+            optionsViewBuilder: (context, escolher, opcoes) {
+              final bairros = opcoes
+                  .where((opcao) => opcao != outroBairro)
+                  .toList();
+              return Align(
+              alignment: Alignment.topLeft,
+              child: Material(
+                color: Cores.cartao,
+                elevation: 3,
+                borderRadius: BorderRadius.circular(12),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: 300,
+                    maxWidth: restricoes.maxWidth,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Flexible(
+                        child: ListView.builder(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          shrinkWrap: true,
+                          itemCount: bairros.length,
+                          itemBuilder: (context, indice) {
+                            final opcao = bairros[indice];
+                            return _OpcaoDeBairro(
+                              texto: opcao,
+                              aoTocar: () => escolher(opcao),
+                            );
+                          },
+                        ),
+                      ),
+                      // Fica fixo no rodapé: quem não acha o bairro não
+                      // precisa rolar a lista inteira para descobrir a saída
+                      const Divider(height: 1, color: Cores.borda),
+                      _OpcaoDeBairro(
+                        texto: 'Outro bairro',
+                        destaque: true,
+                        aoTocar: () => escolher(outroBairro),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+            },
+          ),
+        ),
+        if (comErro) const _Recado('Campo obrigatório', erro: true),
+      ],
+    );
+  }
+}
+
+class _OpcaoDeBairro extends StatelessWidget {
+  final String texto;
+  final bool destaque;
+  final VoidCallback aoTocar;
+
+  const _OpcaoDeBairro({
+    required this.texto,
+    required this.aoTocar,
+    this.destaque = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: aoTocar,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Text(
+          texto,
+          style: TextStyle(
+            fontSize: 15,
+            color: destaque ? Cores.principal : Cores.texto,
+            fontWeight: destaque ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
+      ),
     );
   }
 }

@@ -20,6 +20,9 @@ class EstadoPataAmiga extends ChangeNotifier {
 
   List<Animal> get meusCadastros => List.unmodifiable(_meusCadastros);
 
+  // Os animais que o feed carregou, para as telas que também os mostram
+  List<Animal> get animais => _animais;
+
   List<Animal> get animaisCurtidos => _animais
       .where(
         (animal) =>

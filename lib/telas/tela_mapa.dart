@@ -3,41 +3,129 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../estado/estado_pata_amiga.dart';
+import '../modelos/animal.dart';
+import '../modelos/camadas_do_mapa.dart';
+import '../routes/route_names.dart';
 import '../tema/cores.dart';
 import '../widgets/barra_inferior.dart';
+import '../widgets/escolha_de_tipo.dart';
+import '../widgets/etiqueta.dart';
+import '../widgets/foto_animal.dart';
 
-class CaoDoacao {
-  final String id;
-  final String nome;
-  final double lat;
-  final double lng;
+// Uma cor por camada, a mesma no marcador e na legenda do filtro
+Color corDaCamada(TipoRegistro tipo) =>
+    tipo == TipoRegistro.perdido ? Cores.destaque : Cores.principal;
 
-  const CaoDoacao({
-    required this.id,
-    required this.nome,
-    required this.lat,
-    required this.lng,
-  });
+/// Página do mapa: o filtro das camadas em cima e o mapa embaixo.
+class PaginaMapa extends StatefulWidget {
+  const PaginaMapa({super.key, this.comMapaDeFundo = true});
+
+  // Os testes desligam o mapa de fundo, que baixaria imagens da internet
+  final bool comMapaDeFundo;
+
+  @override
+  State<PaginaMapa> createState() => _PaginaMapaState();
 }
 
-/// Página do mapa: Scaffold com a barra inferior (aba Mapa selecionada).
-class PaginaMapa extends StatelessWidget {
-  const PaginaMapa({super.key});
+class _PaginaMapaState extends State<PaginaMapa> {
+  // As duas camadas abrem ligadas
+  Set<TipoRegistro> _ligadas = camadasDoMapa.toSet();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Cores.fundo,
-        title: const Text('Mapa'),
+        leadingWidth: 64,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12),
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            tooltip: 'Voltar',
+            color: Cores.principal,
+            onPressed: () => Navigator.maybePop(context),
+          ),
+        ),
+        centerTitle: true,
+        title: const Text(
+          'MAPA',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.8,
+            color: Cores.principal,
+          ),
+        ),
       ),
-      body: const TelaMapa(),
-      bottomNavigationBar: BarraInferior(atual: 1),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+            child: SegmentedButton<TipoRegistro>(
+              segments: [
+                for (final tipo in camadasDoMapa)
+                  ButtonSegment(
+                    value: tipo,
+                    label: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // O pontinho é a legenda: a cor do marcador, dentro
+                        // de um círculo branco para aparecer também quando a
+                        // aba está selecionada e o fundo fica verde
+                        Container(
+                          width: 14,
+                          height: 14,
+                          padding: const EdgeInsets.all(2.5),
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: corDaCamada(tipo),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(rotuloPlural(tipo)),
+                      ],
+                    ),
+                  ),
+              ],
+              selected: _ligadas,
+              multiSelectionEnabled: true,
+              emptySelectionAllowed: true,
+              showSelectedIcon: false,
+              onSelectionChanged: (ligadas) =>
+                  setState(() => _ligadas = ligadas),
+              style: estiloDasAbas(Cores.cartao),
+            ),
+          ),
+          Expanded(
+            child: TelaMapa(
+              ligadas: _ligadas,
+              comMapaDeFundo: widget.comMapaDeFundo,
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: const BarraInferior(atual: 1),
     );
   }
 }
+
 class TelaMapa extends StatefulWidget {
-  const TelaMapa({super.key});
+  const TelaMapa({
+    super.key,
+    required this.ligadas,
+    this.comMapaDeFundo = true,
+  });
+
+  final Set<TipoRegistro> ligadas;
+  final bool comMapaDeFundo;
 
   @override
   State<TelaMapa> createState() => _TelaMapaState();
@@ -53,13 +141,6 @@ class _TelaMapaState extends State<TelaMapa> {
   }
 
   static const LatLng _centroInicial = LatLng(-20.4647, -45.4264); // Formiga-MG
-
-  // Dados de teste. Depois troque pelos dados do Firebase.
-  static const List<CaoDoacao> _caes = [
-    CaoDoacao(id: '1', nome: 'Thor', lat: -20.4647, lng: -45.4264),
-    CaoDoacao(id: '2', nome: 'Luna', lat: -20.4690, lng: -45.4310),
-    CaoDoacao(id: '3', nome: 'Bob', lat: -20.4610, lng: -45.4200),
-  ];
 
   LatLng? _minhaPosicao;
   bool _buscandoLocalizacao = false;
@@ -109,33 +190,22 @@ class _TelaMapaState extends State<TelaMapa> {
     }
   }
 
-  void _mostrarDetalhes(CaoDoacao cao) {
+  void _mostrarResumo(Animal animal) {
     showModalBottomSheet(
       context: context,
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.pets, color: Colors.red),
-                const SizedBox(width: 8),
-                Text(cao.nome,
-                    style: Theme.of(context).textTheme.headlineSmall),
-              ],
-            ),
-            const SizedBox(height: 8),
-            const Text('Disponível para doação'),
-          ],
-        ),
-      ),
+      backgroundColor: Cores.cartao,
+      showDragHandle: true,
+      builder: (_) => _ResumoDoAnimal(animal: animal),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final animais = animaisNoMapa(
+      PataAmigaScope.of(context).animais,
+      widget.ligadas,
+    );
+
     return Stack(
       children: [
         FlutterMap(
@@ -145,35 +215,28 @@ class _TelaMapaState extends State<TelaMapa> {
             initialZoom: 14,
           ),
           children: [
-            TileLayer(
-              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-              userAgentPackageName: 'br.edu.ifmg.pata_amiga',
-            ),
-            CircleLayer(
-              circles: _caes
-                  .map((c) => CircleMarker(
-                        point: LatLng(c.lat, c.lng),
-                        radius: 150,
-                        useRadiusInMeter: true,
-                        color: Colors.red.withValues(alpha: 0.15),
-                        borderColor: Colors.red.withValues(alpha: 0.3),
-                        borderStrokeWidth: 1,
-                      ))
-                  .toList(),
-            ),
+            if (widget.comMapaDeFundo)
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'br.edu.ifmg.pata_amiga',
+              ),
             MarkerLayer(
-              markers: _caes
-                  .map((c) => Marker(
-                        point: LatLng(c.lat, c.lng),
-                        width: 48,
-                        height: 48,
-                        alignment: Alignment.topCenter,
-                        child: GestureDetector(
-                          onTap: () => _mostrarDetalhes(c),
-                          child: const _PinPatinha(),
-                        ),
-                      ))
-                  .toList(),
+              markers: [
+                for (final animal in animais)
+                  Marker(
+                    point: LatLng(animal.latitude!, animal.longitude!),
+                    width: 48,
+                    height: 48,
+                    alignment: Alignment.topCenter,
+                    child: GestureDetector(
+                      onTap: () => _mostrarResumo(animal),
+                      child: _Pino(
+                        cor: corDaCamada(animal.tipo),
+                        rotulo: animal.nome,
+                      ),
+                    ),
+                  ),
+              ],
             ),
             if (_minhaPosicao != null)
               MarkerLayer(
@@ -192,17 +255,39 @@ class _TelaMapaState extends State<TelaMapa> {
                   ),
                 ],
               ),
-            const SimpleAttributionWidget(
-              source: Text('© OpenStreetMap contributors'),
-            ),
+            // O crédito do OpenStreetMap é obrigatório pela política de uso
+            // dos mapas dele. Fica num botão "i": aparece aberto ao entrar e
+            // se recolhe sozinho, sem ocupar o rodapé o tempo todo
+            if (widget.comMapaDeFundo)
+              const RichAttributionWidget(
+                alignment: AttributionAlignment.bottomLeft,
+                popupInitialDisplayDuration: Duration(seconds: 4),
+                showFlutterMapAttribution: false,
+                attributions: [
+                  TextSourceAttribution('OpenStreetMap contributors'),
+                ],
+              ),
           ],
         ),
+        // Sem nenhum ponto, o mapa vazio diria nada: o aviso explica por quê
+        if (animais.isEmpty)
+          Positioned(
+            left: 16,
+            right: 16,
+            top: 12,
+            child: _AvisoDoMapa(
+              texto: widget.ligadas.isEmpty
+                  ? 'Ligue Perdidos ou Resgate para ver os animais no mapa.'
+                  : 'Nenhum animal com localização nestas camadas ainda.',
+            ),
+          ),
         Positioned(
           right: 16,
           bottom: 40,
           child: FloatingActionButton(
             heroTag: 'btn_minha_localizacao',
             backgroundColor: Colors.white,
+            tooltip: 'Minha localização',
             onPressed: _irParaMinhaLocalizacao,
             child: _buscandoLocalizacao
                 ? const SizedBox(
@@ -210,7 +295,7 @@ class _TelaMapaState extends State<TelaMapa> {
                     height: 22,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Icon(Icons.my_location, color: Colors.blueGrey),
+                : const Icon(Icons.my_location, color: Cores.principal),
           ),
         ),
       ],
@@ -218,20 +303,158 @@ class _TelaMapaState extends State<TelaMapa> {
   }
 }
 
-class _PinPatinha extends StatelessWidget {
-  const _PinPatinha();
+class _Pino extends StatelessWidget {
+  const _Pino({required this.cor, required this.rotulo});
+
+  final Color cor;
+  final String rotulo;
 
   @override
   Widget build(BuildContext context) {
-    return const Stack(
-      alignment: Alignment.topCenter,
-      children: [
-        Icon(Icons.location_on, color: Colors.red, size: 48),
-        Padding(
-          padding: EdgeInsets.only(top: 9),
-          child: Icon(Icons.pets, color: Colors.white, size: 18),
+    return Semantics(
+      button: true,
+      label: rotulo,
+      child: Stack(
+        alignment: Alignment.topCenter,
+        children: [
+          Icon(Icons.location_on, color: cor, size: 48),
+          const Padding(
+            padding: EdgeInsets.only(top: 9),
+            child: Icon(Icons.pets, color: Colors.white, size: 18),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AvisoDoMapa extends StatelessWidget {
+  const _AvisoDoMapa({required this.texto});
+
+  final String texto;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Cores.cartao,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Cores.borda),
+      ),
+      child: Text(
+        texto,
+        textAlign: TextAlign.center,
+        style: const TextStyle(color: Cores.textoFraco, fontSize: 14),
+      ),
+    );
+  }
+}
+
+// O resumo que sobe ao tocar no pino: foto, nome, onde e quando, e o
+// caminho para a ficha completa, de onde se chega ao contato
+class _ResumoDoAnimal extends StatelessWidget {
+  const _ResumoDoAnimal({required this.animal});
+
+  final Animal animal;
+
+  @override
+  Widget build(BuildContext context) {
+    final lugar = [
+      animal.rua,
+      animal.bairro,
+    ].where((parte) => parte.trim().isNotEmpty).join(', ');
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            FotoAnimal(caminho: animal.foto, altura: 170),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    animal.nome.toUpperCase(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Etiqueta(rotuloSingular(animal.tipo)),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(top: 1),
+                  child: Icon(
+                    Icons.location_on_outlined,
+                    size: 15,
+                    color: Cores.principal,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    lugar,
+                    style: const TextStyle(
+                      color: Cores.principal,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Text(
+                  ' · ${animal.publicadoHa(DateTime.now())}',
+                  style: const TextStyle(
+                    color: Cores.textoFraco,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+            if (animal.observacoes.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                animal.observacoes,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 14, height: 1.4),
+              ),
+            ],
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: () {
+                // O navegador é guardado antes de fechar o painel, porque o
+                // contexto dele deixa de existir assim que ele fecha
+                final navegador = Navigator.of(context);
+                navegador.pop();
+                navegador.pushNamed(AppRoutes.details, arguments: animal);
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: Cores.principal,
+                minimumSize: const Size.fromHeight(48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child: const Text(
+                'Ver ficha completa',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

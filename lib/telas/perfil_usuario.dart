@@ -14,6 +14,7 @@ import '../widgets/barra_inferior.dart';
 import '../widgets/escolha_de_tipo.dart';
 import '../widgets/etiqueta.dart';
 import '../widgets/foto_animal.dart';
+import '../widgets/mascaras.dart';
 
 enum _SecaoPerfil { curtidos, meusCadastros }
 
@@ -198,7 +199,7 @@ class _Cabecalho extends StatelessWidget {
                     const SizedBox(height: 4),
                     _Contato(
                       icone: Icons.phone_outlined,
-                      texto: usuario.telefone,
+                      texto: formatarTelefone(usuario.telefone),
                     ),
                   ],
                 ],

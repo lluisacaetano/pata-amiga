@@ -47,6 +47,9 @@ class Animal {
   final String idade;
   final String peso;
   final String cor;
+  // Fica guardada para o mapa e para o responsável; o feed e a ficha
+  // mostram só bairro e cidade
+  final String rua;
   final String bairro;
   final String cidade;
   final TipoRegistro tipo;
@@ -74,6 +77,7 @@ class Animal {
     required this.idade,
     required this.peso,
     required this.cor,
+    this.rua = '',
     required this.bairro,
     required this.cidade,
     required this.tipo,
@@ -103,6 +107,7 @@ class Animal {
         idade: json['idade'] as String,
         peso: json['peso'] as String? ?? '',
         cor: json['cor'] as String? ?? '',
+        rua: json['rua'] as String? ?? '',
         bairro: json['bairro'] as String,
         cidade: json['cidade'] as String,
         // Enums chegam como texto com o nome do valor ("adocao", "disponivel")
@@ -136,6 +141,7 @@ class Animal {
         'idade': idade,
         'peso': peso,
         'cor': cor,
+        'rua': rua,
         'bairro': bairro,
         'cidade': cidade,
         'tipo': tipo.name,

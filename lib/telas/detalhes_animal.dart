@@ -10,6 +10,7 @@ import '../widgets/cuidado.dart';
 import '../widgets/escolha_de_tipo.dart';
 import '../widgets/galeria_animal.dart';
 import '../widgets/etiqueta.dart';
+import '../widgets/mascaras.dart';
 
 class DetalhesAnimal extends StatelessWidget {
   final Animal animal;
@@ -224,7 +225,15 @@ class _Ficha extends StatelessWidget {
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
-                  '${animal.bairro}, ${animal.cidade}',
+                  // A rua só aparece em perdido e resgate, onde é um lugar
+                  // público: na adoção ela seria a casa do responsável
+                  [
+                    if (animal.tipo != TipoRegistro.adocao &&
+                        animal.rua.isNotEmpty)
+                      animal.rua,
+                    animal.bairro,
+                    animal.cidade,
+                  ].join(', '),
                   style: const TextStyle(
                     color: Cores.principal,
                     fontSize: 14,
@@ -248,18 +257,13 @@ class _Ficha extends StatelessWidget {
 
           const _Divisoria(),
           _Rotulo(animal.tipo.tituloDoContato),
-          Text(
-            animal.dono.nome,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            animal.dono.telefone,
-            style: const TextStyle(
-              fontSize: 15,
-              color: Cores.principal,
-              fontWeight: FontWeight.w600,
-            ),
+          const SizedBox(height: 4),
+          // O mesmo quadro das medidas, com o telefone sempre formatado
+          _PainelDeMedidas(
+            medidas: [
+              ('Nome', animal.dono.nome),
+              ('Telefone', formatarTelefone(animal.dono.telefone)),
+            ],
           ),
         ],
       ),

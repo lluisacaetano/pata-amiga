@@ -10,8 +10,9 @@
       "idade": "2 anos",
       "peso": "28 kg",
       "cor": "caramelo",
-      "bairro": "centro",
-      "cidade": "mongaguá",
+      "rua": "Praça São Vicente Ferrer",
+      "bairro": "Centro",
+      "cidade": "Formiga",
       "tipo": "adocao",
       "status": "disponivel",
       "castrado": true,
@@ -29,8 +30,8 @@
         "assets/animais/thor-3.jpg"
       ],
       "publicadoEm": "2026-10-10T12:00:00.000",
-      "latitude": null,
-      "longitude": null
+      "latitude": -20.4641045,
+      "longitude": -45.4267203
     },
     {
       "id": 2,
@@ -42,8 +43,9 @@
       "idade": "4 anos",
       "peso": "14 kg",
       "cor": "preto",
-      "bairro": "jussara",
-      "cidade": "mongaguá",
+      "rua": "Rua Padre Leão João Dehon",
+      "bairro": "Santa Tereza",
+      "cidade": "Formiga",
       "tipo": "adocao",
       "status": "disponivel",
       "castrado": false,
@@ -61,8 +63,8 @@
         "assets/animais/bidu-3.jpg"
       ],
       "publicadoEm": "2026-10-12T12:00:00.000",
-      "latitude": null,
-      "longitude": null
+      "latitude": -20.4597638,
+      "longitude": -45.4296545
     },
     {
       "id": 3,
@@ -74,8 +76,9 @@
       "idade": "1 ano",
       "peso": "3 kg",
       "cor": "cinza",
-      "bairro": "vila atlântica",
-      "cidade": "mongaguá",
+      "rua": "Rua do Expedicionário",
+      "bairro": "Quartéis",
+      "cidade": "Formiga",
       "tipo": "adocao",
       "status": "disponivel",
       "castrado": true,
@@ -93,8 +96,8 @@
         "assets/animais/amora-3.jpg"
       ],
       "publicadoEm": "2026-10-13T12:00:00.000",
-      "latitude": null,
-      "longitude": null
+      "latitude": -20.4697811,
+      "longitude": -45.4216775
     },
     {
       "id": 4,
@@ -106,8 +109,9 @@
       "idade": "3 anos",
       "peso": "5 kg",
       "cor": "laranja",
-      "bairro": "vera cruz",
-      "cidade": "mongaguá",
+      "rua": "Rua Antônio Vaz da Silva",
+      "bairro": "Alvorada",
+      "cidade": "Formiga",
       "tipo": "perdido",
       "status": "disponivel",
       "castrado": true,
@@ -125,8 +129,8 @@
         "assets/animais/simba-3.jpg"
       ],
       "publicadoEm": "2026-10-11T12:00:00.000",
-      "latitude": null,
-      "longitude": null
+      "latitude": -20.4750334,
+      "longitude": -45.429957
     },
     {
       "id": 5,
@@ -138,8 +142,9 @@
       "idade": "5 anos",
       "peso": "6 kg",
       "cor": "branca",
-      "bairro": "itaóca",
-      "cidade": "mongaguá",
+      "rua": "Avenida Inhazinha Pires",
+      "bairro": "Vila José Branco",
+      "cidade": "Formiga",
       "tipo": "perdido",
       "status": "disponivel",
       "castrado": true,
@@ -157,8 +162,8 @@
         "assets/animais/nina-3.jpg"
       ],
       "publicadoEm": "2026-10-13T18:00:00.000",
-      "latitude": null,
-      "longitude": null
+      "latitude": -20.4780129,
+      "longitude": -45.4179826
     },
     {
       "id": 6,
@@ -170,8 +175,9 @@
       "idade": "6 anos",
       "peso": "17 kg",
       "cor": "marrom",
-      "bairro": "agenor de campos",
-      "cidade": "mongaguá",
+      "rua": "Rua Ana Parreira Barbosa",
+      "bairro": "Jardim América",
+      "cidade": "Formiga",
       "tipo": "resgate",
       "status": "disponivel",
       "castrado": false,
@@ -189,8 +195,8 @@
         "assets/animais/fred-3.jpg"
       ],
       "publicadoEm": "2026-10-12T20:00:00.000",
-      "latitude": null,
-      "longitude": null
+      "latitude": -20.4610009,
+      "longitude": -45.4241615
     },
     {
       "id": 7,
@@ -202,8 +208,9 @@
       "idade": "8 meses",
       "peso": "5 kg",
       "cor": "caramelo",
-      "bairro": "flórida mirim",
-      "cidade": "mongaguá",
+      "rua": "Rua Pará de Minas",
+      "bairro": "Jardim Alvorada",
+      "cidade": "Formiga",
       "tipo": "resgate",
       "status": "disponivel",
       "castrado": false,
@@ -221,8 +228,8 @@
         "assets/animais/mel-3.jpg"
       ],
       "publicadoEm": "2026-10-14T09:00:00.000",
-      "latitude": null,
-      "longitude": null
+      "latitude": -20.4721612,
+      "longitude": -45.4261062
     }
   ]
 }

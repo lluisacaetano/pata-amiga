@@ -112,19 +112,9 @@ class _FeedAdocaoState extends State<FeedAdocao> {
       setState(() {
         _atualizando = false;
         if (salvos == null) _estado = EstadoFeed.erro;
-        // Se havia cache, o estado continua "cache"
+        // Se havia cache, o estado continua "cache", e a faixa laranja do
+        // topo já avisa que os dados podem estar desatualizados
       });
-      if (salvos != null) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Não foi possível atualizar. Mostrando dados salvos.',
-              ),
-            ),
-          );
-      }
     }
   }
 

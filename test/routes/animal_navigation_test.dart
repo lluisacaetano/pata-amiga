@@ -1,4 +1,12 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geocoding_platform_interface/geocoding_platform_interface.dart'
+    as pi;
+import 'package:geolocator/geolocator.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 import 'package:provider/provider.dart';
@@ -6,14 +14,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:pata_amiga/auth/screens/de_volta_screen.dart';
 import 'package:pata_amiga/dados/animais_mock.dart';
+import 'package:pata_amiga/dados/bairros_formiga.dart';
+import 'package:pata_amiga/modelos/camadas_do_mapa.dart';
 import 'package:pata_amiga/estado/estado_pata_amiga.dart';
 import 'package:pata_amiga/modelos/animal.dart';
 import 'package:pata_amiga/provider/usuario_provider.dart';
 import 'package:pata_amiga/routes/app_router.dart';
 import 'package:pata_amiga/services/animal_service.dart';
 import 'package:pata_amiga/telas/cadastro_animal.dart';
+import 'package:pata_amiga/telas/detalhes_animal.dart';
+import 'package:pata_amiga/telas/tela_mapa.dart';
 import 'package:pata_amiga/telas/feed_adocao.dart';
 import 'package:pata_amiga/widgets/barra_inferior.dart';
+import 'package:pata_amiga/widgets/foto_animal.dart';
+import 'package:pata_amiga/widgets/mascaras.dart';
 
 class _GaleriaVazia extends ImagePickerPlatform {
   @override
@@ -64,6 +78,94 @@ class _CadastroProntoState extends State<_CadastroPronto> {
 
   @override
   Widget build(BuildContext context) => const Scaffold();
+}
+
+// GPS e endereço falsos, os mesmos do teste de localização: o aparelho
+// "está" na Praça Olegário Maciel, no Centro de Formiga
+final _naPraca = Position(
+  latitude: -20.4642,
+  longitude: -45.4267,
+  timestamp: DateTime(2026, 10, 19),
+  accuracy: 5,
+  altitude: 0,
+  altitudeAccuracy: 0,
+  heading: 0,
+  headingAccuracy: 0,
+  speed: 0,
+  speedAccuracy: 0,
+);
+
+class _GpsFalso extends GeolocatorPlatform with MockPlatformInterfaceMixin {
+  @override
+  Future<bool> isLocationServiceEnabled() async => true;
+
+  @override
+  Future<LocationPermission> checkPermission() async =>
+      LocationPermission.whileInUse;
+
+  @override
+  Future<LocationPermission> requestPermission() async =>
+      LocationPermission.whileInUse;
+
+  @override
+  Future<Position> getCurrentPosition({
+    LocationSettings? locationSettings,
+  }) async => _naPraca;
+}
+
+// O ponto que o serviço devolve para uma rua digitada, diferente da praça
+const _latDaRua = -20.4697811;
+const _lonDaRua = -45.4216775;
+
+class _EnderecoFalso extends pi.Geocoding with MockPlatformInterfaceMixin {
+  _EnderecoFalso(this.bairro, {this.achaRua = true})
+    : super.implementation(pi.GeocodingCreationParams());
+
+  final String bairro;
+  final bool achaRua;
+  static String? ultimoEnderecoBuscado;
+
+  @override
+  Future<List<pi.Location>> locationFromAddress(
+    String address, {
+    Locale? locale,
+  }) async {
+    ultimoEnderecoBuscado = address;
+    if (!achaRua) return [];
+    return [
+      pi.Location(
+        latitude: _latDaRua,
+        longitude: _lonDaRua,
+        timestamp: DateTime(2026, 10, 19),
+      ),
+    ];
+  }
+
+  @override
+  Future<List<Placemark>> placemarkFromCoordinates(
+    double latitude,
+    double longitude, {
+    Locale? locale,
+  }) async => [
+    Placemark(
+      thoroughfare: 'Praça Olegário Maciel',
+      subThoroughfare: '155',
+      subLocality: bairro,
+      locality: 'Formiga',
+    ),
+  ];
+}
+
+class _FabricaFalsa extends pi.GeocodingPlatformFactory
+    with MockPlatformInterfaceMixin {
+  _FabricaFalsa({this.bairro = 'Centro', this.achaRua = true});
+
+  final String bairro;
+  final bool achaRua;
+
+  @override
+  pi.Geocoding createGeocoding(pi.GeocodingCreationParams params) =>
+      _EnderecoFalso(bairro, achaRua: achaRua);
 }
 
 void main() {
@@ -464,5 +566,466 @@ void main() {
 
     expect(find.text('Luisa Caetano'), findsNothing);
     expect(tester.takeException(), isNull);
+  });
+
+  final campoDoBairro = find.byWidgetPredicate(
+    (w) =>
+        w is TextField &&
+        w.decoration?.hintText == 'Digite para buscar o bairro',
+  );
+
+  // Digita um pedaço do nome e toca na opção da lista
+  Future<void> escolherBairro(WidgetTester tester, String opcao) async {
+    await tester.tap(campoDoBairro);
+    await tester.pumpAndSettle();
+    if (opcao != 'Outro bairro') {
+      await tester.enterText(campoDoBairro, opcao.substring(0, 4));
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(find.text(opcao).last);
+    await tester.pumpAndSettle();
+  }
+
+  // Fundação do mapa: o cadastro guarda de onde o animal foi registrado
+  Future<Animal?> cadastrarPerdido(
+    WidgetTester tester, {
+    bool usarMira = true,
+    String bairroDoGps = 'Centro',
+    String? ruaDigitada,
+    String? bairroDigitado,
+    String? outroBairroDigitado,
+    bool enviar = true,
+    bool achaRua = true,
+  }) async {
+    SharedPreferences.setMockInitialValues({});
+    GeolocatorPlatform.instance = _GpsFalso();
+    pi.GeocodingPlatformFactory.instance = _FabricaFalsa(
+      bairro: bairroDoGps,
+      achaRua: achaRua,
+    );
+    tester.view.physicalSize = const Size(1200, 3600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final usuario = UsuarioProvider();
+    await usuario.registrarUsuario(
+      nome: 'Luisa',
+      email: 'luisa@pata.com',
+      telefone: '(37) 99999-0000',
+    );
+
+    Animal? devolvido;
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: usuario,
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) => TextButton(
+              onPressed: () async {
+                devolvido = await Navigator.push<Animal>(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CadastroAnimal()),
+                );
+              },
+              child: const Text('abrir'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('abrir'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Perdido'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Escolher').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cachorro').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Escolher').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Pequeno').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, '2 anos'), '3 anos');
+    await tester.enterText(
+      find.widgetWithText(
+        TextField,
+        'Onde e quando sumiu, coleira, se atende pelo nome',
+      ),
+      'Sumiu perto da praça.',
+    );
+
+    if (usarMira) {
+      await tester.tap(find.byTooltip('Usar minha localização'));
+      await tester.pumpAndSettle();
+      expect(find.text('Praça Olegário Maciel, 155'), findsOneWidget);
+    }
+    final rua = find.byWidgetPredicate(
+      (w) =>
+          w is TextField &&
+          w.decoration?.hintText == 'Informe a rua e o número',
+    );
+    if (ruaDigitada != null) await tester.enterText(rua, ruaDigitada);
+    if (bairroDigitado != null) await escolherBairro(tester, bairroDigitado);
+    if (outroBairroDigitado != null) {
+      await escolherBairro(tester, 'Outro bairro');
+      await tester.enterText(
+        find.byWidgetPredicate(
+          (w) =>
+              w is TextField &&
+              w.decoration?.hintText == 'Informe o nome do bairro',
+        ),
+        outroBairroDigitado,
+      );
+    }
+
+    if (!enviar) return null;
+    await tester.tap(find.widgetWithText(FilledButton, 'Cadastrar'));
+    await tester.pumpAndSettle();
+    return devolvido;
+  }
+
+  testWidgets(
+    'com a mira, o animal sai com rua, bairro, Formiga e a coordenada',
+    (tester) async {
+      final animal = await cadastrarPerdido(tester);
+
+      expect(animal, isNotNull);
+      expect(animal!.rua, 'Praça Olegário Maciel, 155');
+      expect(animal.bairro, 'Centro');
+      expect(animal.cidade, 'Formiga');
+      expect(animal.latitude, -20.4642);
+      expect(animal.longitude, -45.4267);
+    },
+  );
+
+  testWidgets('rua trocada depois da mira usa o ponto da rua nova', (
+    tester,
+  ) async {
+    final animal = await cadastrarPerdido(
+      tester,
+      ruaDigitada: 'Rua do Expedicionário',
+    );
+
+    expect(animal!.rua, 'Rua do Expedicionário');
+    expect(animal.latitude, _latDaRua);
+    expect(animal.longitude, _lonDaRua);
+  });
+
+  testWidgets('sem a mira, o animal é fixado num ponto da rua digitada', (
+    tester,
+  ) async {
+    final animal = await cadastrarPerdido(
+      tester,
+      usarMira: false,
+      ruaDigitada: 'Rua do Expedicionário',
+      bairroDigitado: 'Quartéis',
+    );
+
+    expect(
+      _EnderecoFalso.ultimoEnderecoBuscado,
+      'Rua do Expedicionário, Quartéis, Formiga, MG, Brasil',
+    );
+    expect(animal!.latitude, _latDaRua);
+    expect(animal.longitude, _lonDaRua);
+  });
+
+  testWidgets('se a rua não for encontrada, o cadastro sai sem ponto', (
+    tester,
+  ) async {
+    final animal = await cadastrarPerdido(
+      tester,
+      usarMira: false,
+      ruaDigitada: 'Rua que não existe',
+      bairroDigitado: 'Quartéis',
+      achaRua: false,
+    );
+
+    expect(animal, isNotNull);
+    expect(animal!.temPonto, isFalse);
+  });
+
+  testWidgets('a mira já escolhe o bairro da lista', (tester) async {
+    final animal = await cadastrarPerdido(tester);
+
+    expect(animal!.bairro, 'Centro');
+  });
+
+  testWidgets('bairro do GPS fora da lista vai para Outro com o nome dele', (
+    tester,
+  ) async {
+    final animal = await cadastrarPerdido(tester, bairroDoGps: 'Bairro Novo');
+
+    expect(animal!.bairro, 'Bairro Novo');
+    expect(animal.temPonto, isTrue);
+  });
+
+  testWidgets('escolher o bairro que o GPS não achou mantém a coordenada', (
+    tester,
+  ) async {
+    final animal = await cadastrarPerdido(
+      tester,
+      bairroDoGps: '',
+      bairroDigitado: 'Rosário',
+    );
+
+    expect(animal!.bairro, 'Rosário');
+    expect(animal.temPonto, isTrue);
+  });
+
+  testWidgets('Outro bairro abre um campo e salva o que foi escrito', (
+    tester,
+  ) async {
+    final animal = await cadastrarPerdido(
+      tester,
+      usarMira: false,
+      ruaDigitada: 'Rua Pedro Mendes, 40',
+      outroBairroDigitado: 'Vila Nova',
+    );
+
+    expect(animal!.bairro, 'Vila Nova');
+    expect(animal.cidade, 'Formiga');
+  });
+
+  testWidgets('bairro que não está na lista ainda mostra Outro bairro', (
+    tester,
+  ) async {
+    await cadastrarPerdido(tester, usarMira: false, enviar: false);
+    await tester.tap(campoDoBairro);
+    await tester.enterText(campoDoBairro, 'xyzw');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Outro bairro'), findsOneWidget);
+    await tester.tap(find.text('Outro bairro'));
+    await tester.pumpAndSettle();
+    expect(find.text('QUAL É O BAIRRO?'), findsOneWidget);
+  });
+
+  testWidgets('sem rua ou sem bairro o cadastro não sai', (tester) async {
+    final semBairro = await cadastrarPerdido(
+      tester,
+      usarMira: false,
+      ruaDigitada: 'Rua Pedro Mendes, 40',
+    );
+    expect(semBairro, isNull);
+    expect(find.text('CADASTRAR ANIMAL'), findsOneWidget);
+  });
+
+  // A lista de bairros, testada como lógica pura
+  group('bairros de Formiga', () {
+    test('a busca ignora maiúsculas e acentos', () {
+      expect(filtrarBairros('agua'), contains('Água Vermelha'));
+      expect(filtrarBairros('ROSARIO'), contains('Rosário'));
+    });
+
+    test('a busca filtra pelo pedaço digitado', () {
+      final achados = filtrarBairros('santa');
+      expect(achados, contains('Santa Luzia'));
+      expect(achados, isNot(contains('Centro')));
+    });
+
+    test('o nome do GPS acha o bairro com a grafia da lista', () {
+      expect(bairroDaLista('centro'), 'Centro');
+      expect(bairroDaLista('Agua Vermelha'), 'Água Vermelha');
+      expect(bairroDaLista('Bairro Inventado'), isNull);
+    });
+
+    test('a lista está em ordem alfabética e sem repetição', () {
+      expect(bairrosDeFormiga.toSet().length, bairrosDeFormiga.length);
+      expect(bairrosDeFormiga, contains('Ponte Vila'));
+      expect(bairrosDeFormiga, contains("Distrito Empresarial D'Carlos"));
+      expect(bairrosDeFormiga, isNot(contains('Pontevila')));
+    });
+  });
+
+  // A rua aparece na ficha de perdido e resgate, nunca na de adoção
+  Future<void> abrirFicha(WidgetTester tester, Animal animal) async {
+    SharedPreferences.setMockInitialValues({});
+    tester.view.physicalSize = const Size(1200, 3000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final estado = EstadoPataAmiga();
+    addTearDown(estado.dispose);
+    await tester.pumpWidget(
+      PataAmigaScope(
+        notifier: estado,
+        child: MaterialApp(home: DetalhesAnimal(animal: animal)),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  Animal comRua(TipoRegistro tipo) => Animal.fromJson({
+    ...animaisMock.first.toJson(),
+    'tipo': tipo.name,
+    'rua': 'Praça Olegário Maciel, 155',
+    'bairro': 'Centro',
+    'cidade': 'Formiga',
+  });
+
+  testWidgets('a ficha de perdido mostra a rua', (tester) async {
+    await abrirFicha(tester, comRua(TipoRegistro.perdido));
+    expect(
+      find.text('Praça Olegário Maciel, 155, Centro, Formiga'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a ficha de adoção não mostra a rua', (tester) async {
+    await abrirFicha(tester, comRua(TipoRegistro.adocao));
+    expect(find.text('Centro, Formiga'), findsOneWidget);
+    expect(find.textContaining('Olegário'), findsNothing);
+  });
+
+  group('telefone formatado', () {
+    test('telefone sem máscara, como vem da API, sai formatado', () {
+      expect(formatarTelefone('13999991111'), '(13) 99999-1111');
+      expect(formatarTelefone('3732221234'), '(37) 3222-1234');
+    });
+
+    test('o 55 do país sai, e o que já está formatado não muda', () {
+      expect(formatarTelefone('5537999990000'), '(37) 99999-0000');
+      expect(formatarTelefone('(37) 99999-0000'), '(37) 99999-0000');
+    });
+  });
+
+  testWidgets('a ficha mostra nome e telefone formatado do responsável', (
+    tester,
+  ) async {
+    await abrirFicha(
+      tester,
+      Animal.fromJson({
+        ...animaisMock.first.toJson(),
+        'dono': {'nome': 'João', 'telefone': '13999991111'},
+      }),
+    );
+
+    expect(find.text('NOME'), findsOneWidget);
+    expect(find.text('João'), findsOneWidget);
+    expect(find.text('TELEFONE'), findsOneWidget);
+    expect(find.text('(13) 99999-1111'), findsOneWidget);
+    expect(find.text('13999991111'), findsNothing);
+  });
+
+  test('todo animal de exemplo da API tem endereço completo em Formiga', () {
+    final banco = jsonDecode(File('api/db.json').readAsStringSync()) as Map;
+    final animais = (banco['animais'] as List)
+        .map((item) => Animal.fromJson(item as Map<String, dynamic>))
+        .toList();
+
+    expect(animais, isNotEmpty);
+    for (final animal in animais) {
+      expect(animal.rua, isNotEmpty, reason: animal.nome);
+      expect(bairrosDeFormiga, contains(animal.bairro), reason: animal.nome);
+      expect(animal.cidade, 'Formiga', reason: animal.nome);
+      // A caixa que cobre a área urbana de Formiga
+      expect(animal.latitude, inInclusiveRange(-20.50, -20.43));
+      expect(animal.longitude, inInclusiveRange(-45.47, -45.39));
+    }
+  });
+
+  // US 08: o mapa mostra perdidos e resgates com localização
+  Animal noMapa(String nome, TipoRegistro tipo, {bool comPonto = true}) =>
+      Animal.fromJson({
+        ...animaisMock.first.toJson(),
+        'nome': nome,
+        'tipo': tipo.name,
+        'rua': 'Rua do Expedicionário',
+        'bairro': 'Quartéis',
+        'cidade': 'Formiga',
+        'latitude': comPonto ? -20.4697 : null,
+        'longitude': comPonto ? -45.4216 : null,
+      });
+
+  group('camadas do mapa', () {
+    final perdido = noMapa('Nina', TipoRegistro.perdido);
+    final resgate = noMapa('Mel', TipoRegistro.resgate);
+    final adocao = noMapa('Thor', TipoRegistro.adocao);
+    final semPonto = noMapa('Bidu', TipoRegistro.perdido, comPonto: false);
+    final todos = [perdido, resgate, adocao, semPonto];
+
+    test('adoção nunca vai para o mapa', () {
+      expect(
+        animaisNoMapa(todos, TipoRegistro.values.toSet()),
+        isNot(contains(adocao)),
+      );
+    });
+
+    test('animal sem coordenada fica fora do mapa', () {
+      expect(
+        animaisNoMapa(todos, camadasDoMapa.toSet()),
+        isNot(contains(semPonto)),
+      );
+    });
+
+    test('só aparecem as camadas ligadas', () {
+      expect(animaisNoMapa(todos, {TipoRegistro.perdido}), [perdido]);
+      expect(animaisNoMapa(todos, {TipoRegistro.resgate}), [resgate]);
+      expect(animaisNoMapa(todos, {}), isEmpty);
+    });
+  });
+
+  Future<void> abrirMapa(WidgetTester tester, List<Animal> animais) async {
+    SharedPreferences.setMockInitialValues({});
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.75;
+    addTearDown(tester.view.reset);
+    final estado = EstadoPataAmiga();
+    addTearDown(estado.dispose);
+    estado.atualizarAnimais(animais);
+    await tester.pumpWidget(
+      PataAmigaScope(
+        notifier: estado,
+        child: MaterialApp(
+          home: const PaginaMapa(comMapaDeFundo: false),
+          routes: {
+            AppRoutes.details: AppRoutesConfig.routes[AppRoutes.details]!,
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('o mapa mostra perdidos e resgates e desliga cada camada', (
+    tester,
+  ) async {
+    await abrirMapa(tester, [
+      noMapa('Nina', TipoRegistro.perdido),
+      noMapa('Mel', TipoRegistro.resgate),
+      noMapa('Thor', TipoRegistro.adocao),
+    ]);
+
+    expect(find.bySemanticsLabel('Nina'), findsOneWidget);
+    expect(find.bySemanticsLabel('Mel'), findsOneWidget);
+    expect(find.bySemanticsLabel('Thor'), findsNothing);
+
+    await tester.tap(find.text('Perdidos'));
+    await tester.pumpAndSettle();
+    expect(find.bySemanticsLabel('Nina'), findsNothing);
+    expect(find.bySemanticsLabel('Mel'), findsOneWidget);
+
+    await tester.tap(find.text('Resgate'));
+    await tester.pumpAndSettle();
+    expect(find.bySemanticsLabel('Mel'), findsNothing);
+    expect(
+      find.text('Ligue Perdidos ou Resgate para ver os animais no mapa.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('tocar no pino mostra foto, nome, lugar e leva à ficha', (
+    tester,
+  ) async {
+    await abrirMapa(tester, [noMapa('Nina', TipoRegistro.perdido)]);
+
+    await tester.tap(find.bySemanticsLabel('Nina'));
+    await tester.pumpAndSettle();
+    expect(find.text('NINA'), findsOneWidget);
+    expect(find.text('Rua do Expedicionário, Quartéis'), findsOneWidget);
+    expect(find.byType(FotoAnimal), findsOneWidget);
+
+    await tester.tap(find.text('Ver ficha completa'));
+    await tester.pumpAndSettle();
+    expect(find.text('DETALHES'), findsOneWidget);
   });
 }
