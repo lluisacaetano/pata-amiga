@@ -1,11 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../modelos/animal.dart';
+import 'endereco_da_api.dart';
 
 class AnimalService {
-  // Chrome: localhost | Emulador Android: 10.0.2.2 | Celular: IP do PC
-  
-  static const _baseUrl = 'http://10.0.2.2:3000';
+  static const _baseUrl = enderecoDaApi;
 
   Future<List<Animal>> buscarAnimais() async {
     

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../modelos/animal.dart';
+import '../modelos/avistamento.dart';
 
 class EstadoPataAmiga extends ChangeNotifier {
   // Chave usada para gravar as curtidas no armazenamento do aparelho
@@ -22,6 +23,20 @@ class EstadoPataAmiga extends ChangeNotifier {
 
   // Os animais que o feed carregou, para as telas que também os mostram
   List<Animal> get animais => _animais;
+
+  // Os avistamentos de animais perdidos, que movem o pino no mapa
+  List<Avistamento> _avistamentos = [];
+  List<Avistamento> get avistamentos => List.unmodifiable(_avistamentos);
+
+  void atualizarAvistamentos(List<Avistamento> avistamentos) {
+    _avistamentos = List.of(avistamentos);
+    notifyListeners();
+  }
+
+  void adicionarAvistamento(Avistamento avistamento) {
+    _avistamentos = [..._avistamentos, avistamento];
+    notifyListeners();
+  }
 
   List<Animal> get animaisCurtidos => _animais
       .where(
@@ -103,6 +118,12 @@ class PataAmigaScope extends InheritedNotifier<EstadoPataAmiga> {
     required EstadoPataAmiga notifier,
     required super.child,
   }) : super(notifier: notifier);
+
+  // Para quem só precisa ler uma vez, como no initState, sem passar a ouvir
+  // as mudanças; devolve null se a tela estiver fora do escopo
+  static EstadoPataAmiga? talvez(BuildContext context) => context
+      .getInheritedWidgetOfExactType<PataAmigaScope>()
+      ?.notifier;
 
   static EstadoPataAmiga of(BuildContext context) {
     final scope = context.dependOnInheritedWidgetOfExactType<PataAmigaScope>();

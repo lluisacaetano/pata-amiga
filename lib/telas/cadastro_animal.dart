@@ -5,18 +5,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
 import '../dados/bairros_formiga.dart';
 import '../modelos/animal.dart';
 import '../modelos/dono.dart';
 import '../provider/usuario_provider.dart';
+import '../services/bairro_service.dart';
 import '../tema/cores.dart';
 import '../widgets/barra_inferior.dart';
 import '../widgets/cuidado.dart';
 import '../widgets/escolha_de_tipo.dart';
 import '../widgets/foto_animal.dart';
+import '../widgets/mapa_de_local.dart';
 import '../widgets/mascaras.dart';
 
 String _comMaiuscula(String texto) =>
@@ -58,13 +62,18 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
   TipoRegistro? _tipo;
   bool _tentouCadastrar = false;
   final _seletorDeFotos = ImagePicker();
+  final _bairros = BairroService();
   bool _buscandoLocalizacao = false;
   bool _salvando = false;
-  // O ponto lido pelo GPS e a rua e o bairro que ele gerou. A coordenada só
+  // O ponto do pino no mapa e a rua e o bairro que correspondem a ele. O
+  // pino é marcado pela mira, pelo arrasto do mapa ou pela busca; o ponto só
   // vai para o animal se a rua e o bairro continuarem os mesmos: mudados à
-  // mão, ela já não corresponde ao que está escrito
-  ({double latitude, double longitude})? _coordenada;
-  ({String rua, String bairro})? _enderecoDaCoordenada;
+  // mão depois, ele já não corresponde ao que está escrito
+  final _mapa = MapController();
+  LatLng _ponto = centroDeFormiga;
+  ({String rua, String bairro})? _enderecoDoPino;
+  bool _buscandoNoMapa = false;
+  String? _avisoDaBusca;
   final List<XFile> _fotos = [];
   bool _castrado = false;
   bool _vacinado = false;
@@ -138,16 +147,15 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
       }
 
       if (!mounted) return;
-      final endereco = _enderecoDe(lugares.first);
+      final endereco = await _comBairro(lugares.first);
+      if (!mounted) return;
       setState(() {
         _rua.text = endereco.rua;
         _escolherBairroDoGps(endereco.bairro);
-        _coordenada = (
-          latitude: posicao.latitude,
-          longitude: posicao.longitude,
-        );
-        _enderecoDaCoordenada = endereco;
+        _ponto = LatLng(posicao.latitude, posicao.longitude);
+        _enderecoDoPino = endereco;
       });
+      _mapa.move(_ponto, 17);
     } on TimeoutException {
       _avisar('A localização demorou demais. Insira o endereço manualmente.');
     } on Exception {
@@ -173,7 +181,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     final numero = lugar.subThoroughfare?.trim() ?? '';
     return (
       rua: numero.isEmpty || rua.isEmpty ? rua : '$rua, $numero',
-      bairro: lugar.subLocality?.trim() ?? '',
+      bairro: bairroDoServico(lugar.subLocality, lugar.locality),
     );
   }
 
@@ -195,6 +203,80 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
   String get _bairro => _bairroEscolhido == outroBairro
       ? _outroBairro.text.trim()
       : _bairroEscolhido ?? '';
+
+  // O Android raramente sabe o bairro em Formiga; quando não vem, o ViaCEP
+  // completa pelo CEP do ponto ou pelo nome da rua
+  Future<({String rua, String bairro})> _comBairro(Placemark lugar) async {
+    final endereco = _enderecoDe(lugar);
+    if (endereco.bairro.isNotEmpty) return endereco;
+    final bairro =
+        await _bairros.pelaCep(lugar.postalCode) ??
+        await _bairros.pelaRua(endereco.rua) ??
+        '';
+    return (rua: endereco.rua, bairro: bairro);
+  }
+
+  // Arrastou o mapa: o endereço do novo ponto preenche a rua e o bairro
+  Future<void> _aoArrastarOMapa(LatLng centro) async {
+    _ponto = centro;
+    try {
+      final lugares = await Geocoding()
+          .placemarkFromCoordinates(centro.latitude, centro.longitude)
+          .timeout(const Duration(seconds: 8));
+      if (!mounted || centro != _ponto) return;
+      if (lugares.isEmpty) {
+        setState(() => _enderecoDoPino = (rua: '', bairro: ''));
+        return;
+      }
+      final endereco = await _comBairro(lugares.first);
+      if (!mounted || centro != _ponto) return;
+      setState(() {
+        _rua.text = endereco.rua;
+        _escolherBairroDoGps(endereco.bairro);
+        _enderecoDoPino = endereco;
+        _avisoDaBusca = null;
+      });
+    } on Exception {
+      // Sem o endereço, o pino continua onde a pessoa deixou
+    }
+  }
+
+  // Escreveu a rua: a lupa leva o mapa até ela, e a pessoa confere o pino
+  Future<void> _buscarNoMapa() async {
+    final rua = _rua.text.trim();
+    if (rua.isEmpty || _buscandoNoMapa) return;
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _buscandoNoMapa = true;
+      _avisoDaBusca = null;
+    });
+    final bairro = _bairro;
+    String? aviso;
+    try {
+      final achados = await Geocoding()
+          .locationFromAddress(
+            [rua, bairro, 'Formiga, MG, Brasil']
+                .where((parte) => parte.isNotEmpty)
+                .join(', '),
+          )
+          .timeout(const Duration(seconds: 8));
+      if (achados.isEmpty) {
+        aviso = 'Não encontrei essa rua em Formiga. Confira o nome ou '
+            'arraste o mapa.';
+      } else if (mounted) {
+        _ponto = LatLng(achados.first.latitude, achados.first.longitude);
+        _enderecoDoPino = (rua: rua, bairro: bairro);
+        _mapa.move(_ponto, 17);
+      }
+    } on Exception {
+      aviso = 'Não foi possível buscar a rua agora. Arraste o mapa.';
+    }
+    if (!mounted) return;
+    setState(() {
+      _buscandoNoMapa = false;
+      _avisoDaBusca = aviso;
+    });
+  }
 
   void _avisar(String mensagem) {
     if (!mounted) return;
@@ -310,13 +392,14 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     final rua = _rua.text.trim();
     final bairro = _bairro;
     // Se o GPS não achou o bairro, a pessoa o escolhe sem invalidar o ponto
-    final lido = _enderecoDaCoordenada;
+    final lido = _enderecoDoPino;
     final mesmoLugar =
         lido != null &&
-        rua == lido.rua &&
-        (lido.bairro.isEmpty ||
-            mesmoBairro(bairro, lido.bairro));
-    var coordenada = mesmoLugar ? _coordenada : null;
+        (lido.rua.isEmpty || rua == lido.rua) &&
+        (lido.bairro.isEmpty || mesmoBairro(bairro, lido.bairro));
+    var coordenada = mesmoLugar
+        ? (latitude: _ponto.latitude, longitude: _ponto.longitude)
+        : null;
     if (coordenada == null) {
       setState(() => _salvando = true);
       coordenada = await _pontoDaRua(rua, bairro);
@@ -356,6 +439,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
 
   @override
   void dispose() {
+    _mapa.dispose();
     for (final campo in [
       _nome,
       _raca,
@@ -561,19 +645,18 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
                     controlador: _rua,
                     exemplo: 'Informe a rua e o número',
                     comErro: _faltando(_rua),
+                    aviso: _avisoDaBusca,
                     acao: IconButton(
-                      onPressed:
-                          _buscandoLocalizacao ? null : _usarMinhaLocalizacao,
-                      // Icone de buscando localização
-                      icon: _buscandoLocalizacao
+                      onPressed: _buscandoNoMapa ? null : _buscarNoMapa,
+                      icon: _buscandoNoMapa
                           ? const SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Icon(Icons.my_location, size: 20),
+                          : const Icon(Icons.search, size: 20),
                       color: Cores.principal,
-                      tooltip: 'Usar minha localização',
+                      tooltip: 'Buscar no mapa',
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -592,6 +675,23 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
                       comErro: _faltando(_outroBairro),
                     ),
                   ],
+                  const SizedBox(height: 14),
+                  const _Rotulo('Ponto no mapa'),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Busque a rua pela lupa, toque na mira para usar sua '
+                    'localização ou arraste o mapa até o pino.',
+                    style: TextStyle(fontSize: 12, color: Cores.textoFraco),
+                  ),
+                  const SizedBox(height: 8),
+                  MapaDeLocal(
+                    controlador: _mapa,
+                    inicio: _ponto,
+                    altura: 220,
+                    buscandoPosicao: _buscandoLocalizacao,
+                    aoUsarMinhaLocalizacao: _usarMinhaLocalizacao,
+                    aoArrastar: _aoArrastarOMapa,
+                  ),
                 ],
               ),
             ),

@@ -11,4 +11,5 @@ abstract final class AppRoutes {
   static const perfilUsuario = '/perfil-usuario';
   static const editarPerfil = '/editar-perfil';
   static const mapa = '/mapa';
+  static const registrarAvistamento = '/registrar-avistamento';
 }

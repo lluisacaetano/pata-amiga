@@ -15,16 +15,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pata_amiga/auth/screens/de_volta_screen.dart';
 import 'package:pata_amiga/dados/animais_mock.dart';
 import 'package:pata_amiga/dados/bairros_formiga.dart';
+import 'package:pata_amiga/modelos/avistamento.dart';
 import 'package:pata_amiga/modelos/camadas_do_mapa.dart';
 import 'package:pata_amiga/estado/estado_pata_amiga.dart';
 import 'package:pata_amiga/modelos/animal.dart';
 import 'package:pata_amiga/provider/usuario_provider.dart';
 import 'package:pata_amiga/routes/app_router.dart';
 import 'package:pata_amiga/services/animal_service.dart';
+import 'package:pata_amiga/services/avistamento_service.dart';
+import 'package:pata_amiga/services/bairro_service.dart';
 import 'package:pata_amiga/telas/cadastro_animal.dart';
 import 'package:pata_amiga/telas/detalhes_animal.dart';
 import 'package:pata_amiga/telas/tela_mapa.dart';
 import 'package:pata_amiga/telas/feed_adocao.dart';
+import 'package:pata_amiga/telas/registrar_avistamento.dart';
 import 'package:pata_amiga/widgets/barra_inferior.dart';
 import 'package:pata_amiga/widgets/foto_animal.dart';
 import 'package:pata_amiga/widgets/mascaras.dart';
@@ -54,6 +58,28 @@ class _ApiFalsa extends AnimalService {
   Future<void> criarAnimal(Animal animal) async {
     if (fora) throw Exception('sem conexão');
     animais.add(animal);
+  }
+}
+
+// Serviço de avistamentos falso: guarda na memória e devolve com id
+class _AvistamentosFalsos extends AvistamentoService {
+  _AvistamentosFalsos({this.fora = false});
+
+  final bool fora;
+  final gravados = <Avistamento>[];
+
+  @override
+  Future<List<Avistamento>> buscarTodos() async => [...gravados];
+
+  @override
+  Future<Avistamento> registrar(Avistamento avistamento) async {
+    if (fora) throw Exception('sem conexão');
+    final comId = Avistamento.fromJson({
+      ...avistamento.toJson(),
+      'id': gravados.length + 1,
+    });
+    gravados.add(comId);
+    return comId;
   }
 }
 
@@ -849,6 +875,13 @@ void main() {
       expect(bairroDaLista('Bairro Inventado'), isNull);
     });
 
+    test('cidade no lugar do bairro conta como bairro desconhecido', () {
+      expect(bairroDoServico('Formiga', 'Formiga'), '');
+      expect(bairroDoServico('Formiga', null), '');
+      expect(bairroDoServico('Centro', 'Formiga'), 'Centro');
+      expect(bairroDoServico(null, 'Formiga'), '');
+    });
+
     test('a lista está em ordem alfabética e sem repetição', () {
       expect(bairrosDeFormiga.toSet().length, bairrosDeFormiga.length);
       expect(bairrosDeFormiga, contains('Ponte Vila'));
@@ -884,15 +917,14 @@ void main() {
 
   testWidgets('a ficha de perdido mostra a rua', (tester) async {
     await abrirFicha(tester, comRua(TipoRegistro.perdido));
-    expect(
-      find.text('Praça Olegário Maciel, 155, Centro, Formiga'),
-      findsOneWidget,
-    );
+    expect(find.text('Praça Olegário Maciel, 155'), findsOneWidget);
+    expect(find.text('Centro, Formiga'), findsOneWidget);
   });
 
   testWidgets('a ficha de adoção não mostra a rua', (tester) async {
     await abrirFicha(tester, comRua(TipoRegistro.adocao));
-    expect(find.text('Centro, Formiga'), findsOneWidget);
+    expect(find.text('Centro'), findsOneWidget);
+    expect(find.text('Formiga'), findsOneWidget);
     expect(find.textContaining('Olegário'), findsNothing);
   });
 
@@ -1047,5 +1079,334 @@ void main() {
     await tester.tap(find.text('Ver ficha completa'));
     await tester.pumpAndSettle();
     expect(find.text('DETALHES'), findsOneWidget);
+  });
+
+  // US 12: registro de avistamento
+  Avistamento visto(
+    String animal,
+    DateTime data, {
+    double latitude = -20.47,
+    DateTime? registradoEm,
+    String bairro = 'Quartéis',
+  }) => Avistamento(
+    animal: animal,
+    data: data,
+    latitude: latitude,
+    longitude: -45.42,
+    rua: 'Rua do Expedicionário',
+    bairro: bairro,
+    registradoEm: registradoEm ?? data,
+  );
+
+  group('avistamentos', () {
+    final simba = Animal.fromJson({
+      ...animaisMock.first.toJson(),
+      'id': 4,
+      'nome': 'Simba',
+      'tipo': 'perdido',
+    });
+
+    test('o avistamento vai e volta da API sem perder nada', () {
+      final original = visto('4', DateTime(2026, 10, 18));
+      final lido = Avistamento.fromJson(original.toJson());
+      expect(lido.animal, '4');
+      expect(lido.data, DateTime(2026, 10, 18));
+      expect(lido.lugar, 'Rua do Expedicionário, Quartéis');
+    });
+
+    test('o último avistamento é o de data mais recente, só do animal', () {
+      final todos = [
+        visto('4', DateTime(2026, 10, 15), bairro: 'Centro'),
+        visto('4', DateTime(2026, 10, 18), bairro: 'Rosário'),
+        visto('9', DateTime(2026, 10, 19), bairro: 'Alvorada'),
+      ];
+      expect(ultimoAvistamento(simba, todos)!.bairro, 'Rosário');
+    });
+
+    test('no mesmo dia, vale o que foi registrado por último', () {
+      final todos = [
+        visto(
+          '4',
+          DateTime(2026, 10, 18),
+          bairro: 'Centro',
+          registradoEm: DateTime(2026, 10, 18, 9),
+        ),
+        visto(
+          '4',
+          DateTime(2026, 10, 18),
+          bairro: 'Rosário',
+          registradoEm: DateTime(2026, 10, 18, 15),
+        ),
+      ];
+      expect(ultimoAvistamento(simba, todos)!.bairro, 'Rosário');
+    });
+
+    test('a mensagem ao tutor diz quando e onde', () {
+      final mensagem = mensagemParaOTutor(
+        simba,
+        visto('4', DateTime(2026, 10, 19)),
+        DateTime(2026, 10, 19, 14),
+      );
+      expect(
+        mensagem,
+        'Olá! Vi Simba hoje, perto de Rua do Expedicionário, Quartéis. '
+        'Registrei o avistamento no Pata Amiga, com o ponto no mapa.',
+      );
+    });
+
+    test('no mapa, o perdido aparece no último avistamento', () {
+      final semPontoNoCadastro = Animal.fromJson({
+        ...simba.toJson(),
+        'latitude': null,
+        'longitude': null,
+      });
+      final pinos = pinosDoMapa(
+        [semPontoNoCadastro],
+        [visto('4', DateTime(2026, 10, 18), latitude: -20.4555)],
+        camadasDoMapa.toSet(),
+      );
+      expect(pinos, hasLength(1));
+      expect(pinos.single.latitude, -20.4555);
+      expect(pinos.single.ultimo, isNotNull);
+    });
+  });
+
+  Future<void> abrirFichaComAvistamento(
+    WidgetTester tester,
+    Animal animal,
+    _AvistamentosFalsos servico,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    tester.view.physicalSize = const Size(1200, 3000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final estado = EstadoPataAmiga();
+    addTearDown(estado.dispose);
+    await tester.pumpWidget(
+      PataAmigaScope(
+        notifier: estado,
+        child: MaterialApp(
+          home: DetalhesAnimal(animal: animal),
+          routes: {
+            AppRoutes.registrarAvistamento: (context) => RegistrarAvistamento(
+              animal: ModalRoute.of(context)!.settings.arguments as Animal,
+              servico: servico,
+            ),
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  Animal perdidoComPonto() => Animal.fromJson({
+    ...animaisMock.first.toJson(),
+    'id': 4,
+    'nome': 'Simba',
+    'tipo': 'perdido',
+    'latitude': -20.4750334,
+    'longitude': -45.4299570,
+  });
+
+  testWidgets('só animal perdido tem o botão de registrar avistamento', (
+    tester,
+  ) async {
+    final servico = _AvistamentosFalsos();
+    await abrirFichaComAvistamento(
+      tester,
+      Animal.fromJson({...animaisMock.first.toJson(), 'tipo': 'adocao'}),
+      servico,
+    );
+    expect(find.text('Registrar avistamento'), findsNothing);
+
+    await abrirFichaComAvistamento(tester, perdidoComPonto(), servico);
+    expect(find.text('Registrar avistamento'), findsOneWidget);
+    expect(find.textContaining('Ninguém registrou'), findsOneWidget);
+  });
+
+  testWidgets('registrar grava o ponto do pino e oferece avisar o tutor', (
+    tester,
+  ) async {
+    final servico = _AvistamentosFalsos();
+    await abrirFichaComAvistamento(tester, perdidoComPonto(), servico);
+
+    await tester.tap(find.text('Registrar avistamento'));
+    await tester.pumpAndSettle();
+    expect(find.text('REGISTRAR AVISTAMENTO'), findsOneWidget);
+    expect(find.textContaining('Hoje,'), findsOneWidget);
+
+    await tester.tap(
+      find.widgetWithText(FilledButton, 'Registrar avistamento'),
+    );
+    await tester.pumpAndSettle();
+
+    // Sem arrastar o mapa, o pino fica onde o animal foi cadastrado
+    expect(servico.gravados, hasLength(1));
+    expect(servico.gravados.single.animal, '4');
+    expect(servico.gravados.single.latitude, -20.4750334);
+    expect(find.text('Avistamento registrado'), findsOneWidget);
+    expect(find.text('Avisar o tutor pelo WhatsApp'), findsOneWidget);
+
+    await tester.tap(find.text('Agora não'));
+    await tester.pumpAndSettle();
+    expect(find.text('Visto hoje'), findsOneWidget);
+  });
+
+  testWidgets('sem conexão, o registro avisa e a tela continua aberta', (
+    tester,
+  ) async {
+    final servico = _AvistamentosFalsos(fora: true);
+    await abrirFichaComAvistamento(tester, perdidoComPonto(), servico);
+
+    await tester.tap(find.text('Registrar avistamento'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.widgetWithText(FilledButton, 'Registrar avistamento'),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Não foi possível registrar agora. Tente de novo.'),
+      findsOneWidget,
+    );
+    expect(find.text('REGISTRAR AVISTAMENTO'), findsOneWidget);
+  });
+
+  testWidgets('escrever o endereço leva o pino até a rua buscada', (
+    tester,
+  ) async {
+    GeolocatorPlatform.instance = _GpsFalso();
+    pi.GeocodingPlatformFactory.instance = _FabricaFalsa(bairro: 'Quartéis');
+    final servico = _AvistamentosFalsos();
+    await abrirFichaComAvistamento(tester, perdidoComPonto(), servico);
+    await tester.tap(find.text('Registrar avistamento'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byWidgetPredicate(
+        (w) =>
+            w is TextField &&
+            w.decoration?.hintText == 'Buscar endereço (rua e número)',
+      ),
+      'Rua do Expedicionário',
+    );
+    await tester.tap(find.byTooltip('Buscar no mapa'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.widgetWithText(FilledButton, 'Registrar avistamento'),
+    );
+    await tester.pumpAndSettle();
+
+    expect(servico.gravados.single.latitude, _latDaRua);
+    expect(servico.gravados.single.longitude, _lonDaRua);
+  });
+
+  testWidgets('a mira leva o pino até onde a pessoa está', (tester) async {
+    GeolocatorPlatform.instance = _GpsFalso();
+    pi.GeocodingPlatformFactory.instance = _FabricaFalsa();
+    final servico = _AvistamentosFalsos();
+    await abrirFichaComAvistamento(tester, perdidoComPonto(), servico);
+    await tester.tap(find.text('Registrar avistamento'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Usar minha localização'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.widgetWithText(FilledButton, 'Registrar avistamento'),
+    );
+    await tester.pumpAndSettle();
+
+    // O GPS falso está na Praça Olegário Maciel
+    expect(servico.gravados.single.latitude, -20.4642);
+    expect(servico.gravados.single.longitude, -45.4267);
+  });
+
+  testWidgets('a prévia do mapa na ficha abre o mapa com o animal em foco', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    tester.view.physicalSize = const Size(1200, 3000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final estado = EstadoPataAmiga();
+    addTearDown(estado.dispose);
+    final simba = perdidoComPonto();
+    estado.atualizarAnimais([simba]);
+    await tester.pumpWidget(
+      PataAmigaScope(
+        notifier: estado,
+        child: MaterialApp(
+          home: DetalhesAnimal(animal: simba),
+          routes: {
+            AppRoutes.mapa: (context) => PaginaMapa(
+              comMapaDeFundo: false,
+              focar: ModalRoute.of(context)!.settings.arguments as Animal,
+            ),
+            AppRoutes.details: AppRoutesConfig.routes[AppRoutes.details]!,
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Ver no mapa'));
+    await tester.pumpAndSettle();
+    expect(find.text('MAPA'), findsOneWidget);
+    // O resumo do animal já abre sozinho
+    expect(find.text('SIMBA'), findsOneWidget);
+    expect(find.text('Ver ficha completa'), findsOneWidget);
+  });
+
+  testWidgets('ficha de adoção não tem prévia do mapa', (tester) async {
+    await abrirFicha(
+      tester,
+      Animal.fromJson({
+        ...animaisMock.first.toJson(),
+        'tipo': 'adocao',
+        'latitude': -20.46,
+        'longitude': -45.42,
+      }),
+    );
+    expect(find.text('Ver no mapa'), findsNothing);
+  });
+
+  group('bairro pelo ViaCEP', () {
+    test('a busca usa só o nome da rua, sem tipo de via nem número', () {
+      expect(
+        nomeDaRuaParaBusca('Rua do Expedicionário, 155'),
+        'do Expedicionário',
+      );
+      expect(nomeDaRuaParaBusca('Avenida Inhazinha Pires'), 'Inhazinha Pires');
+      expect(
+        nomeDaRuaParaBusca('Praça São Vicente Ferrer'),
+        'São Vicente Ferrer',
+      );
+    });
+
+    test('rua de um bairro só devolve esse bairro', () {
+      final resultados = [
+        {'logradouro': 'Rua do Expedicionário', 'bairro': 'Quartéis'},
+      ];
+      expect(bairroUnicoDaRua(resultados, 'do Expedicionário'), 'Quartéis');
+    });
+
+    test('rua que atravessa dois bairros não escolhe nenhum', () {
+      final resultados = [
+        {'logradouro': 'Rua Presidente Hermes', 'bairro': 'Vila São Vicente'},
+        {'logradouro': 'Rua Presidente Hermes', 'bairro': 'Água Vermelha'},
+      ];
+      expect(bairroUnicoDaRua(resultados, 'Presidente Hermes'), isNull);
+    });
+
+    test('resultado de outra rua com nome parecido não conta', () {
+      final resultados = [
+        {'logradouro': 'Rua Presidente Hermes', 'bairro': 'Vila São Vicente'},
+        {'logradouro': 'Rua Presidente Hermes da Fonseca', 'bairro': 'Centro'},
+      ];
+      expect(
+        bairroUnicoDaRua(resultados, 'Presidente Hermes'),
+        'Vila São Vicente',
+      );
+    });
   });
 }

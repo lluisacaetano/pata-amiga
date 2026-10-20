@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'provider/usuario_provider.dart';
 
@@ -53,6 +54,11 @@ class _AplicativoPataAmigaState extends State<AplicativoPataAmiga> {
         title: 'Pata Amiga',
         debugShowCheckedModeBanner: false,
         theme: temaPataAmiga(),
+        // Os textos prontos do Flutter (calendário, botões de diálogo) em
+        // português, como o resto do app
+        locale: const Locale('pt', 'BR'),
+        supportedLocales: const [Locale('pt', 'BR')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
         initialRoute: AppRoutes.welcome,
         builder: (context, child) => Center(
           child: ConstrainedBox(

@@ -152,3 +152,14 @@ Iterable<String> filtrarBairros(String digitado) {
   if (busca.isEmpty) return bairrosDeFormiga;
   return bairrosDeFormiga.where((bairro) => _semAcento(bairro).contains(busca));
 }
+
+// O serviço de endereços do Android às vezes devolve o nome da cidade no lugar
+// do bairro. Quando isso acontece, o bairro é tratado como desconhecido
+String bairroDoServico(String? bairro, String? cidade) {
+  final lido = bairro?.trim() ?? '';
+  if (lido.isEmpty) return '';
+  if (mesmoBairro(lido, cidade ?? '') || mesmoBairro(lido, 'Formiga')) {
+    return '';
+  }
+  return lido;
+}

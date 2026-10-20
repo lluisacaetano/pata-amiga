@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../estado/estado_pata_amiga.dart';
 import '../modelos/animal.dart';
+import '../modelos/avistamento.dart';
 import '../modelos/camadas_do_mapa.dart';
 import '../routes/route_names.dart';
 import '../tema/cores.dart';
@@ -19,10 +20,12 @@ Color corDaCamada(TipoRegistro tipo) =>
 
 /// Página do mapa: o filtro das camadas em cima e o mapa embaixo.
 class PaginaMapa extends StatefulWidget {
-  const PaginaMapa({super.key, this.comMapaDeFundo = true});
+  const PaginaMapa({super.key, this.comMapaDeFundo = true, this.focar});
 
   // Os testes desligam o mapa de fundo, que baixaria imagens da internet
   final bool comMapaDeFundo;
+  // Vindo da ficha: o mapa abre com zoom neste animal e o resumo dele aberto
+  final Animal? focar;
 
   @override
   State<PaginaMapa> createState() => _PaginaMapaState();
@@ -108,6 +111,7 @@ class _PaginaMapaState extends State<PaginaMapa> {
             child: TelaMapa(
               ligadas: _ligadas,
               comMapaDeFundo: widget.comMapaDeFundo,
+              focar: widget.focar,
             ),
           ),
         ],
@@ -122,10 +126,12 @@ class TelaMapa extends StatefulWidget {
     super.key,
     required this.ligadas,
     this.comMapaDeFundo = true,
+    this.focar,
   });
 
   final Set<TipoRegistro> ligadas;
   final bool comMapaDeFundo;
+  final Animal? focar;
 
   @override
   State<TelaMapa> createState() => _TelaMapaState();
@@ -133,6 +139,33 @@ class TelaMapa extends StatefulWidget {
 
 class _TelaMapaState extends State<TelaMapa> {
   final MapController _controller = MapController();
+
+  // Onde o mapa abre: no animal vindo da ficha, ou no centro de Formiga
+  late final PinoDoMapa? _pinoEmFoco = _acharPinoEmFoco();
+
+  PinoDoMapa? _acharPinoEmFoco() {
+    final alvo = widget.focar;
+    final estado = PataAmigaScope.talvez(context);
+    if (alvo == null || estado == null) return null;
+    final pinos = pinosDoMapa(
+      [alvo],
+      estado.avistamentos,
+      camadasDoMapa.toSet(),
+    );
+    return pinos.isEmpty ? null : pinos.single;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final pino = _pinoEmFoco;
+    if (pino != null) {
+      // O resumo abre depois que o mapa aparece
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _mostrarResumo(pino.animal, pino.ultimo);
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -190,19 +223,21 @@ class _TelaMapaState extends State<TelaMapa> {
     }
   }
 
-  void _mostrarResumo(Animal animal) {
+  void _mostrarResumo(Animal animal, Avistamento? ultimo) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Cores.cartao,
       showDragHandle: true,
-      builder: (_) => _ResumoDoAnimal(animal: animal),
+      builder: (_) => _ResumoDoAnimal(animal: animal, ultimo: ultimo),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final animais = animaisNoMapa(
-      PataAmigaScope.of(context).animais,
+    final estado = PataAmigaScope.of(context);
+    final pinos = pinosDoMapa(
+      estado.animais,
+      estado.avistamentos,
       widget.ligadas,
     );
 
@@ -210,9 +245,11 @@ class _TelaMapaState extends State<TelaMapa> {
       children: [
         FlutterMap(
           mapController: _controller,
-          options: const MapOptions(
-            initialCenter: _centroInicial,
-            initialZoom: 14,
+          options: MapOptions(
+            initialCenter: _pinoEmFoco == null
+                ? _centroInicial
+                : LatLng(_pinoEmFoco.latitude, _pinoEmFoco.longitude),
+            initialZoom: _pinoEmFoco == null ? 14 : 17,
           ),
           children: [
             if (widget.comMapaDeFundo)
@@ -222,17 +259,17 @@ class _TelaMapaState extends State<TelaMapa> {
               ),
             MarkerLayer(
               markers: [
-                for (final animal in animais)
+                for (final pino in pinos)
                   Marker(
-                    point: LatLng(animal.latitude!, animal.longitude!),
+                    point: LatLng(pino.latitude, pino.longitude),
                     width: 48,
                     height: 48,
                     alignment: Alignment.topCenter,
                     child: GestureDetector(
-                      onTap: () => _mostrarResumo(animal),
+                      onTap: () => _mostrarResumo(pino.animal, pino.ultimo),
                       child: _Pino(
-                        cor: corDaCamada(animal.tipo),
-                        rotulo: animal.nome,
+                        cor: corDaCamada(pino.animal.tipo),
+                        rotulo: pino.animal.nome,
                       ),
                     ),
                   ),
@@ -270,7 +307,7 @@ class _TelaMapaState extends State<TelaMapa> {
           ],
         ),
         // Sem nenhum ponto, o mapa vazio diria nada: o aviso explica por quê
-        if (animais.isEmpty)
+        if (pinos.isEmpty)
           Positioned(
             left: 16,
             right: 16,
@@ -303,6 +340,8 @@ class _TelaMapaState extends State<TelaMapa> {
   }
 }
 
+// O pino do mapa: a patinha do Início num círculo da cor da camada, com uma
+// ponta embaixo que marca o lugar exato
 class _Pino extends StatelessWidget {
   const _Pino({required this.cor, required this.rotulo});
 
@@ -314,13 +353,50 @@ class _Pino extends StatelessWidget {
     return Semantics(
       button: true,
       label: rotulo,
+      child: PinoDaPatinha(cor: cor),
+    );
+  }
+}
+
+class PinoDaPatinha extends StatelessWidget {
+  const PinoDaPatinha({super.key, required this.cor, this.tamanho = 38});
+
+  final Color cor;
+  final double tamanho;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: tamanho,
+      height: tamanho + 10,
       child: Stack(
         alignment: Alignment.topCenter,
         children: [
-          Icon(Icons.location_on, color: cor, size: 48),
-          const Padding(
-            padding: EdgeInsets.only(top: 9),
-            child: Icon(Icons.pets, color: Colors.white, size: 18),
+          // A ponta: um quadrado girado, metade escondida atrás do círculo
+          Positioned(
+            bottom: 2,
+            child: Transform.rotate(
+              angle: 0.785398,
+              child: Container(width: 12, height: 12, color: cor),
+            ),
+          ),
+          Container(
+            width: tamanho,
+            height: tamanho,
+            decoration: BoxDecoration(
+              color: cor,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2.5),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x33000000),
+                  blurRadius: 4,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            alignment: Alignment.center,
+            child: Icon(Icons.pets, color: Colors.white, size: tamanho * 0.5),
           ),
         ],
       ),
@@ -354,9 +430,11 @@ class _AvisoDoMapa extends StatelessWidget {
 // O resumo que sobe ao tocar no pino: foto, nome, onde e quando, e o
 // caminho para a ficha completa, de onde se chega ao contato
 class _ResumoDoAnimal extends StatelessWidget {
-  const _ResumoDoAnimal({required this.animal});
+  const _ResumoDoAnimal({required this.animal, this.ultimo});
 
   final Animal animal;
+  // Com avistamento, o pino está onde o animal foi visto por último
+  final Avistamento? ultimo;
 
   @override
   Widget build(BuildContext context) {
@@ -391,6 +469,20 @@ class _ResumoDoAnimal extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 6),
+            if (ultimo != null) ...[
+              Text(
+                [
+                  'Visto pela última vez ${ultimo!.vistoHa(DateTime.now())}',
+                  if (ultimo!.lugar.isNotEmpty) ultimo!.lugar,
+                ].join(', '),
+                style: const TextStyle(
+                  color: Cores.destaque,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+            ],
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -415,10 +507,7 @@ class _ResumoDoAnimal extends StatelessWidget {
                 ),
                 Text(
                   ' · ${animal.publicadoHa(DateTime.now())}',
-                  style: const TextStyle(
-                    color: Cores.textoFraco,
-                    fontSize: 13,
-                  ),
+                  style: const TextStyle(color: Cores.textoFraco, fontSize: 13),
                 ),
               ],
             ),

@@ -1,4 +1,5 @@
 import 'animal.dart';
+import 'avistamento.dart';
 
 // As camadas do mapa: só perdido e resgate. Adoção fica fora, porque o
 // ponto de um animal para adoção seria a casa de quem o oferece
@@ -17,3 +18,45 @@ List<Animal> animaisNoMapa(
           ligadas.contains(animal.tipo),
     )
     .toList();
+
+// Um pino no mapa: o animal, onde ele aparece e o avistamento que o pôs ali
+typedef PinoDoMapa = ({
+  Animal animal,
+  double latitude,
+  double longitude,
+  Avistamento? ultimo,
+});
+
+// Os pinos do mapa. O perdido aparece no último lugar em que foi visto, e não
+// mais onde foi cadastrado; por isso entra mesmo sem coordenada no cadastro,
+// desde que alguém o tenha avistado
+List<PinoDoMapa> pinosDoMapa(
+  Iterable<Animal> animais,
+  Iterable<Avistamento> avistamentos,
+  Set<TipoRegistro> ligadas,
+) {
+  final pinos = <PinoDoMapa>[];
+  for (final animal in animais) {
+    if (!camadasDoMapa.contains(animal.tipo)) continue;
+    if (!ligadas.contains(animal.tipo)) continue;
+    final ultimo = animal.tipo == TipoRegistro.perdido
+        ? ultimoAvistamento(animal, avistamentos)
+        : null;
+    if (ultimo != null) {
+      pinos.add((
+        animal: animal,
+        latitude: ultimo.latitude,
+        longitude: ultimo.longitude,
+        ultimo: ultimo,
+      ));
+    } else if (animal.temPonto) {
+      pinos.add((
+        animal: animal,
+        latitude: animal.latitude!,
+        longitude: animal.longitude!,
+        ultimo: null,
+      ));
+    }
+  }
+  return pinos;
+}

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
@@ -14,6 +16,7 @@ import '../widgets/escolha_de_tipo.dart';
 import '../routes/app_router.dart';
 // [SPRINT 3 - NOVO] Camada de dados: API e cache local
 import '../services/animal_service.dart';
+import '../services/avistamento_service.dart';
 import '../services/cache_service.dart';
 
 enum EstadoFeed { carregando, cache, atualizado, erro }
@@ -23,8 +26,9 @@ class FeedAdocao extends StatefulWidget {
   // versões falsas para não depender da API no ar
   final AnimalService? api;
   final CacheService? cache;
+  final AvistamentoService? avistamentos;
 
-  const FeedAdocao({super.key, this.api, this.cache});
+  const FeedAdocao({super.key, this.api, this.cache, this.avistamentos});
 
   @override
   State<FeedAdocao> createState() => _FeedAdocaoState();
@@ -43,6 +47,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
   // [SPRINT 3 - NOVO] Serviços de dados
   late final _api = widget.api ?? AnimalService();
   late final _cache = widget.cache ?? CacheService();
+  late final _avistamentos = widget.avistamentos ?? AvistamentoService();
 
   // [SPRINT 3 - NOVO] Animais que vieram da API ou do cache.
   // Substitui a lista fixa animaisMock.
@@ -74,6 +79,18 @@ class _FeedAdocaoState extends State<FeedAdocao> {
   //        falha   -> com cache, continua no estado cache
   //                   sem cache, estado erro
   // É chamado ao abrir a tela e pelo botão "Tentar atualizar".
+  // Os avistamentos vêm à parte: se a API deles falhar, o feed segue igual,
+  // só o mapa fica sem o último ponto visto
+  Future<void> _carregarAvistamentos() async {
+    try {
+      final lista = await _avistamentos.buscarTodos();
+      if (!mounted) return;
+      PataAmigaScope.of(context).atualizarAvistamentos(lista);
+    } on Exception {
+      // sem avistamentos desta vez
+    }
+  }
+
   Future<void> _carregar() async {
     final salvos = await _cache.lerAnimais();
     final dataSalva = await _cache.dataDoCache();
@@ -94,6 +111,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
           .atualizarAnimais([..._animaisApi, ..._animaisCriados]);
     }
 
+    unawaited(_carregarAvistamentos());
     try {
       final novos = await _api.buscarAnimais();
       await _cache.salvarAnimais(novos); // o cache nunca fica congelado

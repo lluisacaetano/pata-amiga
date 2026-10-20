@@ -13,6 +13,7 @@ import '../telas/cadastro_animal.dart';
 import '../telas/onboarding_screen.dart';
 import '../telas/editar_perfil.dart';
 import '../telas/perfil_usuario.dart';
+import '../telas/registrar_avistamento.dart';
 import '../telas/tela_mapa.dart'; // NOVO
 import 'route_names.dart';
 
@@ -53,6 +54,18 @@ class AppRoutesConfig {
     AppRoutes.perfilUsuario: (_) => const PerfilUsuario(),
     AppRoutes.editarPerfil: (_) => const EditarPerfil(),
 
-    AppRoutes.mapa: (_) => const PaginaMapa(), // NOVO
+    AppRoutes.mapa: (context) {
+      // Vindo da ficha, o mapa recebe o animal para abrir com zoom nele
+      final animal = ModalRoute.of(context)?.settings.arguments;
+      return PaginaMapa(focar: animal is Animal ? animal : null);
+    },
+
+    AppRoutes.registrarAvistamento: (context) {
+      final animal = ModalRoute.of(context)?.settings.arguments;
+      if (animal is! Animal) {
+        throw ArgumentError('O avistamento precisa saber de qual animal é.');
+      }
+      return RegistrarAvistamento(animal: animal);
+    },
   };
 }

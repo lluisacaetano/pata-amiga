@@ -39,6 +39,8 @@ extension RotuloStatus on StatusAnimal {
 }
 
 class Animal {
+  // O id que a API dá; animal cadastrado só no aparelho não tem
+  final int? id;
   final String nome;
   final String especie;
   final String raca;
@@ -69,6 +71,7 @@ class Animal {
   final double? longitude;
 
   Animal({
+    this.id,
     required this.nome,
     required this.especie,
     required this.raca,
@@ -99,6 +102,7 @@ class Animal {
   // Campos com `?? ''` ou `?? false` são opcionais: JSON incompleto não quebra.
   // Se um campo novo for criado no model, lembrar de incluir aqui e no toJson.
   factory Animal.fromJson(Map<String, dynamic> json) => Animal(
+        id: (json['id'] as num?)?.toInt(),
         nome: json['nome'] as String,
         especie: json['especie'] as String,
         raca: json['raca'] as String? ?? '',
@@ -133,6 +137,7 @@ class Animal {
   // no SharedPreferences. Tem que espelhar o fromJson: se um campo faltar
   // aqui, ele some quando o app ler do cache em modo avião.
   Map<String, dynamic> toJson() => {
+        if (id != null) 'id': id,
         'nome': nome,
         'especie': especie,
         'raca': raca,
@@ -163,6 +168,10 @@ class Animal {
 
   // Os mapas só conseguem desenhar o animal quando as duas coordenadas existem
   bool get temPonto => latitude != null && longitude != null;
+
+  // Como o avistamento acha o animal: pelo id da API, ou pelo nome quando o
+  // animal ainda só existe no aparelho
+  String get chave => id?.toString() ?? nome;
 
   // Descrição curta do animal, exibida embaixo do nome no card do feed.
   String get resumo =>
