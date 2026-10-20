@@ -15,8 +15,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pata_amiga/auth/screens/de_volta_screen.dart';
 import 'package:pata_amiga/dados/animais_mock.dart';
 import 'package:pata_amiga/dados/bairros_formiga.dart';
+import 'package:pata_amiga/dados/racas.dart';
 import 'package:pata_amiga/modelos/avistamento.dart';
 import 'package:pata_amiga/modelos/camadas_do_mapa.dart';
+import 'package:pata_amiga/modelos/filtros_do_feed.dart';
 import 'package:pata_amiga/modelos/ponto_de_alimentacao.dart';
 import 'package:pata_amiga/estado/estado_pata_amiga.dart';
 import 'package:pata_amiga/modelos/animal.dart';
@@ -2355,6 +2357,410 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('EDITAR REGISTRO'), findsOneWidget);
       expect(find.widgetWithText(TextField, 'Paçoca'), findsOneWidget);
+    });
+  });
+
+  group('filtros do feed (US 06)', () {
+    Animal bicho(
+      String nome, {
+      String especie = 'cachorro',
+      String porte = 'médio',
+      String sexo = 'macho',
+      String raca = '',
+      String bairro = 'Centro',
+      bool castrado = false,
+      bool vacinado = false,
+      String tipo = 'adocao',
+    }) => Animal.fromJson({
+      ...animaisMock.first.toJson(),
+      'id': null,
+      'nome': nome,
+      'tipo': tipo,
+      'status': 'disponivel',
+      'especie': especie,
+      'porte': porte,
+      'sexo': sexo,
+      'raca': raca,
+      'bairro': bairro,
+      'castrado': castrado,
+      'vacinado': vacinado,
+      'vermifugado': false,
+    });
+
+    final thor = bicho(
+      'Thor',
+      porte: 'grande',
+      raca: 'labrador',
+      castrado: true,
+      vacinado: true,
+    );
+    final mel = bicho(
+      'Mel',
+      especie: 'gato',
+      porte: 'pequeno',
+      sexo: 'fêmea',
+      raca: 'vira-lata',
+      bairro: 'Água Vermelha',
+      vacinado: true,
+    );
+    final bob = bicho('Bob', raca: 'SRD');
+
+    test('a raça escrita de jeitos diferentes vira uma só', () {
+      expect(racaPadrao('vira-lata'), semRacaDefinida);
+      expect(racaPadrao(' SRD '), semRacaDefinida);
+      expect(racaPadrao('labrador'), 'Labrador Retriever');
+      expect(racaPadrao('LAPERM'), 'LaPerm');
+      expect(racaPadrao('pastor DE  shetland'), 'Pastor de Shetland');
+      expect(racaPadrao(''), '');
+      expect(racasDoFeed([thor, mel, bob]), [
+        semRacaDefinida,
+        'Labrador Retriever',
+      ]);
+    });
+
+    test('opções no mesmo grupo somam; grupos diferentes se combinam', () {
+      final cachorroSemRaca = const FiltrosDoFeed()
+          .alternar(GrupoDeFiltro.especie, 'cachorro')
+          .alternar(GrupoDeFiltro.raca, semRacaDefinida);
+      expect([thor, mel, bob].where(cachorroSemRaca.combina), [bob]);
+
+      final pequenoOuGrande = const FiltrosDoFeed()
+          .alternar(GrupoDeFiltro.porte, 'pequeno')
+          .alternar(GrupoDeFiltro.porte, 'grande');
+      expect([thor, mel, bob].where(pequenoOuGrande.combina), [thor, mel]);
+    });
+
+    test('na saúde, marcar dois cuidados pede os dois', () {
+      final vacinado = const FiltrosDoFeed().alternar(
+        GrupoDeFiltro.saude,
+        'vacinado',
+      );
+      expect([thor, mel, bob].where(vacinado.combina), [thor, mel]);
+      final vacinadoECastrado = vacinado.alternar(
+        GrupoDeFiltro.saude,
+        'castrado',
+      );
+      expect([thor, mel, bob].where(vacinadoECastrado.combina), [thor]);
+    });
+
+    test('os bairros saem do feed em ordem, sem tropeçar no acento', () {
+      final zona = bicho('Zeca', bairro: 'Vila Ferreira');
+      expect(opcoesDe(GrupoDeFiltro.bairro, [zona, mel, thor]), [
+        'Água Vermelha',
+        'Centro',
+        'Vila Ferreira',
+      ]);
+    });
+
+    test('a raça escrita acha a opção da lista da espécie', () {
+      expect(racaDaLista('cachorro', 'labrador'), 'Labrador Retriever');
+      expect(racaDaLista('cachorro', 'Spitz Alemão'), 'Lulu da Pomerânia');
+      expect(racaDaLista('Gato', 'vira-lata'), semRacaDefinida);
+      expect(racaDaLista('gato', 'siames'), 'Siamês');
+      expect(racaDaLista('gato', 'Labrador'), isNull);
+      expect(racaDaLista('cachorro', 'Raça Inventada'), isNull);
+      expect(racaDaLista(null, 'Labrador'), isNull);
+      // Todo nome da lista sai igual pela padronização do filtro
+      for (final raca in [...racasDeCachorro, ...racasDeGato]) {
+        expect(racaPadrao(raca), raca);
+      }
+    });
+
+    testWidgets('a raça é escolhida da lista da espécie e some ao trocá-la', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1200, 2800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(const MaterialApp(home: CadastroAnimal()));
+      await tester.tap(find.text('Adoção'));
+      await tester.pumpAndSettle();
+
+      Finder campoDaRaca(String dica) => find.byWidgetPredicate(
+        (w) => w is TextField && w.decoration?.hintText == dica,
+      );
+      // Sem espécie, a raça espera
+      expect(
+        tester
+            .widget<TextField>(campoDaRaca('Escolha a espécie primeiro'))
+            .enabled,
+        isFalse,
+      );
+
+      Future<void> escolherEspecie(String especie) async {
+        final menu = find.byType(DropdownButtonFormField<String>).first;
+        await tester.ensureVisible(menu);
+        await tester.tap(menu);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(especie).last);
+        await tester.pumpAndSettle();
+      }
+
+      await escolherEspecie('Cachorro');
+      await tester.enterText(campoDaRaca('Digite para buscar a raça'), 'lab');
+      await tester.pumpAndSettle();
+      expect(find.text('Outra raça'), findsOneWidget);
+      await tester.tap(find.text('Labrador Retriever').last);
+      await tester.pumpAndSettle();
+      expect(
+        find.widgetWithText(TextField, 'Labrador Retriever'),
+        findsOneWidget,
+      );
+
+      // Gato não tem Labrador: a raça escolhida sai
+      await escolherEspecie('Gato');
+      expect(
+        find.widgetWithText(TextField, 'Labrador Retriever'),
+        findsNothing,
+      );
+    });
+
+    final rex = bicho('Rex', tipo: 'perdido');
+    final tom = bicho('Tom', especie: 'gato', tipo: 'perdido');
+
+    Future<void> abrirFeed(WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues({});
+      tester.view.physicalSize = const Size(1200, 2800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      await tester.pumpWidget(
+        PataAmigaScope(
+          notifier: estado,
+          child: MaterialApp(
+            home: FeedAdocao(api: _ApiFalsa([thor, mel, bob, rex, tom])),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    Finder campo(String dica) => find.byWidgetPredicate(
+      (w) => w is TextField && w.decoration?.hintText == dica,
+    );
+
+    // Digita no select e escolhe a opção na lista, como no cadastro
+    Future<void> escolherNoSelect(
+      WidgetTester tester,
+      String dica,
+      String digitado,
+      String opcao,
+    ) async {
+      await tester.ensureVisible(campo(dica));
+      // Tocar abre a lista mesmo sem digitar nada
+      await tester.tap(campo(dica));
+      await tester.pumpAndSettle();
+      if (digitado.isNotEmpty) await tester.enterText(campo(dica), digitado);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(opcao).last);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('o painel conta, aplica, tira um filtro e limpa todos', (
+      tester,
+    ) async {
+      await abrirFeed(tester);
+      expect(find.text('THOR'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Filtros'));
+      await tester.pumpAndSettle();
+      expect(find.text('Mostrar 3 animais'), findsOneWidget);
+
+      await tester.tap(find.text('Cachorro'));
+      await tester.pumpAndSettle();
+      expect(find.text('Mostrar 2 animais'), findsOneWidget);
+      await escolherNoSelect(
+        tester,
+        'Digite para buscar a raça',
+        'sem',
+        semRacaDefinida,
+      );
+      // Marcar não muda o feed até confirmar
+      expect(find.text('Mostrar 1 animal'), findsOneWidget);
+
+      await tester.tap(find.text('Mostrar 1 animal'));
+      await tester.pumpAndSettle();
+      expect(find.text('BOB'), findsOneWidget);
+      expect(find.text('THOR'), findsNothing);
+      expect(find.text('MEL'), findsNothing);
+      // O botão diz quantos filtros estão ligados
+      expect(
+        find.descendant(
+          of: find.byTooltip('Filtros'),
+          matching: find.text('2'),
+        ),
+        findsOneWidget,
+      );
+
+      // Tirar só a espécie traz a gata sem raça de volta. A espécie vem
+      // antes da raça na faixa
+      expect(find.widgetWithText(InputChip, 'Cachorro'), findsOneWidget);
+      await tester.tap(find.byTooltip('Tirar o filtro').first);
+      await tester.pumpAndSettle();
+      expect(find.text('BOB'), findsOneWidget);
+      expect(find.text('MEL'), findsOneWidget);
+      expect(find.text('THOR'), findsNothing);
+
+      await tester.tap(find.text('Limpar filtros'));
+      await tester.pumpAndSettle();
+      expect(find.text('THOR'), findsOneWidget);
+      expect(find.byType(InputChip), findsNothing);
+    });
+
+    testWidgets('o select de raça do filtro só tem raças cadastradas', (
+      tester,
+    ) async {
+      await abrirFeed(tester);
+      await tester.tap(find.byTooltip('Filtros'));
+      await tester.pumpAndSettle();
+      await tester.tap(campo('Digite para buscar a raça'));
+      await tester.pumpAndSettle();
+      expect(find.text('Labrador Retriever'), findsOneWidget);
+      expect(find.text('Beagle'), findsNothing);
+      // As fixas ficam no rodapé
+      expect(find.text(semRacaDefinida), findsOneWidget);
+      expect(find.text('Todas as raças'), findsOneWidget);
+
+      await tester.tap(find.text('Labrador Retriever'));
+      await tester.pumpAndSettle();
+      expect(find.text('Mostrar 1 animal'), findsOneWidget);
+      // "Todas as raças" desliga o filtro de raça
+      await escolherNoSelect(
+        tester,
+        'Digite para buscar a raça',
+        '',
+        'Todas as raças',
+      );
+      // A espécie marcada junto com o Labrador continua: são os 2 cachorros
+      expect(find.text('Mostrar 2 animais'), findsOneWidget);
+    });
+
+    testWidgets('escolher a raça marca a espécie; trocar a espécie a apaga', (
+      tester,
+    ) async {
+      await abrirFeed(tester);
+      await tester.tap(find.byTooltip('Filtros'));
+      await tester.pumpAndSettle();
+
+      SegmentedButton<String> abaDaEspecie() => tester
+          .widgetList<SegmentedButton<String>>(
+            find.byType(SegmentedButton<String>),
+          )
+          .first;
+      expect(abaDaEspecie().selected, isEmpty);
+
+      await escolherNoSelect(
+        tester,
+        'Digite para buscar a raça',
+        'lab',
+        'Labrador Retriever',
+      );
+      expect(abaDaEspecie().selected, {'cachorro'});
+      // A lista se refaz com a espécie: a gata sem raça some do rodapé
+      await tester.tap(campo('Digite para buscar a raça'));
+      await tester.pumpAndSettle();
+      expect(find.text(semRacaDefinida), findsOneWidget);
+
+      await tester.tap(find.text('Gato'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cachorro'));
+      await tester.pumpAndSettle();
+      expect(abaDaEspecie().selected, {'gato'});
+      expect(
+        find.widgetWithText(InputChip, 'Labrador Retriever'),
+        findsNothing,
+      );
+    });
+
+    testWidgets('dá para escolher mais de uma raça no filtro', (tester) async {
+      await abrirFeed(tester);
+      await tester.tap(find.byTooltip('Filtros'));
+      await tester.pumpAndSettle();
+
+      await escolherNoSelect(
+        tester,
+        'Digite para buscar a raça',
+        'lab',
+        'Labrador Retriever',
+      );
+      // O campo volta vazio, e a escolhida vira uma etiqueta
+      expect(
+        find.widgetWithText(InputChip, 'Labrador Retriever'),
+        findsOneWidget,
+      );
+      expect(find.text('Mostrar 1 animal'), findsOneWidget);
+
+      await escolherNoSelect(
+        tester,
+        'Digite para buscar a raça',
+        '',
+        semRacaDefinida,
+      );
+      expect(find.widgetWithText(InputChip, semRacaDefinida), findsOneWidget);
+      // Labrador ou sem raça, entre os cachorros que o Labrador marcou
+      expect(find.text('Mostrar 2 animais'), findsOneWidget);
+
+      // Tirar na etiqueta desmarca
+      await tester.tap(find.byTooltip('Tirar Labrador Retriever'));
+      await tester.pumpAndSettle();
+      expect(
+        find.widgetWithText(InputChip, 'Labrador Retriever'),
+        findsNothing,
+      );
+      expect(find.text('Mostrar 1 animal'), findsOneWidget);
+    });
+
+    testWidgets('os filtros continuam valendo ao trocar de aba', (
+      tester,
+    ) async {
+      await abrirFeed(tester);
+      await tester.tap(find.byTooltip('Filtros'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Gato'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Mostrar 1 animal'));
+      await tester.pumpAndSettle();
+      expect(find.text('MEL'), findsOneWidget);
+      expect(find.text('THOR'), findsNothing);
+
+      await tester.tap(find.text('Perdidos'));
+      await tester.pumpAndSettle();
+      // Na outra aba, o filtro continua ligado e só o gato perdido aparece
+      expect(find.widgetWithText(InputChip, 'Gato'), findsOneWidget);
+      expect(find.text('TOM'), findsOneWidget);
+      expect(find.text('REX'), findsNothing);
+
+      // E o painel, aberto aqui, já conta pela aba de perdidos
+      await tester.tap(find.byTooltip('Filtros'));
+      await tester.pumpAndSettle();
+      expect(find.text('Mostrar 1 animal'), findsOneWidget);
+    });
+
+    testWidgets('sem nenhum animal que combine, o feed oferece limpar', (
+      tester,
+    ) async {
+      await abrirFeed(tester);
+      await tester.tap(find.byTooltip('Filtros'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Gato'));
+      await tester.pumpAndSettle();
+      // A gata é da Água Vermelha: no Centro não há nenhum gato
+      await escolherNoSelect(
+        tester,
+        'Digite para buscar o bairro',
+        'Centro',
+        'Centro',
+      );
+      expect(find.text('Nenhum animal combina'), findsOneWidget);
+
+      await tester.tap(find.text('Nenhum animal combina'));
+      await tester.pumpAndSettle();
+      expect(find.text('Nenhum animal com esses filtros.'), findsOneWidget);
+
+      await tester.tap(find.text('Limpar filtros').last);
+      await tester.pumpAndSettle();
+      expect(find.text('THOR'), findsOneWidget);
     });
   });
 }

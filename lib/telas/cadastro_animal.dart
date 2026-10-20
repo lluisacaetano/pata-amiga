@@ -11,6 +11,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
 import '../dados/bairros_formiga.dart';
+import '../dados/racas.dart';
 import '../modelos/animal.dart';
 import '../modelos/dono.dart';
 import '../provider/usuario_provider.dart';
@@ -23,6 +24,7 @@ import '../widgets/escolha_de_tipo.dart';
 import '../widgets/foto_animal.dart';
 import '../widgets/mapa_de_local.dart';
 import '../widgets/mascaras.dart';
+import '../widgets/selecao_com_busca.dart';
 
 String _comMaiuscula(String texto) =>
     texto.isEmpty ? texto : texto[0].toUpperCase() + texto.substring(1);
@@ -94,7 +96,11 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
   String? _sexo;
 
   final _nome = TextEditingController();
-  final _raca = TextEditingController();
+  // A raça sai da lista da espécie; "Outra" abre o campo para escrever,
+  // como no bairro
+  String? _racaEscolhida;
+  final _buscaDaRaca = TextEditingController();
+  final _outraRaca = TextEditingController();
   final _idade = TextEditingController();
   final _observacoes = TextEditingController();
   final _necessidades = TextEditingController();
@@ -143,7 +149,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     _especie = _opcao(_especies, base.especie);
     _porte = _opcao(_portes, base.porte);
     _sexo = _opcao(_sexos, base.sexo);
-    _raca.text = base.raca;
+    _escolherRaca(base.raca);
     _idade.text = base.idade;
     _castrado = base.castrado;
     _vacinado = base.vacinado;
@@ -263,6 +269,39 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
       _outroBairro.text = bairro;
     }
   }
+
+  // A raça já cadastrada: se bater com a lista da espécie, vem escolhida; se
+  // não bater, vai para "Outra" com o nome que estava escrito
+  void _escolherRaca(String raca) {
+    if (raca.trim().isEmpty) return;
+    final daLista = racaDaLista(_especie, raca);
+    if (daLista != null) {
+      _racaEscolhida = daLista;
+      _buscaDaRaca.text = daLista;
+    } else {
+      _racaEscolhida = outraRaca;
+      _buscaDaRaca.text = outraRaca;
+      _outraRaca.text = raca.trim();
+    }
+  }
+
+  // Trocar a espécie apaga a raça que não existe na outra lista
+  void _escolherEspecie(String? especie) {
+    setState(() {
+      _especie = especie;
+      final raca = _racaEscolhida;
+      if (raca != null &&
+          raca != outraRaca &&
+          !racasDa(especie).contains(raca)) {
+        _racaEscolhida = null;
+        _buscaDaRaca.clear();
+      }
+    });
+  }
+
+  String get _raca => _racaEscolhida == outraRaca
+      ? _outraRaca.text.trim()
+      : _racaEscolhida ?? '';
 
   String get _bairro => _bairroEscolhido == outroBairro
       ? _outroBairro.text.trim()
@@ -410,7 +449,8 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
         _responsavel,
         _telefone,
       ].every((campo) => campo.text.trim().isNotEmpty) &&
-      _bairro.isNotEmpty;
+      _bairro.isNotEmpty &&
+      (_racaEscolhida != outraRaca || _raca.isNotEmpty);
 
   // Devolve o animal ao feed, que é quem o põe na lista
   // Sem a mira, o endereço digitado vira um ponto da rua, para o animal
@@ -473,7 +513,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     final animal = Animal(
       nome: nome.isEmpty ? _nomePadrao : nome,
       especie: _especie!,
-      raca: _raca.text.trim(),
+      raca: _raca,
       sexo: _sexo ?? 'não informado',
       porte: _porte!,
       idade: _idade.text.trim(),
@@ -547,7 +587,8 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     _mapa.dispose();
     for (final campo in [
       _nome,
-      _raca,
+      _buscaDaRaca,
+      _outraRaca,
       _idade,
       _observacoes,
       _necessidades,
@@ -638,8 +679,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
                             opcoes: _especies,
                             valor: _especie,
                             comErro: _naoEscolhido(_especie),
-                            aoEscolher: (escolha) =>
-                                setState(() => _especie = escolha),
+                            aoEscolher: _escolherEspecie,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -656,26 +696,39 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
                       ],
                     ),
                     const SizedBox(height: 14),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: _Campo(
-                            rotulo: 'Raça',
-                            controlador: _raca,
-                            exemplo: 'Sem raça definida',
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _Campo(
-                            rotulo: 'Idade',
-                            controlador: _idade,
-                            exemplo: '2 anos',
-                            comErro: _faltando(_idade),
-                          ),
-                        ),
+                    SelecaoComBusca(
+                      // A lista muda com a espécie; a chave refaz o campo
+                      key: ValueKey(_especie),
+                      rotulo: 'Raça',
+                      dica: _especie == null
+                          ? 'Escolha a espécie primeiro'
+                          : 'Digite para buscar a raça',
+                      habilitada: _especie != null,
+                      controlador: _buscaDaRaca,
+                      opcoes: (digitado) => filtrarRacas(_especie, digitado),
+                      daLista: (texto) => racaDaLista(_especie, texto),
+                      rodape: const [
+                        (valor: semRacaDefinida, texto: semRacaDefinida),
+                        (valor: outraRaca, texto: 'Outra raça'),
                       ],
+                      aoEscolher: (raca) =>
+                          setState(() => _racaEscolhida = raca),
+                    ),
+                    if (_racaEscolhida == outraRaca) ...[
+                      const SizedBox(height: 14),
+                      _Campo(
+                        rotulo: 'Qual é a raça?',
+                        controlador: _outraRaca,
+                        exemplo: 'Informe o nome da raça',
+                        comErro: _faltando(_outraRaca),
+                      ),
+                    ],
+                    const SizedBox(height: 14),
+                    _Campo(
+                      rotulo: 'Idade',
+                      controlador: _idade,
+                      exemplo: '2 anos',
+                      comErro: _faltando(_idade),
                     ),
                     const SizedBox(height: 14),
                     _Selecao(
@@ -769,8 +822,15 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  _SelecaoDeBairro(
+                  SelecaoComBusca(
+                    rotulo: 'Bairro',
+                    dica: 'Digite para buscar o bairro',
                     controlador: _buscaDoBairro,
+                    opcoes: filtrarBairros,
+                    daLista: bairroDaLista,
+                    rodape: const [
+                      (valor: outroBairro, texto: 'Outro bairro'),
+                    ],
                     comErro: _tentouCadastrar && _bairroEscolhido == null,
                     aoEscolher: (bairro) =>
                         setState(() => _bairroEscolhido = bairro),
@@ -1330,158 +1390,6 @@ class _Selecao extends StatelessWidget {
         ),
         if (comErro) const _Recado('Campo obrigatório', erro: true),
       ],
-    );
-  }
-}
-
-// O select do bairro: a caixa é a mesma dos outros campos, e digitar
-// filtra a lista. "Outro" fica sempre no fim, para o bairro que faltar
-class _SelecaoDeBairro extends StatefulWidget {
-  final TextEditingController controlador;
-  final bool comErro;
-  final ValueChanged<String?> aoEscolher;
-
-  const _SelecaoDeBairro({
-    required this.controlador,
-    required this.comErro,
-    required this.aoEscolher,
-  });
-
-  @override
-  State<_SelecaoDeBairro> createState() => _SelecaoDeBairroState();
-}
-
-class _SelecaoDeBairroState extends State<_SelecaoDeBairro> {
-  final _foco = FocusNode();
-
-  @override
-  void dispose() {
-    _foco.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final controlador = widget.controlador;
-    final comErro = widget.comErro;
-    final aoEscolher = widget.aoEscolher;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _Rotulo('Bairro'),
-        const SizedBox(height: 6),
-        LayoutBuilder(
-          builder: (context, restricoes) => RawAutocomplete<String>(
-            textEditingController: controlador,
-            focusNode: _foco,
-            // Sem nenhum bairro achado a lista sumiria, e com ela o
-            // "Outro bairro"; o marcador mantém o rodapé aparecendo
-            optionsBuilder: (digitado) {
-              final achados = filtrarBairros(digitado.text);
-              return achados.isEmpty ? const [outroBairro] : achados;
-            },
-            onSelected: (bairro) {
-              FocusScope.of(context).unfocus();
-              aoEscolher(bairro);
-            },
-            fieldViewBuilder: (context, controlador, foco, aoEnviar) =>
-                TextField(
-                  controller: controlador,
-                  focusNode: foco,
-                  style: const TextStyle(fontSize: 15),
-                  textCapitalization: TextCapitalization.words,
-                  // Só conta como escolhido o que bate com a lista
-                  onChanged: (texto) => aoEscolher(bairroDaLista(texto)),
-                  decoration: _caixa(
-                    'Digite para buscar o bairro',
-                    comErro: comErro,
-                    acao: const Icon(
-                      Icons.keyboard_arrow_down,
-                      color: Cores.textoFraco,
-                    ),
-                  ),
-                ),
-            optionsViewBuilder: (context, escolher, opcoes) {
-              final bairros = opcoes
-                  .where((opcao) => opcao != outroBairro)
-                  .toList();
-              return Align(
-              alignment: Alignment.topLeft,
-              child: Material(
-                color: Cores.cartao,
-                elevation: 3,
-                borderRadius: BorderRadius.circular(12),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: 300,
-                    maxWidth: restricoes.maxWidth,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Flexible(
-                        child: ListView.builder(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          shrinkWrap: true,
-                          itemCount: bairros.length,
-                          itemBuilder: (context, indice) {
-                            final opcao = bairros[indice];
-                            return _OpcaoDeBairro(
-                              texto: opcao,
-                              aoTocar: () => escolher(opcao),
-                            );
-                          },
-                        ),
-                      ),
-                      // Fica fixo no rodapé: quem não acha o bairro não
-                      // precisa rolar a lista inteira para descobrir a saída
-                      const Divider(height: 1, color: Cores.borda),
-                      _OpcaoDeBairro(
-                        texto: 'Outro bairro',
-                        destaque: true,
-                        aoTocar: () => escolher(outroBairro),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-            },
-          ),
-        ),
-        if (comErro) const _Recado('Campo obrigatório', erro: true),
-      ],
-    );
-  }
-}
-
-class _OpcaoDeBairro extends StatelessWidget {
-  final String texto;
-  final bool destaque;
-  final VoidCallback aoTocar;
-
-  const _OpcaoDeBairro({
-    required this.texto,
-    required this.aoTocar,
-    this.destaque = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: aoTocar,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Text(
-          texto,
-          style: TextStyle(
-            fontSize: 15,
-            color: destaque ? Cores.principal : Cores.texto,
-            fontWeight: destaque ? FontWeight.w600 : FontWeight.normal,
-          ),
-        ),
-      ),
     );
   }
 }
