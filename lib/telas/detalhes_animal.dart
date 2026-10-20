@@ -12,6 +12,7 @@ import '../provider/usuario_provider.dart';
 import '../routes/route_names.dart';
 import '../services/animal_service.dart';
 import '../tema/cores.dart';
+import '../widgets/acoes_do_registro.dart';
 import '../widgets/barra_inferior.dart';
 import '../widgets/cuidado.dart';
 import '../widgets/escolha_de_tipo.dart';
@@ -87,98 +88,6 @@ class DetalhesAnimal extends StatelessWidget {
     );
   }
 
-  // Quem cadastrou marca o desfecho (adotado, encontrado ou resgatado) ou
-  // volta atrás. Confirma antes, porque o animal sai do feed e do mapa
-  Future<void> _mudarStatus(BuildContext context, Animal atual) async {
-    final novo = atual.finalizado ? StatusAnimal.disponivel : atual.desfecho;
-    final voltando = novo == StatusAnimal.disponivel;
-    final textoNovo = atual.comStatus(novo).rotuloDoStatus;
-    // O mesmo painel de baixo das outras confirmações do app
-    final confirmou = await showModalBottomSheet<bool>(
-      context: context,
-      backgroundColor: Cores.cartao,
-      showDragHandle: true,
-      builder: (painel) => _ConfirmarStatus(
-        titulo: voltando
-            ? 'Retornar ${atual.nome} para "$textoNovo"?'
-            : 'Marcar ${atual.nome} como $textoNovo?',
-        texto: voltando
-            ? 'O animal voltará a ser exibido no feed e no mapa.'
-            : 'O animal deixará de ser exibido no feed e no mapa. A alteração '
-                  'pode ser revertida a qualquer momento nesta ficha.',
-        aoConfirmar: () => Navigator.pop(painel, true),
-      ),
-    );
-    if (confirmou != true || !context.mounted) return;
-
-    final estado = PataAmigaScope.of(context);
-    final mensageiro = ScaffoldMessenger.of(context);
-    try {
-      await (api ?? AnimalService()).atualizarStatus(atual, novo);
-    } on Exception {
-      mensageiro
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(
-            content: Text('Não foi possível mudar agora. Tente de novo.'),
-          ),
-        );
-      return;
-    }
-    await estado.substituirAnimal(atual.comStatus(novo));
-    if (novo == StatusAnimal.resgatado && context.mounted) {
-      await _oferecerAdocao(context, atual);
-    }
-  }
-
-  // Depois do resgate, o convite para publicar o animal para adoção
-  Future<void> _oferecerAdocao(BuildContext context, Animal atual) async {
-    final publicar = await showModalBottomSheet<bool>(
-      context: context,
-      backgroundColor: Cores.cartao,
-      showDragHandle: true,
-      builder: (painel) => _OfertaDeAdocao(
-        nome: atual.nome,
-        aoPublicar: () => Navigator.pop(painel, true),
-      ),
-    );
-    if (publicar == true && context.mounted) {
-      await _publicarParaAdocao(context, atual);
-    }
-  }
-
-  // Abre o cadastro já preenchido com os dados do resgate e o tipo Adoção
-  Future<void> _publicarParaAdocao(BuildContext context, Animal atual) async {
-    final estado = PataAmigaScope.of(context);
-    final mensageiro = ScaffoldMessenger.of(context);
-    final novo = await Navigator.pushNamed(
-      context,
-      AppRoutes.registerAnimal,
-      arguments: atual,
-    );
-    if (novo is! Animal) return;
-    var naApi = true;
-    try {
-      await (api ?? AnimalService()).criarAnimal(novo);
-    } on Exception {
-      naApi = false;
-    }
-    await estado.registrarCadastro(novo);
-    estado.atualizarAnimais([...estado.animais, novo]);
-    mensageiro
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            naApi
-                ? '${novo.nome} foi publicado para adoção.'
-                : '${novo.nome} foi publicado só neste aparelho. '
-                      'Não foi possível enviar à API.',
-          ),
-        ),
-      );
-  }
-
   @override
   Widget build(BuildContext context) {
     final estado = PataAmigaScope.of(context);
@@ -235,8 +144,9 @@ class DetalhesAnimal extends StatelessWidget {
               const SizedBox(height: 12),
               _ControleDoStatus(
                 animal: animal,
-                aoMudar: () => _mudarStatus(context, animal),
-                aoPublicar: () => _publicarParaAdocao(context, animal),
+                aoMudar: () => mudarStatus(context, animal, api: api),
+                aoEditar: () => editarRegistro(context, animal, api: api),
+                aoPublicar: () => publicarParaAdocao(context, animal, api: api),
               ),
             ],
             if (perdido) ...[
@@ -879,11 +789,13 @@ class _ControleDoStatus extends StatelessWidget {
   const _ControleDoStatus({
     required this.animal,
     required this.aoMudar,
+    required this.aoEditar,
     required this.aoPublicar,
   });
 
   final Animal animal;
   final VoidCallback aoMudar;
+  final VoidCallback aoEditar;
   final VoidCallback aoPublicar;
 
   @override
@@ -943,8 +855,18 @@ class _ControleDoStatus extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: 4),
+          TextButton.icon(
+            onPressed: aoEditar,
+            icon: const Icon(Icons.edit_outlined, size: 18),
+            label: const Text('Editar registro'),
+            style: TextButton.styleFrom(
+              foregroundColor: Cores.principal,
+              minimumSize: const Size.fromHeight(44),
+            ),
+          ),
           if (animal.status == StatusAnimal.resgatado) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             FilledButton.icon(
               onPressed: aoPublicar,
               icon: const Icon(Icons.favorite_border, size: 18),
@@ -959,127 +881,6 @@ class _ControleDoStatus extends StatelessWidget {
             ),
           ],
         ],
-      ),
-    );
-  }
-}
-
-// Antes de mudar o status: o que vai acontecer e a confirmação
-class _ConfirmarStatus extends StatelessWidget {
-  const _ConfirmarStatus({
-    required this.titulo,
-    required this.texto,
-    required this.aoConfirmar,
-  });
-
-  final String titulo;
-  final String texto;
-  final VoidCallback aoConfirmar;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              titulo,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              texto,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Cores.textoFraco,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: aoConfirmar,
-              style: FilledButton.styleFrom(
-                backgroundColor: Cores.principal,
-                minimumSize: const Size.fromHeight(48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              child: const Text('Confirmar'),
-            ),
-            const SizedBox(height: 6),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              style: TextButton.styleFrom(foregroundColor: Cores.textoFraco),
-              child: const Text('Cancelar'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// Depois de marcar como resgatado: o convite para publicar para adoção
-class _OfertaDeAdocao extends StatelessWidget {
-  const _OfertaDeAdocao({required this.nome, required this.aoPublicar});
-
-  final String nome;
-  final VoidCallback aoPublicar;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Icon(Icons.check_circle, size: 40, color: Cores.principal),
-            const SizedBox(height: 10),
-            const Text(
-              'Resgate concluído',
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Deseja publicar $nome para adoção? O cadastro será aberto com '
-              'os dados e as fotos do resgate para você completar.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: Cores.textoFraco,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: aoPublicar,
-              icon: const Icon(Icons.favorite_border, size: 18),
-              label: const Text('Publicar para adoção'),
-              style: FilledButton.styleFrom(
-                backgroundColor: Cores.principal,
-                minimumSize: const Size.fromHeight(48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-            ),
-            const SizedBox(height: 6),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              style: TextButton.styleFrom(foregroundColor: Cores.textoFraco),
-              child: const Text('Agora não'),
-            ),
-          ],
-        ),
       ),
     );
   }

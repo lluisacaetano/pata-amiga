@@ -32,8 +32,10 @@ import 'package:pata_amiga/telas/cadastro_animal.dart';
 import 'package:pata_amiga/telas/detalhes_animal.dart';
 import 'package:pata_amiga/telas/tela_mapa.dart';
 import 'package:pata_amiga/telas/feed_adocao.dart';
+import 'package:pata_amiga/telas/perfil_usuario.dart';
 import 'package:pata_amiga/telas/registrar_abastecimento.dart';
 import 'package:pata_amiga/telas/registrar_avistamento.dart';
+import 'package:pata_amiga/widgets/acoes_do_registro.dart';
 import 'package:pata_amiga/widgets/barra_inferior.dart';
 import 'package:pata_amiga/widgets/foto_animal.dart';
 import 'package:pata_amiga/widgets/mascaras.dart';
@@ -66,6 +68,13 @@ class _ApiFalsa extends AnimalService {
   }
 
   final statusGravados = <StatusAnimal>[];
+  final editados = <Animal>[];
+
+  @override
+  Future<void> atualizarAnimal(Animal animal) async {
+    if (fora) throw Exception('sem conexão');
+    editados.add(animal);
+  }
 
   @override
   Future<void> atualizarStatus(Animal animal, StatusAnimal novo) async {
@@ -367,7 +376,7 @@ void main() {
     expect(find.text('Nenhum animal curtido ainda'), findsOneWidget);
   });
 
-  testWidgets('meus cadastros lista o animal registrado no aparelho', (
+  testWidgets('meus registros lista o animal registrado no aparelho', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
@@ -377,7 +386,7 @@ void main() {
     await estado.registrarCadastro(animal);
 
     await abrirPerfil(tester, estado: estado, usuario: UsuarioProvider());
-    await tester.tap(find.text('Meus cadastros'));
+    await tester.tap(find.text('Meus registros'));
     await tester.pumpAndSettle();
 
     expect(find.text(animal.nome.toUpperCase()), findsOneWidget);
@@ -2086,6 +2095,266 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Voltar para precisa de ajuda'), findsOneWidget);
       expect(find.text('Publicar para adoção'), findsOneWidget);
+    });
+  });
+
+  group('meus registros (US 09)', () {
+    const email = 'luisa@pata.com';
+
+    Animal registro(
+      String nome,
+      TipoRegistro tipo, {
+      int? id,
+      String status = 'disponivel',
+      String responsavel = email,
+    }) => Animal.fromJson({
+      ...animaisMock.first.toJson(),
+      'id': id,
+      'nome': nome,
+      'tipo': tipo.name,
+      'status': status,
+      'responsavelEmail': responsavel,
+      'rua': 'Praça Olegário Maciel, 155',
+      'bairro': 'Centro',
+      'observacoes': 'Muito dócil com crianças',
+      'dono': {'nome': 'Luisa', 'telefone': '13999991111'},
+      'latitude': -20.4642,
+      'longitude': -45.4267,
+    });
+
+    Future<_ApiFalsa> abrirRegistros(
+      WidgetTester tester,
+      EstadoPataAmiga estado, {
+      bool fora = false,
+    }) async {
+      tester.view.physicalSize = const Size(1200, 2800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final usuario = UsuarioProvider();
+      await usuario.carregarUsuario(email);
+      final api = _ApiFalsa(const [], fora: fora);
+      await tester.pumpWidget(
+        ChangeNotifierProvider.value(
+          value: usuario,
+          child: PataAmigaScope(
+            notifier: estado,
+            child: MaterialApp(
+              home: PerfilUsuario(api: api),
+              routes: {
+                AppRoutes.registerAnimal: (context) {
+                  final argumento = ModalRoute.of(context)!.settings.arguments;
+                  return CadastroAnimal(
+                    base: argumento is Animal ? argumento : null,
+                    editando: argumento is EdicaoDoRegistro
+                        ? argumento.animal
+                        : null,
+                    api: api,
+                  );
+                },
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Meus registros'));
+      await tester.pumpAndSettle();
+      return api;
+    }
+
+    Future<void> escolherNoMenu(
+      WidgetTester tester,
+      String nome,
+      String opcao,
+    ) async {
+      await tester.tap(find.byTooltip('Opções de $nome'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(opcao).last);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('separa os registros por situação e esconde grupo vazio', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      estado.atualizarAnimais([
+        registro('Paçoca', TipoRegistro.adocao, id: 1),
+        registro('Bolinha', TipoRegistro.adocao, id: 2, status: 'adotado'),
+        registro('Simba', TipoRegistro.perdido, id: 3, status: 'encontrado'),
+      ]);
+      await abrirRegistros(tester, estado);
+
+      expect(find.text('Em aberto'), findsOneWidget);
+      expect(find.text('Adotados'), findsOneWidget);
+      expect(find.text('Encontrados'), findsOneWidget);
+      expect(find.text('Resgatados'), findsNothing);
+      // Cada animal fica abaixo do título do seu grupo
+      expect(
+        tester.getTopLeft(find.text('BOLINHA')).dy,
+        greaterThan(tester.getTopLeft(find.text('Adotados')).dy),
+      );
+      expect(
+        tester.getTopLeft(find.text('BOLINHA')).dy,
+        lessThan(tester.getTopLeft(find.text('Encontrados')).dy),
+      );
+    });
+
+    testWidgets('encerrar pelo menu leva o registro para o grupo do desfecho', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      estado.atualizarAnimais([registro('Paçoca', TipoRegistro.adocao, id: 1)]);
+      final api = await abrirRegistros(tester, estado);
+      expect(find.text('Adotados'), findsNothing);
+
+      await escolherNoMenu(tester, 'Paçoca', 'Marcar como adotado');
+      await tester.tap(find.text('Confirmar'));
+      await tester.pumpAndSettle();
+
+      expect(api.statusGravados, [StatusAnimal.adotado]);
+      expect(find.text('Adotados'), findsOneWidget);
+      expect(find.text('Em aberto'), findsNothing);
+
+      // E o menu oferece desfazer
+      await escolherNoMenu(tester, 'Paçoca', 'Voltar para disponível');
+      await tester.tap(find.text('Confirmar'));
+      await tester.pumpAndSettle();
+      expect(find.text('Em aberto'), findsOneWidget);
+    });
+
+    testWidgets('editar abre o registro inteiro e grava o que mudou', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      final original = registro(
+        'Paçoca',
+        TipoRegistro.perdido,
+        id: 7,
+        status: 'encontrado',
+      );
+      estado.atualizarAnimais([original]);
+      final api = await abrirRegistros(tester, estado);
+
+      await escolherNoMenu(tester, 'Paçoca', 'Editar registro');
+      expect(find.text('EDITAR REGISTRO'), findsOneWidget);
+      expect(find.widgetWithText(TextField, 'Paçoca'), findsOneWidget);
+      expect(
+        find.widgetWithText(TextField, 'Praça Olegário Maciel, 155'),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(TextField, 'Muito dócil com crianças'),
+        findsOneWidget,
+      );
+      // As fotos que o registro já tem entram no bloco de fotos do cadastro,
+      // com a primeira como capa
+      expect(find.text('Capa'), findsOneWidget);
+      expect(find.text('Fotos publicadas'), findsNothing);
+      // A API guarda só os dígitos, mas o campo mostra a máscara
+      expect(find.widgetWithText(TextField, '(13) 99999-1111'), findsOneWidget);
+
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Paçoca'),
+        'Paçoquinha',
+      );
+      final salvar = find.text('Salvar alterações');
+      await tester.ensureVisible(salvar);
+      await tester.pumpAndSettle();
+      await tester.tap(salvar);
+      await tester.pumpAndSettle();
+
+      expect(find.text('EDITAR REGISTRO'), findsNothing);
+      expect(find.text('PAÇOQUINHA'), findsOneWidget);
+      expect(find.text('Alterações salvas.'), findsOneWidget);
+      // O que o formulário não mostra continua igual
+      final gravado = api.editados.single;
+      expect(gravado.id, 7);
+      expect(gravado.status, StatusAnimal.encontrado);
+      expect(gravado.tipo, TipoRegistro.perdido);
+      expect(gravado.responsavelEmail, email);
+      expect(gravado.publicadoEm, original.publicadoEm);
+      expect(gravado.latitude, -20.4642);
+    });
+
+    testWidgets('sem conexão, a edição avisa e a tela continua aberta', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      estado.atualizarAnimais([registro('Paçoca', TipoRegistro.adocao, id: 1)]);
+      await abrirRegistros(tester, estado, fora: true);
+
+      await escolherNoMenu(tester, 'Paçoca', 'Editar registro');
+      final salvar = find.text('Salvar alterações');
+      await tester.ensureVisible(salvar);
+      await tester.pumpAndSettle();
+      await tester.tap(salvar);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Não foi possível salvar as alterações. Tente de novo.'),
+        findsOneWidget,
+      );
+      expect(find.text('EDITAR REGISTRO'), findsOneWidget);
+    });
+
+    testWidgets('cadastro de outra conta no aparelho não tem o menu', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      await estado.registrarCadastro(
+        registro('Bolinha', TipoRegistro.adocao, responsavel: 'outra@pata.com'),
+      );
+      await abrirRegistros(tester, estado);
+
+      expect(find.text('BOLINHA'), findsOneWidget);
+      expect(find.byTooltip('Opções de Bolinha'), findsNothing);
+    });
+
+    testWidgets('a ficha também abre a edição', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      tester.view.physicalSize = const Size(1200, 2800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      final animal = registro('Paçoca', TipoRegistro.adocao, id: 1);
+      estado.atualizarAnimais([animal]);
+      final usuario = UsuarioProvider();
+      await usuario.carregarUsuario(email);
+      await tester.pumpWidget(
+        ChangeNotifierProvider.value(
+          value: usuario,
+          child: PataAmigaScope(
+            notifier: estado,
+            child: MaterialApp(
+              home: DetalhesAnimal(animal: animal, api: _ApiFalsa(const [])),
+              routes: {
+                AppRoutes.registerAnimal:
+                    AppRoutesConfig.routes[AppRoutes.registerAnimal]!,
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final editar = find.text('Editar registro');
+      await tester.ensureVisible(editar);
+      await tester.pumpAndSettle();
+      await tester.tap(editar);
+      await tester.pumpAndSettle();
+      expect(find.text('EDITAR REGISTRO'), findsOneWidget);
+      expect(find.widgetWithText(TextField, 'Paçoca'), findsOneWidget);
     });
   });
 }

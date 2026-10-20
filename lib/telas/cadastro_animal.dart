@@ -14,6 +14,7 @@ import '../dados/bairros_formiga.dart';
 import '../modelos/animal.dart';
 import '../modelos/dono.dart';
 import '../provider/usuario_provider.dart';
+import '../services/animal_service.dart';
 import '../services/bairro_service.dart';
 import '../tema/cores.dart';
 import '../widgets/barra_inferior.dart';
@@ -55,8 +56,12 @@ class CadastroAnimal extends StatefulWidget {
   // Um animal resgatado sendo publicado para adoção: o formulário abre com os
   // dados dele e o tipo Adoção marcado
   final Animal? base;
+  // Um registro já publicado sendo editado por quem o cadastrou: o
+  // formulário abre com todos os dados dele e grava antes de fechar
+  final Animal? editando;
+  final AnimalService? api;
 
-  const CadastroAnimal({super.key, this.base});
+  const CadastroAnimal({super.key, this.base, this.editando, this.api});
 
   @override
   State<CadastroAnimal> createState() => _CadastroAnimalState();
@@ -69,6 +74,8 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
   final _bairros = BairroService();
   bool _buscandoLocalizacao = false;
   bool _salvando = false;
+  // Gravando a edição na API
+  bool _gravando = false;
   // O ponto do pino no mapa e a rua e o bairro que correspondem a ele. O
   // pino é marcado pela mira, pelo arrasto do mapa ou pela busca; o ponto só
   // vai para o animal se a rua e o bairro continuarem os mesmos: mudados à
@@ -82,8 +89,6 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
   bool _castrado = false;
   bool _vacinado = false;
   bool _vermifugado = false;
-  // As fotos que vêm do resgate: já são do animal e passam para a adoção
-  List<String> _fotosDaBase = const [];
   String? _especie;
   String? _porte;
   String? _sexo;
@@ -106,6 +111,11 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     super.initState();
     final base = widget.base;
     if (base != null) _preencherCom(base);
+    final editando = widget.editando;
+    if (editando != null) {
+      _preencherTudo(editando);
+      return;
+    }
     // Quem cadastra costuma ser o responsável, então o contato já vem
     // preenchido com o de quem está logado. Continua editável, porque numa
     // ONG quem cadastra nem sempre é quem atende. Sem provider na árvore,
@@ -139,7 +149,27 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     _vacinado = base.vacinado;
     _vermifugado = base.vermifugado;
     _necessidades.text = base.necessidadesEspeciais;
-    _fotosDaBase = List.of(base.fotos);
+    // As fotos que o animal já tem entram na mesma lista das escolhidas
+    // agora: dá para tirar, reordenar e trocar a capa do mesmo jeito
+    _fotos.addAll(base.fotos.take(_maximoDeFotos).map(XFile.new));
+  }
+
+  // Na edição vem tudo, inclusive o tipo, o local, o contato e as
+  // observações, e o ponto do mapa continua valendo enquanto a rua e o
+  // bairro não mudarem
+  void _preencherTudo(Animal registro) {
+    _preencherCom(registro);
+    _tipo = registro.tipo;
+    _observacoes.text = registro.observacoes;
+    _rua.text = registro.rua;
+    _escolherBairroDoGps(registro.bairro);
+    if (registro.temPonto) {
+      _ponto = LatLng(registro.latitude!, registro.longitude!);
+      _enderecoDoPino = (rua: registro.rua, bairro: registro.bairro);
+    }
+    _responsavel.text = registro.dono.nome;
+    // A API guarda só os dígitos; no campo, o telefone sempre com a máscara
+    _telefone.text = formatarTelefone(registro.dono.telefone);
   }
 
   bool _faltando(TextEditingController campo) =>
@@ -320,7 +350,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
   }
 
   Future<void> _adicionarFotos() async {
-    final vagas = _maximoDeFotos - _fotosDaBase.length - _fotos.length;
+    final vagas = _maximoDeFotos - _fotos.length;
     if (vagas <= 0) return;
 
     try {
@@ -418,7 +448,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
   }
 
   Future<void> _cadastrar() async {
-    if (_salvando) return;
+    if (_salvando || _gravando) return;
     setState(() => _tentouCadastrar = true);
     if (!_completo) return;
 
@@ -463,13 +493,53 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
         telefone: _telefone.text.trim(),
       ),
       responsavelEmail: context.read<UsuarioProvider?>()?.usuario.email ?? '',
-      fotos: [..._fotosDaBase, ..._fotos.map((foto) => foto.path)],
+      fotos: _fotos.map((foto) => foto.path).toList(),
       publicadoEm: DateTime.now(),
       latitude: coordenada?.latitude,
       longitude: coordenada?.longitude,
     );
 
-    Navigator.pop(context, animal);
+    final editando = widget.editando;
+    if (editando == null) {
+      Navigator.pop(context, animal);
+      return;
+    }
+    await _salvarEdicao(editando, animal);
+  }
+
+  // O registro editado mantém o que o formulário não mostra: o id, a
+  // situação, a data da publicação e quem o cadastrou
+  Future<void> _salvarEdicao(Animal original, Animal novo) async {
+    final editado = Animal.fromJson({
+      ...novo.toJson(),
+      if (original.id != null) 'id': original.id,
+      'status': original.status.name,
+      'publicadoEm': original.publicadoEm.toIso8601String(),
+      'responsavelEmail': original.responsavelEmail.isNotEmpty
+          ? original.responsavelEmail
+          : novo.responsavelEmail,
+      'peso': original.peso,
+      'cor': original.cor,
+    });
+    setState(() => _gravando = true);
+    try {
+      await (widget.api ?? AnimalService()).atualizarAnimal(editado);
+    } on Exception {
+      if (!mounted) return;
+      setState(() => _gravando = false);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Não foi possível salvar as alterações. Tente de novo.',
+            ),
+          ),
+        );
+      return;
+    }
+    if (!mounted) return;
+    Navigator.pop(context, editado);
   }
 
   @override
@@ -509,7 +579,11 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
         ),
         centerTitle: true,
         title: Text(
-          widget.base == null ? 'CADASTRAR ANIMAL' : 'PUBLICAR PARA ADOÇÃO',
+          widget.editando != null
+              ? 'EDITAR REGISTRO'
+              : widget.base == null
+              ? 'CADASTRAR ANIMAL'
+              : 'PUBLICAR PARA ADOÇÃO',
           style: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
@@ -523,14 +597,6 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (_fotosDaBase.isNotEmpty)
-              _Cartao(
-                child: _FotosDoResgate(
-                  fotos: _fotosDaBase,
-                  aoRemover: (indice) =>
-                      setState(() => _fotosDaBase.removeAt(indice)),
-                ),
-              ),
             _Cartao(
               child: _BlocoDeFotos(
                 fotos: _fotos,
@@ -767,8 +833,8 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
               ),
             const SizedBox(height: 8),
             FilledButton.icon(
-              onPressed: _salvando ? null : _cadastrar,
-              icon: _salvando
+              onPressed: _salvando || _gravando ? null : _cadastrar,
+              icon: _salvando || _gravando
                   ? const SizedBox(
                       width: 18,
                       height: 18,
@@ -777,8 +843,19 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
                         color: Colors.white,
                       ),
                     )
-                  : const Icon(Icons.pets, size: 18),
-              label: Text(_salvando ? 'Localizando a rua…' : 'Cadastrar'),
+                  : Icon(
+                      widget.editando != null ? Icons.check : Icons.pets,
+                      size: 18,
+                    ),
+              label: Text(
+                _salvando
+                    ? 'Localizando a rua…'
+                    : _gravando
+                    ? 'Salvando…'
+                    : widget.editando != null
+                    ? 'Salvar alterações'
+                    : 'Cadastrar',
+              ),
               style: FilledButton.styleFrom(
                 backgroundColor: Cores.principal,
                 minimumSize: const Size.fromHeight(52),
@@ -795,69 +872,6 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
         ),
       ),
       bottomNavigationBar: BarraInferior(),
-    );
-  }
-}
-
-// As fotos que vieram do resgate, em miniatura, com a opção de tirar alguma
-class _FotosDoResgate extends StatelessWidget {
-  final List<String> fotos;
-  final ValueChanged<int> aoRemover;
-
-  const _FotosDoResgate({required this.fotos, required this.aoRemover});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _TituloDoCartao(
-          icone: Icons.photo_library_outlined,
-          texto: 'Fotos do resgate',
-        ),
-        const SizedBox(height: 4),
-        const Text(
-          'Elas passam para a adoção. Toque no X para tirar alguma.',
-          style: TextStyle(fontSize: 12, color: Cores.textoFraco),
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (var i = 0; i < fotos.length; i++)
-              SizedBox(
-                width: 72,
-                height: 72,
-                child: Stack(
-                  children: [
-                    FotoAnimal(
-                      caminho: fotos[i],
-                      altura: 72,
-                      raio: BorderRadius.circular(10),
-                    ),
-                    Positioned(
-                      top: 2,
-                      right: 2,
-                      child: Material(
-                        color: Cores.cartao,
-                        shape: const CircleBorder(),
-                        child: InkWell(
-                          customBorder: const CircleBorder(),
-                          onTap: () => aoRemover(i),
-                          child: const Padding(
-                            padding: EdgeInsets.all(3),
-                            child: Icon(Icons.close, size: 14),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-      ],
     );
   }
 }
@@ -1095,22 +1109,30 @@ class _FotoDaGaleria extends StatefulWidget {
 class _FotoDaGaleriaState extends State<_FotoDaGaleria> {
   late Future<Uint8List> _bytes;
 
+  // A foto que o animal já tinha pode vir da internet ou do app, e não do
+  // celular: essa a FotoAnimal já sabe mostrar
+  bool get _jaPublicada =>
+      kIsWeb ? false : !widget.arquivo.path.startsWith('/');
+
   @override
   void initState() {
     super.initState();
-    _bytes = widget.arquivo.readAsBytes();
+    if (!_jaPublicada) _bytes = widget.arquivo.readAsBytes();
   }
 
   @override
   void didUpdateWidget(_FotoDaGaleria anterior) {
     super.didUpdateWidget(anterior);
-    if (anterior.arquivo.path != widget.arquivo.path) {
+    if (anterior.arquivo.path != widget.arquivo.path && !_jaPublicada) {
       _bytes = widget.arquivo.readAsBytes();
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_jaPublicada) {
+      return FotoAnimal(caminho: widget.arquivo.path, altura: widget.altura);
+    }
     return FutureBuilder<Uint8List>(
       future: _bytes,
       builder: (context, instantaneo) {

@@ -52,4 +52,22 @@ class AnimalService {
       throw Exception('Erro ${resp.statusCode}');
     }
   }
+
+  // Grava o registro editado inteiro. Como no status, animal sem id ainda não
+  // está na API e fica só no aparelho
+  Future<void> atualizarAnimal(Animal animal) async {
+    final id = animal.id;
+    if (id == null) return;
+    final resp = await http
+        .put(
+          Uri.parse('$_baseUrl/animais/$id'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(animal.toJson()),
+        )
+        .timeout(const Duration(seconds: 8));
+
+    if (resp.statusCode != 200) {
+      throw Exception('Erro ${resp.statusCode}');
+    }
+  }
 }
