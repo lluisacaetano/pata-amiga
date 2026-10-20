@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../modelos/animal.dart';
 import '../modelos/avistamento.dart';
+import '../modelos/ponto_de_alimentacao.dart';
 
 class EstadoPataAmiga extends ChangeNotifier {
   // Chave usada para gravar as curtidas no armazenamento do aparelho
@@ -30,6 +31,31 @@ class EstadoPataAmiga extends ChangeNotifier {
 
   void atualizarAvistamentos(List<Avistamento> avistamentos) {
     _avistamentos = List.of(avistamentos);
+    notifyListeners();
+  }
+
+  // Os comedouros e bebedouros e quem os abasteceu, para a camada do mapa
+  List<PontoDeAlimentacao> _pontos = [];
+  List<Abastecimento> _abastecimentos = [];
+  List<PontoDeAlimentacao> get pontos => List.unmodifiable(_pontos);
+  List<Abastecimento> get abastecimentos => List.unmodifiable(_abastecimentos);
+
+  void atualizarAlimentacao(
+    List<PontoDeAlimentacao> pontos,
+    List<Abastecimento> abastecimentos,
+  ) {
+    _pontos = List.of(pontos);
+    _abastecimentos = List.of(abastecimentos);
+    notifyListeners();
+  }
+
+  void adicionarPonto(PontoDeAlimentacao ponto) {
+    _pontos = [..._pontos, ponto];
+    notifyListeners();
+  }
+
+  void adicionarAbastecimento(Abastecimento abastecimento) {
+    _abastecimentos = [..._abastecimentos, abastecimento];
     notifyListeners();
   }
 

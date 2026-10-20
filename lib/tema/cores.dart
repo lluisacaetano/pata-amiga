@@ -10,6 +10,11 @@ class Cores {
   static const Color textoFraco = Color(0xFF6E6E6E);
   static const Color borda = Color(0xFFDCD8D2);
   static const Color destaque = Color(0xFFD35D4E);
+  // Os pontos de alimentação no mapa: um ocre de ração, que convive com o
+  // verde e o coral sem se confundir com eles
+  static const Color alimentacao = Color(0xFFC98A2E);
+  // Os bebedouros: um azul de água, suave como o resto da paleta
+  static const Color agua = Color(0xFF4A86B4);
 }
 
 ThemeData temaPataAmiga() {

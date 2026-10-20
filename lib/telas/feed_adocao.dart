@@ -15,6 +15,7 @@ import '../widgets/card_animal.dart';
 import '../widgets/escolha_de_tipo.dart';
 import '../routes/app_router.dart';
 // [SPRINT 3 - NOVO] Camada de dados: API e cache local
+import '../services/alimentacao_service.dart';
 import '../services/animal_service.dart';
 import '../services/avistamento_service.dart';
 import '../services/cache_service.dart';
@@ -27,8 +28,15 @@ class FeedAdocao extends StatefulWidget {
   final AnimalService? api;
   final CacheService? cache;
   final AvistamentoService? avistamentos;
+  final AlimentacaoService? alimentacao;
 
-  const FeedAdocao({super.key, this.api, this.cache, this.avistamentos});
+  const FeedAdocao({
+    super.key,
+    this.api,
+    this.cache,
+    this.avistamentos,
+    this.alimentacao,
+  });
 
   @override
   State<FeedAdocao> createState() => _FeedAdocaoState();
@@ -48,6 +56,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
   late final _api = widget.api ?? AnimalService();
   late final _cache = widget.cache ?? CacheService();
   late final _avistamentos = widget.avistamentos ?? AvistamentoService();
+  late final _alimentacao = widget.alimentacao ?? AlimentacaoService();
 
   // [SPRINT 3 - NOVO] Animais que vieram da API ou do cache.
   // Substitui a lista fixa animaisMock.
@@ -91,6 +100,18 @@ class _FeedAdocaoState extends State<FeedAdocao> {
     }
   }
 
+  // Os pontos de alimentação também vêm à parte, pelo mesmo motivo
+  Future<void> _carregarAlimentacao() async {
+    try {
+      final pontos = await _alimentacao.buscarPontos();
+      final abastecimentos = await _alimentacao.buscarAbastecimentos();
+      if (!mounted) return;
+      PataAmigaScope.of(context).atualizarAlimentacao(pontos, abastecimentos);
+    } on Exception {
+      // sem a camada de alimentação desta vez
+    }
+  }
+
   Future<void> _carregar() async {
     final salvos = await _cache.lerAnimais();
     final dataSalva = await _cache.dataDoCache();
@@ -112,6 +133,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
     }
 
     unawaited(_carregarAvistamentos());
+    unawaited(_carregarAlimentacao());
     try {
       final novos = await _api.buscarAnimais();
       await _cache.salvarAnimais(novos); // o cache nunca fica congelado

@@ -232,5 +232,94 @@
       "longitude": -45.4261062
     }
   ],
-  "avistamentos": []
+  "avistamentos": [],
+  "pontosAlimentacao": [
+    {
+      "id": 1,
+      "tipo": "comedouro",
+      "referencia": "Perto dos bancos, no lado da igreja",
+      "rua": "Praça Ferreira Pires",
+      "bairro": "Centro",
+      "latitude": -20.4613736,
+      "longitude": -45.432412,
+      "cadastradoPor": "Ana",
+      "cadastradoEm": "2026-10-01T09:00:00.000"
+    },
+    {
+      "id": 2,
+      "tipo": "ambos",
+      "referencia": "No canteiro central",
+      "rua": "Praça Getúlio Vargas",
+      "bairro": "Centro",
+      "latitude": -20.4635453,
+      "longitude": -45.4298995,
+      "cadastradoPor": "Ana",
+      "cadastradoEm": "2026-10-01T09:00:00.000"
+    },
+    {
+      "id": 3,
+      "tipo": "bebedouro",
+      "referencia": "Ao lado do ponto de ônibus",
+      "rua": "Praça Ozório Garcia",
+      "bairro": "Sagrado Coração de Jesus",
+      "latitude": -20.4567653,
+      "longitude": -45.4370679,
+      "cadastradoPor": "Ana",
+      "cadastradoEm": "2026-10-01T09:00:00.000"
+    },
+    {
+      "id": 4,
+      "tipo": "comedouro",
+      "referencia": "Embaixo da árvore maior",
+      "rua": "Praça Francisco Balbino de Almeida",
+      "bairro": "São Geraldo",
+      "latitude": -20.4531729,
+      "longitude": -45.4195829,
+      "cadastradoPor": "Ana",
+      "cadastradoEm": "2026-10-01T09:00:00.000"
+    },
+    {
+      "id": 5,
+      "tipo": "ambos",
+      "referencia": "Perto do parquinho",
+      "rua": "Praça Padre Clemente",
+      "bairro": "Alvorada",
+      "latitude": -20.4752686,
+      "longitude": -45.4309333,
+      "cadastradoPor": "Ana",
+      "cadastradoEm": "2026-10-01T09:00:00.000"
+    }
+  ],
+  "abastecimentos": [
+    {
+      "id": 1,
+      "ponto": 1,
+      "data": "2026-10-18T08:00:00.000",
+      "registradoPor": "Ana"
+    },
+    {
+      "id": 2,
+      "ponto": 2,
+      "data": "2026-10-15T17:30:00.000",
+      "registradoPor": "Carla"
+    },
+    {
+      "id": 3,
+      "ponto": 3,
+      "data": "2026-10-08T10:00:00.000",
+      "registradoPor": "Ana"
+    },
+    {
+      "id": 4,
+      "ponto": 5,
+      "data": "2026-10-19T07:45:00.000",
+      "registradoPor": "Rita"
+    },
+    {
+      "id": 5,
+      "ponto": 1,
+      "data": "2026-10-12T08:00:00.000",
+      "registradoPor": "Ana"
+    }
+  ]
 }

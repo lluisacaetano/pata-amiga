@@ -17,17 +17,22 @@ import 'package:pata_amiga/dados/animais_mock.dart';
 import 'package:pata_amiga/dados/bairros_formiga.dart';
 import 'package:pata_amiga/modelos/avistamento.dart';
 import 'package:pata_amiga/modelos/camadas_do_mapa.dart';
+import 'package:pata_amiga/modelos/ponto_de_alimentacao.dart';
 import 'package:pata_amiga/estado/estado_pata_amiga.dart';
 import 'package:pata_amiga/modelos/animal.dart';
 import 'package:pata_amiga/provider/usuario_provider.dart';
 import 'package:pata_amiga/routes/app_router.dart';
+import 'package:pata_amiga/services/alimentacao_service.dart';
 import 'package:pata_amiga/services/animal_service.dart';
 import 'package:pata_amiga/services/avistamento_service.dart';
 import 'package:pata_amiga/services/bairro_service.dart';
+import 'package:pata_amiga/services/localizacao_service.dart';
+import 'package:pata_amiga/telas/cadastrar_ponto.dart';
 import 'package:pata_amiga/telas/cadastro_animal.dart';
 import 'package:pata_amiga/telas/detalhes_animal.dart';
 import 'package:pata_amiga/telas/tela_mapa.dart';
 import 'package:pata_amiga/telas/feed_adocao.dart';
+import 'package:pata_amiga/telas/registrar_abastecimento.dart';
 import 'package:pata_amiga/telas/registrar_avistamento.dart';
 import 'package:pata_amiga/widgets/barra_inferior.dart';
 import 'package:pata_amiga/widgets/foto_animal.dart';
@@ -81,6 +86,44 @@ class _AvistamentosFalsos extends AvistamentoService {
     gravados.add(comId);
     return comId;
   }
+}
+
+// Serviço de alimentação falso: guarda na memória e devolve com id
+class _AlimentacaoFalsa extends AlimentacaoService {
+  final pontos = <PontoDeAlimentacao>[];
+  final abastecimentos = <Abastecimento>[];
+
+  @override
+  Future<PontoDeAlimentacao> cadastrarPonto(PontoDeAlimentacao ponto) async {
+    final comId = PontoDeAlimentacao.fromJson({
+      ...ponto.toJson(),
+      'id': pontos.length + 1,
+    });
+    pontos.add(comId);
+    return comId;
+  }
+
+  @override
+  Future<Abastecimento> registrarAbastecimento(Abastecimento item) async {
+    final comId = Abastecimento.fromJson({
+      ...item.toJson(),
+      'id': abastecimentos.length + 1,
+    });
+    abastecimentos.add(comId);
+    return comId;
+  }
+}
+
+// Onde a pessoa "está", sem GPS de verdade
+class _OndeEstou extends LocalizacaoService {
+  _OndeEstou(this.latitude, this.longitude);
+
+  final double latitude;
+  final double longitude;
+
+  @override
+  Future<({double latitude, double longitude})> posicaoAtual() async =>
+      (latitude: latitude, longitude: longitude);
 }
 
 // Faz o papel do formulário de cadastro: volta na hora com o animal pronto
@@ -1059,8 +1102,10 @@ void main() {
     await tester.tap(find.text('Resgate'));
     await tester.pumpAndSettle();
     expect(find.bySemanticsLabel('Mel'), findsNothing);
+    await tester.tap(find.text('Alimentação'));
+    await tester.pumpAndSettle();
     expect(
-      find.text('Ligue Perdidos ou Resgate para ver os animais no mapa.'),
+      find.text('Ligue uma camada do filtro para ver os pontos no mapa.'),
       findsOneWidget,
     );
   });
@@ -1408,5 +1453,372 @@ void main() {
         'Vila São Vicente',
       );
     });
+  });
+
+  // US 14: comedouros e bebedouros
+  PontoDeAlimentacao ponto({
+    int id = 1,
+    TipoDePonto tipo = TipoDePonto.comedouro,
+  }) => PontoDeAlimentacao(
+    id: id,
+    tipo: tipo,
+    referencia: 'Perto dos bancos',
+    rua: 'Praça Ferreira Pires',
+    bairro: 'Centro',
+    latitude: -20.4613736,
+    longitude: -45.432412,
+    cadastradoEm: DateTime(2026, 10, 1),
+  );
+
+  group('pontos de alimentação', () {
+    final hoje = DateTime(2026, 10, 19, 15);
+    Abastecimento em(DateTime data, {int ponto = 1}) =>
+        Abastecimento(ponto: ponto, data: data, registradoPor: 'Ana');
+
+    test('a situação segue os dias desde o último abastecimento', () {
+      expect(
+        situacaoDoPonto(em(DateTime(2026, 10, 17)), hoje),
+        SituacaoDoPonto.abastecido,
+      );
+      expect(
+        situacaoDoPonto(em(DateTime(2026, 10, 16)), hoje),
+        SituacaoDoPonto.abastecerLogo,
+      );
+      expect(
+        situacaoDoPonto(em(DateTime(2026, 10, 13)), hoje),
+        SituacaoDoPonto.abastecerLogo,
+      );
+      expect(
+        situacaoDoPonto(em(DateTime(2026, 10, 12)), hoje),
+        SituacaoDoPonto.precisa,
+      );
+      expect(situacaoDoPonto(null, hoje), SituacaoDoPonto.precisa);
+    });
+
+    test('o último abastecimento é o mais recente daquele ponto', () {
+      final todos = [
+        em(DateTime(2026, 10, 12)),
+        em(DateTime(2026, 10, 18)),
+        em(DateTime(2026, 10, 19), ponto: 2),
+      ];
+      expect(ultimoAbastecimento(ponto(), todos)!.data, DateTime(2026, 10, 18));
+      expect(ultimoAbastecimento(ponto(id: 9), todos), isNull);
+    });
+
+    test('o ponto vai e volta da API sem perder nada', () {
+      final lido = PontoDeAlimentacao.fromJson(
+        ponto(tipo: TipoDePonto.ambos).toJson(),
+      );
+      expect(lido.tipo, TipoDePonto.ambos);
+      expect(lido.lugar, 'Praça Ferreira Pires, Centro');
+    });
+  });
+
+  Future<_AlimentacaoFalsa> abrirMapaComPontos(
+    WidgetTester tester, {
+    required bool logado,
+    List<Abastecimento> abastecimentos = const [],
+    LocalizacaoService? onde,
+  }) async {
+    SharedPreferences.setMockInitialValues({});
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.75;
+    addTearDown(tester.view.reset);
+    final estado = EstadoPataAmiga();
+    addTearDown(estado.dispose);
+    estado.atualizarAlimentacao([ponto()], abastecimentos);
+    final usuario = UsuarioProvider();
+    if (logado) {
+      await usuario.registrarUsuario(
+        nome: 'Luisa',
+        email: 'luisa@pata.com',
+        telefone: '',
+      );
+    }
+    final servico = _AlimentacaoFalsa();
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: usuario,
+        child: PataAmigaScope(
+          notifier: estado,
+          child: MaterialApp(
+            home: Scaffold(
+              body: TelaMapa(
+                ligadas: const {},
+                mostrarAlimentacao: true,
+                comMapaDeFundo: false,
+                alimentacao: servico,
+              ),
+            ),
+            routes: {
+              AppRoutes.registrarAbastecimento: (context) =>
+                  RegistrarAbastecimento(
+                    ponto:
+                        ModalRoute.of(context)!.settings.arguments
+                            as PontoDeAlimentacao,
+                    servico: servico,
+                    localizacao: onde,
+                  ),
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    return servico;
+  }
+
+  testWidgets('o pino do ponto mostra a situação e o último abastecimento', (
+    tester,
+  ) async {
+    await abrirMapaComPontos(
+      tester,
+      logado: false,
+      abastecimentos: [
+        Abastecimento(
+          ponto: 1,
+          data: DateTime.now().subtract(const Duration(days: 4)),
+          registradoPor: 'Carla',
+        ),
+      ],
+    );
+
+    await tester.tap(
+      find.bySemanticsLabel('Comedouro Praça Ferreira Pires, Centro'),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Comedouro'), findsOneWidget);
+    expect(find.text('Abastecer logo'), findsOneWidget);
+    expect(
+      find.text('Último abastecimento há 4 dias, por Carla'),
+      findsOneWidget,
+    );
+    // Sem login, não registra abastecimento nem cadastra ponto
+    expect(find.text('Abasteci hoje'), findsNothing);
+    expect(find.byTooltip('Cadastrar ponto de alimentação'), findsNothing);
+  });
+
+  Future<void> abrirConfirmacao(WidgetTester tester) async {
+    await tester.tap(
+      find.bySemanticsLabel('Comedouro Praça Ferreira Pires, Centro'),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Abasteci hoje'));
+    await tester.pumpAndSettle();
+    expect(find.text('REGISTRAR ABASTECIMENTO'), findsOneWidget);
+  }
+
+  testWidgets('no ponto, o abastecimento vale e só uma vez por dia', (
+    tester,
+  ) async {
+    // A pessoa está exatamente no ponto
+    final servico = await abrirMapaComPontos(
+      tester,
+      logado: true,
+      onde: _OndeEstou(-20.4613736, -45.432412),
+    );
+    expect(find.byTooltip('Cadastrar ponto de alimentação'), findsOneWidget);
+    await abrirConfirmacao(tester);
+
+    await tester.tap(find.text('Confirmar abastecimento'));
+    await tester.pumpAndSettle();
+    expect(servico.abastecimentos.single.ponto, 1);
+    expect(servico.abastecimentos.single.email, 'luisa@pata.com');
+
+    // De volta ao resumo: abastecido, e o botão não deixa repetir hoje
+    expect(find.text('Abastecido'), findsOneWidget);
+    expect(find.text('Último abastecimento hoje, por Luisa'), findsOneWidget);
+    expect(find.text('Você já registrou hoje'), findsOneWidget);
+  });
+
+  testWidgets('longe do ponto, o abastecimento não vale', (tester) async {
+    // Praça Olegário Maciel, a mais de 500 m da Praça Ferreira Pires
+    final servico = await abrirMapaComPontos(
+      tester,
+      logado: true,
+      onde: _OndeEstou(-20.4642, -45.4267),
+    );
+    await abrirConfirmacao(tester);
+
+    await tester.tap(find.text('Confirmar abastecimento'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Você precisa estar no ponto para registrar o abastecimento.'),
+      findsOneWidget,
+    );
+    expect(servico.abastecimentos, isEmpty);
+  });
+
+  group('verificação do abastecimento', () {
+    final agora = DateTime(2026, 10, 19, 15);
+
+    test('a distância entre duas praças do Centro passa de 150 m', () {
+      final metros = distanciaEmMetros(
+        -20.4613736,
+        -45.432412,
+        -20.4642,
+        -45.4267,
+      );
+      expect(metros, greaterThan(500));
+      expect(metros, lessThan(800));
+    });
+
+    MotivoDaRecusa? verificar({
+      double latitude = -20.4613736,
+      double longitude = -45.432412,
+      List<Abastecimento> antes = const [],
+    }) => verificarAbastecimento(
+      latitudeDoPonto: -20.4613736,
+      longitudeDoPonto: -45.432412,
+      idDoPonto: 1,
+      latitudeDaPessoa: latitude,
+      longitudeDaPessoa: longitude,
+      email: 'luisa@pata.com',
+      abastecimentos: antes,
+      agora: agora,
+    );
+
+    test('perto do ponto, pela primeira vez no dia, vale', () {
+      // Uns 50 m ao norte
+      expect(verificar(latitude: -20.4609236), isNull);
+    });
+
+    test('a mais de 150 m não vale', () {
+      expect(verificar(latitude: -20.4600), MotivoDaRecusa.longeDoPonto);
+    });
+
+    test('a mesma pessoa não registra o mesmo ponto duas vezes no dia', () {
+      final hojeCedo = Abastecimento(
+        ponto: 1,
+        data: DateTime(2026, 10, 19, 8),
+        email: 'luisa@pata.com',
+      );
+      final deOutraPessoa = Abastecimento(
+        ponto: 1,
+        data: DateTime(2026, 10, 19, 8),
+        email: 'ana@pata.com',
+      );
+      final ontem = Abastecimento(
+        ponto: 1,
+        data: DateTime(2026, 10, 18, 8),
+        email: 'luisa@pata.com',
+      );
+      expect(verificar(antes: [hojeCedo]), MotivoDaRecusa.jaRegistrouHoje);
+      expect(verificar(antes: [deOutraPessoa, ontem]), isNull);
+    });
+  });
+
+  testWidgets('cadastrar ponto grava o ponto e o abastecimento de hoje', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    GeolocatorPlatform.instance = _GpsFalso();
+    pi.GeocodingPlatformFactory.instance = _FabricaFalsa();
+    tester.view.physicalSize = const Size(1200, 3000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final estado = EstadoPataAmiga();
+    addTearDown(estado.dispose);
+    final servico = _AlimentacaoFalsa();
+    await tester.pumpWidget(
+      PataAmigaScope(
+        notifier: estado,
+        child: MaterialApp(home: CadastrarPonto(servico: servico)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Sem tipo, não cadastra
+    await tester.tap(find.text('Cadastrar ponto'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Escolha se é comedouro, bebedouro ou os dois.'),
+      findsOneWidget,
+    );
+    expect(servico.pontos, isEmpty);
+
+    await tester.tap(find.text('Os dois'));
+    await tester.tap(find.byTooltip('Usar minha localização'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cadastrar ponto'));
+    await tester.pumpAndSettle();
+
+    expect(servico.pontos.single.tipo, TipoDePonto.ambos);
+    expect(servico.pontos.single.latitude, -20.4642);
+    expect(servico.abastecimentos.single.ponto, servico.pontos.single.id);
+    expect(estado.pontos, hasLength(1));
+  });
+
+  // Perto de você: o GPS falso está na Praça Olegário Maciel
+  group('perto de você', () {
+    final pertinho = PontoDeAlimentacao(
+      id: 7,
+      tipo: TipoDePonto.bebedouro,
+      rua: 'Praça Doutor Olinto Fonseca',
+      bairro: 'Centro',
+      latitude: -20.4651235,
+      longitude: -45.4257303,
+      cadastradoEm: DateTime(2026, 10, 1),
+    );
+    final longe = PontoDeAlimentacao(
+      id: 8,
+      tipo: TipoDePonto.comedouro,
+      latitude: -20.4870323,
+      longitude: -45.4361244,
+      cadastradoEm: DateTime(2026, 10, 1),
+    );
+
+    test('fica só o que está a até 1 km, do mais perto ao mais longe', () {
+      final ferreira = ponto();
+      final itens = pertoDe(
+        -20.4642,
+        -45.4267,
+        animais: const [],
+        pontos: [ferreira, longe, pertinho],
+      );
+      expect(itens.map((item) => item.ponto), [pertinho, ferreira]);
+    });
+
+    test('a distância aparece em metros até 1 km e depois em km', () {
+      expect(textoDaDistancia(347), '350 m');
+      expect(textoDaDistancia(1240), '1,2 km');
+    });
+  });
+
+  testWidgets('a mira abre o perto de você com o que está nas camadas', (
+    tester,
+  ) async {
+    GeolocatorPlatform.instance = _GpsFalso();
+    SharedPreferences.setMockInitialValues({});
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.75;
+    addTearDown(tester.view.reset);
+    final estado = EstadoPataAmiga();
+    addTearDown(estado.dispose);
+    estado.atualizarAlimentacao([ponto()], const []);
+    estado.atualizarAnimais([perdidoComPonto()]);
+    await tester.pumpWidget(
+      PataAmigaScope(
+        notifier: estado,
+        child: const MaterialApp(home: PaginaMapa(comMapaDeFundo: false)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Minha localização'));
+    await tester.pumpAndSettle();
+    expect(find.text('Perto de você'), findsOneWidget);
+    // O comedouro da Praça Ferreira Pires fica a uns 700 m; o Simba, a mais
+    // de 1 km, fica de fora
+    expect(find.text('Comedouro'), findsOneWidget);
+    expect(find.text('Simba'), findsNothing);
+
+    // Desligar a camada tira o ponto da lista
+    await tester.tap(find.text('Alimentação'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Nada a até 1 km de você nas camadas ligadas.'),
+      findsOneWidget,
+    );
   });
 }

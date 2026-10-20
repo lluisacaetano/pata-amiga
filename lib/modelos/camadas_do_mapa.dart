@@ -1,5 +1,6 @@
 import 'animal.dart';
 import 'avistamento.dart';
+import 'ponto_de_alimentacao.dart';
 
 // As camadas do mapa: só perdido e resgate. Adoção fica fora, porque o
 // ponto de um animal para adoção seria a casa de quem o oferece
@@ -59,4 +60,58 @@ List<PinoDoMapa> pinosDoMapa(
     }
   }
   return pinos;
+}
+
+// O que está perto de quem tocou na mira: um animal ou um ponto de
+// alimentação, com a distância até ele
+typedef ItemPerto = ({
+  PinoDoMapa? animal,
+  PontoDeAlimentacao? ponto,
+  double metros,
+});
+
+// O raio do "Perto de você"
+const raioDePerto = 1000.0;
+
+// Os animais e pontos das camadas ligadas a até 1 km, do mais perto para o
+// mais longe
+List<ItemPerto> pertoDe(
+  double latitude,
+  double longitude, {
+  required Iterable<PinoDoMapa> animais,
+  required Iterable<PontoDeAlimentacao> pontos,
+}) {
+  final itens = <ItemPerto>[
+    for (final pino in animais)
+      (
+        animal: pino,
+        ponto: null,
+        metros: distanciaEmMetros(
+          latitude,
+          longitude,
+          pino.latitude,
+          pino.longitude,
+        ),
+      ),
+    for (final ponto in pontos)
+      (
+        animal: null,
+        ponto: ponto,
+        metros: distanciaEmMetros(
+          latitude,
+          longitude,
+          ponto.latitude,
+          ponto.longitude,
+        ),
+      ),
+  ];
+  return itens.where((item) => item.metros <= raioDePerto).toList()
+    ..sort((a, b) => a.metros.compareTo(b.metros));
+}
+
+// "350 m" até 1 km, arredondado de 10 em 10; depois, "1,2 km"
+String textoDaDistancia(double metros) {
+  if (metros < 1000) return '${(metros / 10).round() * 10} m';
+  final km = (metros / 100).round() / 10;
+  return '${km.toStringAsFixed(1).replaceAll('.', ',')} km';
 }

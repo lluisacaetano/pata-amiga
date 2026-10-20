@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 
 import '../modelos/animal.dart';
+import '../modelos/ponto_de_alimentacao.dart';
 import '../auth/auth_router.dart';
 import '../auth/screens/cadastro_screen.dart';
 import '../auth/screens/login_screen.dart';
@@ -9,10 +10,12 @@ import '../auth/screens/recuperar_senha.dart';
 import '../telas/home_screen.dart';
 import '../telas/feed_adocao.dart';
 import '../telas/detalhes_animal.dart';
+import '../telas/cadastrar_ponto.dart';
 import '../telas/cadastro_animal.dart';
 import '../telas/onboarding_screen.dart';
 import '../telas/editar_perfil.dart';
 import '../telas/perfil_usuario.dart';
+import '../telas/registrar_abastecimento.dart';
 import '../telas/registrar_avistamento.dart';
 import '../telas/tela_mapa.dart'; // NOVO
 import 'route_names.dart';
@@ -58,6 +61,16 @@ class AppRoutesConfig {
       // Vindo da ficha, o mapa recebe o animal para abrir com zoom nele
       final animal = ModalRoute.of(context)?.settings.arguments;
       return PaginaMapa(focar: animal is Animal ? animal : null);
+    },
+
+    AppRoutes.cadastrarPonto: (_) => const CadastrarPonto(),
+
+    AppRoutes.registrarAbastecimento: (context) {
+      final ponto = ModalRoute.of(context)?.settings.arguments;
+      if (ponto is! PontoDeAlimentacao) {
+        throw ArgumentError('O abastecimento precisa saber de qual ponto é.');
+      }
+      return RegistrarAbastecimento(ponto: ponto);
     },
 
     AppRoutes.registrarAvistamento: (context) {
