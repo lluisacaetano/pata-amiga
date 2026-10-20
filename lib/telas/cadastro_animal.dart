@@ -275,14 +275,27 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     String bairro,
   ) async {
     try {
-      final achados = await Geocoding()
+      final servico = Geocoding();
+      final achados = await servico
           .locationFromAddress('$rua, $bairro, Formiga, MG, Brasil')
           .timeout(const Duration(seconds: 8));
       if (achados.isEmpty) return null;
-      return (
-        latitude: achados.first.latitude,
-        longitude: achados.first.longitude,
-      );
+      final ponto = achados.first;
+
+      // Com a rua escrita errado, o serviço pode devolver o centro do bairro
+      // ou da cidade sem avisar. Por isso o ponto só vale se ficar no bairro
+      // escolhido, em Formiga; na dúvida, é melhor ficar fora do mapa do que
+      // aparecer num lugar errado
+      final lugares = await servico
+          .placemarkFromCoordinates(ponto.latitude, ponto.longitude)
+          .timeout(const Duration(seconds: 8));
+      if (lugares.isEmpty) return null;
+      final lugar = lugares.first;
+      final emFormiga = mesmoBairro(lugar.locality ?? '', 'Formiga');
+      final noBairro = mesmoBairro(lugar.subLocality ?? '', bairro);
+      if (!emFormiga || !noBairro) return null;
+
+      return (latitude: ponto.latitude, longitude: ponto.longitude);
     } on Exception {
       return null;
     }

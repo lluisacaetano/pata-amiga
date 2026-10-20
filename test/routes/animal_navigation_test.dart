@@ -717,6 +717,8 @@ void main() {
     final animal = await cadastrarPerdido(
       tester,
       usarMira: false,
+      // O ponto que o serviço devolve fica mesmo no Quartéis
+      bairroDoGps: 'Quartéis',
       ruaDigitada: 'Rua do Expedicionário',
       bairroDigitado: 'Quartéis',
     );
@@ -727,6 +729,24 @@ void main() {
     );
     expect(animal!.latitude, _latDaRua);
     expect(animal.longitude, _lonDaRua);
+  });
+
+  testWidgets('ponto da rua fora do bairro escolhido não vai para o mapa', (
+    tester,
+  ) async {
+    // Rua escrita errado: o serviço devolve um ponto no Centro, mas o bairro
+    // escolhido é o Quartéis
+    final animal = await cadastrarPerdido(
+      tester,
+      usarMira: false,
+      bairroDoGps: 'Centro',
+      ruaDigitada: 'Rua do Expedicionaro',
+      bairroDigitado: 'Quartéis',
+    );
+
+    expect(animal, isNotNull);
+    expect(animal!.rua, 'Rua do Expedicionaro');
+    expect(animal.temPonto, isFalse);
   });
 
   testWidgets('se a rua não for encontrada, o cadastro sai sem ponto', (
