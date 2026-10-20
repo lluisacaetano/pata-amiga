@@ -11,6 +11,7 @@ import 'package:pata_amiga/modelos/animal.dart';
 import 'package:pata_amiga/provider/usuario_provider.dart';
 import 'package:pata_amiga/routes/app_router.dart';
 import 'package:pata_amiga/services/animal_service.dart';
+import 'package:pata_amiga/telas/cadastro_animal.dart';
 import 'package:pata_amiga/telas/feed_adocao.dart';
 import 'package:pata_amiga/widgets/barra_inferior.dart';
 
@@ -418,5 +419,50 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('FEED FALSO'), findsOneWidget);
     expect(find.text('PERFIL FALSO'), findsNothing);
+  });
+
+  // US 20: o cadastro de animal lê quem está logado direto do estado
+  Future<void> abrirCadastro(WidgetTester tester, Widget app) async {
+    tester.view.physicalSize = const Size(1200, 3000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(app);
+    // Os campos de contato aparecem depois de escolher o tipo
+    await tester.tap(find.text('Perdido'));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('cadastro de animal já vem com o contato de quem está logado', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final usuario = UsuarioProvider();
+    await usuario.registrarUsuario(
+      nome: 'Luisa Caetano',
+      email: 'luisa@pata.com',
+      telefone: '(37) 99999-0000',
+    );
+
+    await abrirCadastro(
+      tester,
+      ChangeNotifierProvider.value(
+        value: usuario,
+        child: const MaterialApp(home: CadastroAnimal()),
+      ),
+    );
+
+    expect(find.text('Luisa Caetano'), findsOneWidget);
+    expect(find.text('(37) 99999-0000'), findsOneWidget);
+  });
+
+  testWidgets('sem ninguém logado, o contato do cadastro começa vazio', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+
+    await abrirCadastro(tester, const MaterialApp(home: CadastroAnimal()));
+
+    expect(find.text('Luisa Caetano'), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 }

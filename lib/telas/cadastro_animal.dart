@@ -6,9 +6,11 @@ import 'package:flutter/services.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 
 import '../modelos/animal.dart';
 import '../modelos/dono.dart';
+import '../provider/usuario_provider.dart';
 import '../tema/cores.dart';
 import '../widgets/barra_inferior.dart';
 import '../widgets/cuidado.dart';
@@ -72,6 +74,19 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
   final _localizacao = TextEditingController();
   final _responsavel = TextEditingController();
   final _telefone = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Quem cadastra costuma ser o responsável, então o contato já vem
+    // preenchido com o de quem está logado. Continua editável, porque numa
+    // ONG quem cadastra nem sempre é quem atende. Sem provider na árvore,
+    // como nos testes da tela sozinha, os campos só começam vazios
+    final usuario = context.read<UsuarioProvider?>()?.usuario;
+    if (usuario == null) return;
+    _responsavel.text = usuario.nome.trim();
+    _telefone.text = usuario.telefone.trim();
+  }
 
   bool _faltando(TextEditingController campo) =>
       _tentouCadastrar && campo.text.trim().isEmpty;

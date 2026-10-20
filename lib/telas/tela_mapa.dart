@@ -46,6 +46,12 @@ class TelaMapa extends StatefulWidget {
 class _TelaMapaState extends State<TelaMapa> {
   final MapController _controller = MapController();
 
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   static const LatLng _centroInicial = LatLng(-20.4647, -45.4264); // Formiga-MG
 
   // Dados de teste. Depois troque pelos dados do Firebase.
