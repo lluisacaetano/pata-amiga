@@ -39,6 +39,8 @@ List<PinoDoMapa> pinosDoMapa(
   final pinos = <PinoDoMapa>[];
   for (final animal in animais) {
     if (!camadasDoMapa.contains(animal.tipo)) continue;
+    // Encontrado ou resgatado não está mais lá para alguém ajudar
+    if (animal.finalizado) continue;
     if (!ligadas.contains(animal.tipo)) continue;
     final ultimo = animal.tipo == TipoRegistro.perdido
         ? ultimoAvistamento(animal, avistamentos)

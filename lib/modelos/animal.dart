@@ -31,11 +31,17 @@ extension RotuloTipo on TipoRegistro {
       : 'Onde ele está';
 }
 
-enum StatusAnimal { disponivel, adotado }
+// Cada tipo tem o seu desfecho: adoção termina em adotado, perdido em
+// encontrado e resgate em resgatado. Com desfecho, o animal sai do feed e do mapa
+enum StatusAnimal { disponivel, adotado, encontrado, resgatado }
 
 extension RotuloStatus on StatusAnimal {
-  String get rotulo =>
-      this == StatusAnimal.disponivel ? 'disponível' : 'adotado';
+  String get rotulo => switch (this) {
+    StatusAnimal.disponivel => 'disponível',
+    StatusAnimal.adotado => 'adotado',
+    StatusAnimal.encontrado => 'encontrado',
+    StatusAnimal.resgatado => 'resgatado',
+  };
 }
 
 class Animal {
@@ -63,6 +69,9 @@ class Animal {
   // O que esse animal precisa e os outros não: remédio contínuo, dieta, deficiência
   final String necessidadesEspeciais;
   final Dono dono;
+  // A conta de quem cadastrou: só ela muda o status do animal. Os animais de
+  // exemplo da API não têm, então ninguém muda o deles
+  final String responsavelEmail;
   final List<String> fotos;
   final DateTime publicadoEm;
   // Salva a localização do aparelho quando a pessoa tocou no botão de localização
@@ -91,6 +100,7 @@ class Animal {
     this.observacoes = '',
     this.necessidadesEspeciais = '',
     required this.dono,
+    this.responsavelEmail = '',
     this.fotos = const [],
     required this.publicadoEm,
     this.latitude,
@@ -125,6 +135,7 @@ class Animal {
         necessidadesEspeciais: json['necessidadesEspeciais'] as String? ?? '',
         // O dono é um objeto aninhado: usa o Dono.fromJson (dono.dart)
         dono: Dono.fromJson(json['dono'] as Map<String, dynamic>),
+        responsavelEmail: json['responsavelEmail'] as String? ?? '',
         fotos: List<String>.from(json['fotos'] as List? ?? []),
         // A data chega como texto ISO 8601 (ex.: 2026-10-14T12:00:00.000)
         publicadoEm: DateTime.parse(json['publicadoEm'] as String),
@@ -157,6 +168,7 @@ class Animal {
         'observacoes': observacoes,
         'necessidadesEspeciais': necessidadesEspeciais,
         'dono': dono.toJson(),
+        'responsavelEmail': responsavelEmail,
         'fotos': fotos,
         'publicadoEm': publicadoEm.toIso8601String(),
         'latitude': latitude,
@@ -172,6 +184,34 @@ class Animal {
   // Como o avistamento acha o animal: pelo id da API, ou pelo nome quando o
   // animal ainda só existe no aparelho
   String get chave => id?.toString() ?? nome;
+
+  // Já teve desfecho: foi adotado, encontrado ou resgatado
+  bool get finalizado => status != StatusAnimal.disponivel;
+
+  // O desfecho que este tipo de registro pode ter
+  StatusAnimal get desfecho => switch (tipo) {
+    TipoRegistro.adocao => StatusAnimal.adotado,
+    TipoRegistro.perdido => StatusAnimal.encontrado,
+    TipoRegistro.resgate => StatusAnimal.resgatado,
+  };
+
+  // Como o status aparece: enquanto não há desfecho, cada tipo diz o seu
+  String get rotuloDoStatus => finalizado
+      ? status.rotulo
+      : switch (tipo) {
+          TipoRegistro.adocao => 'disponível',
+          TipoRegistro.perdido => 'procurando',
+          TipoRegistro.resgate => 'precisa de ajuda',
+        };
+
+  // Se quem está logado é quem cadastrou o animal
+  bool eDoResponsavel(String email) =>
+      email.trim().isNotEmpty &&
+      responsavelEmail.trim().toLowerCase() == email.trim().toLowerCase();
+
+  // O mesmo animal com outro status, para a mudança não alterar o original
+  Animal comStatus(StatusAnimal novo) =>
+      Animal.fromJson({...toJson(), 'status': novo.name});
 
   // Descrição curta do animal, exibida embaixo do nome no card do feed.
   String get resumo =>

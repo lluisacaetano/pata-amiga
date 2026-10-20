@@ -248,7 +248,15 @@ class _FeedAdocaoState extends State<FeedAdocao> {
   List<Animal> get _animaisVisiveis {
     final termo = _busca.trim().toLowerCase();
     // [SPRINT 3 - ALTERADO] antes: [...animaisMock, ..._animaisCriados]
-    final encontrados = [..._animaisApi, ..._animaisCriados].where((animal) {
+    // Do estado compartilhado, e não das listas do feed: assim um status
+    // mudado na ficha aparece aqui na hora
+    final estado = PataAmigaScope.of(context);
+    final todos = estado.animais.isNotEmpty
+        ? estado.animais
+        : [..._animaisApi, ..._animaisCriados];
+    final encontrados = todos.where((animal) {
+      // Com desfecho (adotado, encontrado ou resgatado), sai do feed
+      if (animal.finalizado) return false;
       if (animal.tipo != _abaAtual) return false;
       if (termo.isEmpty) return true;
       return animal.nome.toLowerCase().contains(termo) ||

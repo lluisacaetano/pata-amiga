@@ -52,7 +52,11 @@ const _portes = ['pequeno', 'médio', 'grande'];
 const _sexos = ['macho', 'fêmea'];
 
 class CadastroAnimal extends StatefulWidget {
-  const CadastroAnimal({super.key});
+  // Um animal resgatado sendo publicado para adoção: o formulário abre com os
+  // dados dele e o tipo Adoção marcado
+  final Animal? base;
+
+  const CadastroAnimal({super.key, this.base});
 
   @override
   State<CadastroAnimal> createState() => _CadastroAnimalState();
@@ -78,6 +82,8 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
   bool _castrado = false;
   bool _vacinado = false;
   bool _vermifugado = false;
+  // As fotos que vêm do resgate: já são do animal e passam para a adoção
+  List<String> _fotosDaBase = const [];
   String? _especie;
   String? _porte;
   String? _sexo;
@@ -98,6 +104,8 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
   @override
   void initState() {
     super.initState();
+    final base = widget.base;
+    if (base != null) _preencherCom(base);
     // Quem cadastra costuma ser o responsável, então o contato já vem
     // preenchido com o de quem está logado. Continua editável, porque numa
     // ONG quem cadastra nem sempre é quem atende. Sem provider na árvore,
@@ -106,6 +114,32 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     if (usuario == null) return;
     _responsavel.text = usuario.nome.trim();
     _telefone.text = usuario.telefone.trim();
+  }
+
+  // A opção da lista com o mesmo nome, sem ligar para maiúsculas: a API
+  // guarda "cachorro" e a lista mostra "Cachorro"
+  String? _opcao(List<String> opcoes, String valor) {
+    for (final opcao in opcoes) {
+      if (opcao.toLowerCase() == valor.trim().toLowerCase()) return opcao;
+    }
+    return null;
+  }
+
+  // O que vale para a adoção vem do resgate; observações e endereço ficam em
+  // branco, porque o animal agora está com quem o acolheu
+  void _preencherCom(Animal base) {
+    _tipo = TipoRegistro.adocao;
+    if (base.nome != _nomePadrao) _nome.text = base.nome;
+    _especie = _opcao(_especies, base.especie);
+    _porte = _opcao(_portes, base.porte);
+    _sexo = _opcao(_sexos, base.sexo);
+    _raca.text = base.raca;
+    _idade.text = base.idade;
+    _castrado = base.castrado;
+    _vacinado = base.vacinado;
+    _vermifugado = base.vermifugado;
+    _necessidades.text = base.necessidadesEspeciais;
+    _fotosDaBase = List.of(base.fotos);
   }
 
   bool _faltando(TextEditingController campo) =>
@@ -286,7 +320,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
   }
 
   Future<void> _adicionarFotos() async {
-    final vagas = _maximoDeFotos - _fotos.length;
+    final vagas = _maximoDeFotos - _fotosDaBase.length - _fotos.length;
     if (vagas <= 0) return;
 
     try {
@@ -428,7 +462,8 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
         nome: _responsavel.text.trim(),
         telefone: _telefone.text.trim(),
       ),
-      fotos: _fotos.map((foto) => foto.path).toList(),
+      responsavelEmail: context.read<UsuarioProvider?>()?.usuario.email ?? '',
+      fotos: [..._fotosDaBase, ..._fotos.map((foto) => foto.path)],
       publicadoEm: DateTime.now(),
       latitude: coordenada?.latitude,
       longitude: coordenada?.longitude,
@@ -473,9 +508,9 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
           ),
         ),
         centerTitle: true,
-        title: const Text(
-          'CADASTRAR ANIMAL',
-          style: TextStyle(
+        title: Text(
+          widget.base == null ? 'CADASTRAR ANIMAL' : 'PUBLICAR PARA ADOÇÃO',
+          style: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.8,
@@ -488,6 +523,14 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (_fotosDaBase.isNotEmpty)
+              _Cartao(
+                child: _FotosDoResgate(
+                  fotos: _fotosDaBase,
+                  aoRemover: (indice) =>
+                      setState(() => _fotosDaBase.removeAt(indice)),
+                ),
+              ),
             _Cartao(
               child: _BlocoDeFotos(
                 fotos: _fotos,
@@ -752,6 +795,69 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
         ),
       ),
       bottomNavigationBar: BarraInferior(),
+    );
+  }
+}
+
+// As fotos que vieram do resgate, em miniatura, com a opção de tirar alguma
+class _FotosDoResgate extends StatelessWidget {
+  final List<String> fotos;
+  final ValueChanged<int> aoRemover;
+
+  const _FotosDoResgate({required this.fotos, required this.aoRemover});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _TituloDoCartao(
+          icone: Icons.photo_library_outlined,
+          texto: 'Fotos do resgate',
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Elas passam para a adoção. Toque no X para tirar alguma.',
+          style: TextStyle(fontSize: 12, color: Cores.textoFraco),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (var i = 0; i < fotos.length; i++)
+              SizedBox(
+                width: 72,
+                height: 72,
+                child: Stack(
+                  children: [
+                    FotoAnimal(
+                      caminho: fotos[i],
+                      altura: 72,
+                      raio: BorderRadius.circular(10),
+                    ),
+                    Positioned(
+                      top: 2,
+                      right: 2,
+                      child: Material(
+                        color: Cores.cartao,
+                        shape: const CircleBorder(),
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: () => aoRemover(i),
+                          child: const Padding(
+                            padding: EdgeInsets.all(3),
+                            child: Icon(Icons.close, size: 14),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }

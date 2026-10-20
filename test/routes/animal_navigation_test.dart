@@ -64,6 +64,14 @@ class _ApiFalsa extends AnimalService {
     if (fora) throw Exception('sem conexão');
     animais.add(animal);
   }
+
+  final statusGravados = <StatusAnimal>[];
+
+  @override
+  Future<void> atualizarStatus(Animal animal, StatusAnimal novo) async {
+    if (fora) throw Exception('sem conexão');
+    statusGravados.add(novo);
+  }
 }
 
 // Serviço de avistamentos falso: guarda na memória e devolve com id
@@ -1820,5 +1828,264 @@ void main() {
       find.text('Nada a até 1 km de você nas camadas ligadas.'),
       findsOneWidget,
     );
+  });
+
+  group('status do animal (US 03)', () {
+    const email = 'luisa@pata.com';
+
+    Animal meu(TipoRegistro tipo, {String status = 'disponivel'}) =>
+        Animal.fromJson({
+          ...animaisMock.first.toJson(),
+          'id': 7,
+          'nome': 'Paçoca',
+          'tipo': tipo.name,
+          'status': status,
+          'responsavelEmail': email,
+        });
+
+    test('o desfecho e o rótulo seguem o tipo do registro', () {
+      expect(meu(TipoRegistro.adocao).desfecho, StatusAnimal.adotado);
+      expect(meu(TipoRegistro.perdido).desfecho, StatusAnimal.encontrado);
+      expect(meu(TipoRegistro.resgate).desfecho, StatusAnimal.resgatado);
+      expect(meu(TipoRegistro.perdido).rotuloDoStatus, 'procurando');
+      expect(meu(TipoRegistro.resgate).rotuloDoStatus, 'precisa de ajuda');
+      expect(
+        meu(TipoRegistro.perdido, status: 'encontrado').rotuloDoStatus,
+        'encontrado',
+      );
+    });
+
+    test('só o e-mail de quem cadastrou é responsável', () {
+      final animal = meu(TipoRegistro.adocao);
+      expect(animal.eDoResponsavel('Luisa@Pata.com '), isTrue);
+      expect(animal.eDoResponsavel('outra@pata.com'), isFalse);
+      expect(animal.eDoResponsavel(''), isFalse);
+      expect(animaisMock.first.eDoResponsavel(''), isFalse);
+    });
+
+    test('animal com desfecho sai dos pinos do mapa', () {
+      final perdido = Animal.fromJson({
+        ...meu(TipoRegistro.perdido).toJson(),
+        'latitude': -20.4642,
+        'longitude': -45.4267,
+      });
+      final ligadas = camadasDoMapa.toSet();
+      expect(pinosDoMapa([perdido], const [], ligadas), hasLength(1));
+      expect(
+        pinosDoMapa(
+          [perdido.comStatus(StatusAnimal.encontrado)],
+          const [],
+          ligadas,
+        ),
+        isEmpty,
+      );
+    });
+
+    Future<_ApiFalsa> abrirMinhaFicha(
+      WidgetTester tester,
+      EstadoPataAmiga estado,
+      Animal animal, {
+      String logado = email,
+      bool fora = false,
+    }) async {
+      tester.view.physicalSize = const Size(1200, 2600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final usuario = UsuarioProvider();
+      await usuario.carregarUsuario(logado);
+      final api = _ApiFalsa([animal], fora: fora);
+      await tester.pumpWidget(
+        ChangeNotifierProvider.value(
+          value: usuario,
+          child: PataAmigaScope(
+            notifier: estado,
+            child: MaterialApp(
+              home: DetalhesAnimal(animal: animal, api: api),
+              routes: {
+                AppRoutes.registerAnimal: (context) => CadastroAnimal(
+                  base: ModalRoute.of(context)!.settings.arguments as Animal?,
+                ),
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      return api;
+    }
+
+    Future<void> tocarNoControle(WidgetTester tester, String texto) async {
+      final botao = find.text(texto);
+      await tester.ensureVisible(botao);
+      await tester.pumpAndSettle();
+      await tester.tap(botao);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('só quem cadastrou vê o controle de status', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      await abrirMinhaFicha(
+        tester,
+        estado,
+        meu(TipoRegistro.adocao),
+        logado: 'outra@pata.com',
+      );
+      expect(find.text('Você cadastrou este animal'), findsNothing);
+      expect(find.text('Marcar como adotado'), findsNothing);
+    });
+
+    testWidgets('cadastro do aparelho sem e-mail também mostra o controle', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      final antigo = Animal.fromJson({
+        ...meu(TipoRegistro.perdido).toJson(),
+        'id': null,
+        'responsavelEmail': '',
+      });
+      await estado.registrarCadastro(antigo);
+      await abrirMinhaFicha(tester, estado, antigo);
+      expect(find.text('Você cadastrou este animal'), findsOneWidget);
+
+      // Sem estar nos cadastros do aparelho, não
+      final deOutro = Animal.fromJson({...antigo.toJson(), 'nome': 'Bolinha'});
+      expect(estado.podeMudarStatus(deOutro, email), isFalse);
+    });
+
+    test('animal da API no e-mail de quem está logado entra nos cadastros', () {
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      final deOutro = Animal.fromJson({
+        ...meu(TipoRegistro.adocao).toJson(),
+        'id': 8,
+        'nome': 'Bolinha',
+        'responsavelEmail': 'outra@pata.com',
+      });
+      estado.atualizarAnimais([meu(TipoRegistro.adocao), deOutro]);
+      expect(estado.cadastrosDe(email).map((animal) => animal.nome), [
+        'Paçoca',
+      ]);
+      expect(estado.cadastrosDe('ninguem@pata.com'), isEmpty);
+    });
+
+    testWidgets('marcar como adotado confirma, grava e tira do feed', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      final animal = meu(TipoRegistro.adocao);
+      estado.atualizarAnimais([animal]);
+      final api = await abrirMinhaFicha(tester, estado, animal);
+
+      expect(find.text('Você cadastrou este animal'), findsOneWidget);
+      await tocarNoControle(tester, 'Marcar como adotado');
+      expect(find.text('Marcar Paçoca como adotado?'), findsOneWidget);
+
+      // Cancelar não muda nada
+      await tester.tap(find.text('Cancelar'));
+      await tester.pumpAndSettle();
+      expect(api.statusGravados, isEmpty);
+
+      await tocarNoControle(tester, 'Marcar como adotado');
+      await tester.tap(find.text('Confirmar'));
+      await tester.pumpAndSettle();
+
+      expect(api.statusGravados, [StatusAnimal.adotado]);
+      expect(estado.atual(animal).status, StatusAnimal.adotado);
+      expect(find.text('Voltar para disponível'), findsOneWidget);
+      expect(
+        estado.animais.where((item) => !item.finalizado),
+        isEmpty,
+        reason: 'o feed só mostra quem não tem desfecho',
+      );
+
+      // E dá para desfazer
+      await tocarNoControle(tester, 'Voltar para disponível');
+      await tester.tap(find.text('Confirmar'));
+      await tester.pumpAndSettle();
+      expect(estado.atual(animal).status, StatusAnimal.disponivel);
+      expect(find.text('Marcar como adotado'), findsOneWidget);
+    });
+
+    testWidgets('perdido vira encontrado', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      final animal = meu(TipoRegistro.perdido);
+      estado.atualizarAnimais([animal]);
+      final api = await abrirMinhaFicha(tester, estado, animal);
+
+      await tocarNoControle(tester, 'Marcar como encontrado');
+      await tester.tap(find.text('Confirmar'));
+      await tester.pumpAndSettle();
+      expect(api.statusGravados, [StatusAnimal.encontrado]);
+      expect(find.text('Voltar para procurando'), findsOneWidget);
+    });
+
+    testWidgets('sem conexão, o status não muda e avisa', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      final animal = meu(TipoRegistro.adocao);
+      estado.atualizarAnimais([animal]);
+      await abrirMinhaFicha(tester, estado, animal, fora: true);
+
+      await tocarNoControle(tester, 'Marcar como adotado');
+      await tester.tap(find.text('Confirmar'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Não foi possível mudar agora. Tente de novo.'),
+        findsOneWidget,
+      );
+      expect(estado.atual(animal).status, StatusAnimal.disponivel);
+    });
+
+    testWidgets('resgatado oferece publicar para adoção com os dados', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      final animal = meu(TipoRegistro.resgate);
+      estado.atualizarAnimais([animal]);
+      await abrirMinhaFicha(tester, estado, animal);
+
+      await tocarNoControle(tester, 'Marcar como resgatado');
+      await tester.tap(find.text('Confirmar'));
+      await tester.pumpAndSettle();
+      expect(find.text('Resgate concluído'), findsOneWidget);
+
+      // O botão do painel, que fica por cima do botão do quadro
+      await tester.tap(
+        find.widgetWithText(FilledButton, 'Publicar para adoção').last,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('PUBLICAR PARA ADOÇÃO'), findsOneWidget);
+      expect(find.widgetWithText(TextField, 'Paçoca'), findsOneWidget);
+    });
+
+    testWidgets('a oferta pode ser recusada e continua no quadro', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      final animal = meu(TipoRegistro.resgate);
+      estado.atualizarAnimais([animal]);
+      await abrirMinhaFicha(tester, estado, animal);
+
+      await tocarNoControle(tester, 'Marcar como resgatado');
+      await tester.tap(find.text('Confirmar'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Agora não'));
+      await tester.pumpAndSettle();
+      expect(find.text('Voltar para precisa de ajuda'), findsOneWidget);
+      expect(find.text('Publicar para adoção'), findsOneWidget);
+    });
   });
 }

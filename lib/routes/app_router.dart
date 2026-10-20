@@ -53,7 +53,11 @@ class AppRoutesConfig {
       return DetalhesAnimal(animal: animal);
     },
 
-    AppRoutes.registerAnimal: (_) => const CadastroAnimal(),
+    // Com um animal de argumento, o cadastro abre preenchido para adoção
+    AppRoutes.registerAnimal: (context) {
+      final base = ModalRoute.of(context)?.settings.arguments;
+      return CadastroAnimal(base: base is Animal ? base : null);
+    },
     AppRoutes.perfilUsuario: (_) => const PerfilUsuario(),
     AppRoutes.editarPerfil: (_) => const EditarPerfil(),
 

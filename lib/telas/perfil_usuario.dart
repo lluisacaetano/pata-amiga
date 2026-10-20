@@ -69,7 +69,7 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
     final estado = PataAmigaScope.of(context);
     final usuario = context.watch<UsuarioProvider>().usuario;
     final curtidos = estado.animaisCurtidos;
-    final cadastros = estado.meusCadastros;
+    final cadastros = estado.cadastrosDe(usuario.email);
 
     return Scaffold(
       appBar: AppBar(
@@ -415,21 +415,15 @@ class _CartaoCurtido extends StatelessWidget {
           Row(
             children: [
               Etiqueta(rotuloSingular(animal.tipo)),
-              // Disponível ou adotado só diz algo sobre adoção
-              if (animal.tipo == TipoRegistro.adocao) ...[
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    comMaiuscula(animal.status.rotulo),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Cores.textoFraco,
-                      fontSize: 12,
-                    ),
-                  ),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  comMaiuscula(animal.rotuloDoStatus),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Cores.textoFraco, fontSize: 12),
                 ),
-              ],
+              ),
             ],
           ),
           const SizedBox(height: 6),
@@ -481,8 +475,8 @@ class _LinhaDeCadastro extends StatelessWidget {
                     runSpacing: 4,
                     children: [
                       Etiqueta(rotuloSingular(animal.tipo)),
-                      if (animal.status == StatusAnimal.adotado)
-                        Etiqueta(animal.status.rotulo, cheia: true),
+                      if (animal.finalizado)
+                        Etiqueta(animal.rotuloDoStatus, cheia: true),
                     ],
                   ),
                   const SizedBox(height: 6),
