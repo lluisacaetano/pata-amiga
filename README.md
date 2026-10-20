@@ -175,15 +175,15 @@ Sprint 0, e todas são cadastradas como Issues no Issue Board deste repositório
 
 Patinhas Gals Dev. Os papéis são rotativos e revisados a cada sprint, de modo que
 todas as integrantes passem por todas as funções ao longo do semestre. A divisão
-registrada abaixo valeu na Sprint 0 e se manteve na Sprint 1.
+das Sprints 0 e 1 foi a mesma; a partir da Sprint 2, cada uma teve a sua.
 
-| Integrante | Papel nas Sprints 0 e 1 | GitLab |
-|---|---|---|
-| Yasmim Stefane Faria | Tech Lead | @yasmimstefane |
-| Maria Eduarda Siqueira Silva | Product Owner | @Mariyaduarda |
-| Júlia Cristina Martins | QA | @Julia_Nakano |
-| Luisa Caetano Araujo | Dev 1 | @luisacaetano |
-| Maria Luzia Sanches | Dev 2 | @marialuziademoura |
+| Integrante | GitLab | Sprints 0 e 1 | Sprint 2 | Sprint 3 | Sprint 4 |
+|---|---|---|---|---|---|
+| Yasmim Stefane Faria | @yasmimstefane | Tech Lead | Dev | Product Owner | Tech Lead |
+| Maria Eduarda Siqueira Silva | @Mariyaduarda | Product Owner | Dev | Tech Lead | Dev |
+| Júlia Cristina Martins | @Julia_Nakano | QA | Tech Lead | Dev | Product Owner |
+| Luisa Caetano Araujo | @luisacaetano | Dev | Product Owner | QA | Dev |
+| Maria Luzia Sanches | @marialuziademoura | Dev | QA | Dev | QA |
 
 ## Documentação
 
@@ -201,19 +201,44 @@ Android e iOS a partir de uma base única. A API de referência do projeto é a
 [Pata Amiga API](https://github.com/PET-foundation/Pata-Amiga-API), escrita em
 Java com Spring.
 
+Enquanto o aplicativo não se conecta a ela, os animais vêm de uma API local
+servida pelo [json-server](https://github.com/typicode/json-server) a partir do
+arquivo `api/db.json`. O feed busca a lista por `lib/services/animal_service.dart`
+e guarda uma cópia no aparelho com `shared_preferences`, por meio de
+`lib/services/cache_service.dart`, o que permite continuar mostrando os animais
+sem internet e avisar na tela se o dado veio do cache ou acabou de ser
+atualizado.
+
+O estado compartilhado do usuário logado fica em um `ChangeNotifier` exposto pelo
+`provider`, e a navegação passa por um arquivo único de rotas, em
+`lib/routes/`. O mapa usa o `flutter_map` com os mapas públicos do
+OpenStreetMap, e a localização do aparelho vem do `geolocator`.
+
 ## Como rodar
 
-O projeto Flutter entra no repositório pela Sprint 1. A partir daí:
+O feed depende da API local, então ela precisa estar no ar antes do aplicativo.
+Em um terminal, na raiz do projeto:
+
+```
+npx json-server api/db.json --port 3000
+```
+
+Com a API respondendo em `http://localhost:3000/animais`, em outro terminal:
 
 ```
 flutter pub get
 flutter run
 ```
 
+O endereço da API está em `lib/services/animal_service.dart` e muda conforme onde
+o aplicativo roda: `10.0.2.2` no emulador Android, que é como ele enxerga o
+computador, `localhost` no Chrome e o IP do computador na rede em um celular de
+verdade. Sem a API no ar, o feed mostra o que estiver em cache ou um aviso de que
+não conseguiu buscar os dados.
+
 Para escolher onde rodar, use `flutter devices` e depois
-`flutter run -d <dispositivo>`. Além do emulador Android, o projeto roda em
-`chrome` e `macos`, o que ajuda quem ainda está terminando de configurar o SDK.
-Os testes rodam com `flutter test`.
+`flutter run -d <dispositivo>`. Antes de abrir um Merge Request, rode
+`flutter analyze` e `flutter test`.
 
 ## Como trabalhamos
 
@@ -226,13 +251,23 @@ prática antes de aprovar. Se estiver ocupada, qualquer outra integrante pode
 cobrir. A regra que não muda é que ninguém aprova o próprio Merge Request. Depois
 da aprovação, quem faz o merge é a própria autora, que escolhe o momento certo.
 
-O andamento fica registrado em uma Issue fixa por sprint, onde cada integrante
-comenta, a cada dia de aula, o que fez, o que vai fazer em seguida e se está
-travada em alguma coisa. Isso substitui a daily presencial de uma squad remota.
+O andamento fica registrado na Issue fixa "Daily Sprint", a mesma em todas as
+sprints, onde cada integrante comenta, a cada dia de aula, o que fez, o que vai
+fazer em seguida e se está travada em alguma coisa. Isso substitui a daily
+presencial de uma squad remota. Ao fim de cada sprint, a retrospectiva fica em uma
+Issue própria, "Retro Sprint N".
+
+A partir da Sprint 4, parte do código é escrita com ajuda de um agente de IA, e a
+regra do Merge Request vale para ele também: nenhum código gerado por IA entra na
+`main` sem revisão de outra integrante, e o agente não faz commit nem push direto
+nela.
 
 ## Sprints
 
 | Sprint | Entrega | Situação |
 |---|---|---|
 | 0 | Kickoff: formação do squad, conceito do produto, backlog e wireframes | Entregue |
-| 1 | Primeiras telas do MVP, backlog no Issue Board e fluxo de Merge Request | Entregue |
+| 1 | Primeiras Telas: telas do MVP, backlog no Issue Board e fluxo de Merge Request | Entregue |
+| 2 | Produto Conectado: rotas centralizadas, estado compartilhado, cadastro, login e perfil | Entregue |
+| 3 | Produto Resiliente: cache local, estados de conectividade na tela e preferência salva | Entregue |
+| 4 | Squad com IA: agente com o MCP do Flutter, arquivo de rules, funcionalidade e testes com IA | Em andamento |
