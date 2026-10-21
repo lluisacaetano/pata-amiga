@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'auth_components.dart';
 import '../../telas/onboarding_screen.dart';
+import '../../tema/cores.dart';
 import '../../widgets/mascaras.dart';
 import '../../provider/usuario_provider.dart';
 
@@ -38,14 +39,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
             children: [
               const AuthBrandMark(size: 58),
               const SizedBox(height: 10),
-              const Text(
+              Text(
                 'Criar conta',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: 'Roboto',
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF24543A),
+                  color: context.cores.principal,
                 ),
               ),
               const SizedBox(height: 18),

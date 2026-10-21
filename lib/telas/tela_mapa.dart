@@ -20,8 +20,9 @@ import '../widgets/foto_animal.dart';
 import '../widgets/icone_de_tigela.dart';
 
 // Uma cor por camada, a mesma no marcador e na legenda do filtro
-Color corDaCamada(TipoRegistro tipo) =>
-    tipo == TipoRegistro.perdido ? Cores.destaque : Cores.principal;
+Color corDaCamada(BuildContext context, TipoRegistro tipo) => tipo == TipoRegistro.perdido
+    ? context.cores.destaque
+    : context.cores.principal;
 
 // As três camadas do filtro: os dois tipos de animal e os pontos de
 // alimentação, que não são animais
@@ -34,17 +35,17 @@ extension SobreACamada on CamadaDoFiltro {
     CamadaDoFiltro.alimentacao => 'Alimentação',
   };
 
-  Color get cor => switch (this) {
-    CamadaDoFiltro.perdidos => corDaCamada(TipoRegistro.perdido),
-    CamadaDoFiltro.resgate => corDaCamada(TipoRegistro.resgate),
-    CamadaDoFiltro.alimentacao => Cores.alimentacao,
+  Color cor(BuildContext context) => switch (this) {
+    CamadaDoFiltro.perdidos => corDaCamada(context, TipoRegistro.perdido),
+    CamadaDoFiltro.resgate => corDaCamada(context, TipoRegistro.resgate),
+    CamadaDoFiltro.alimentacao => context.cores.alimentacao,
   };
 }
 
 // Os pontos de alimentação: ocre de ração para comedouro (e para o que é os
 // dois), azul de água para bebedouro
-Color corDoPonto(TipoDePonto tipo) =>
-    tipo == TipoDePonto.bebedouro ? Cores.agua : Cores.alimentacao;
+Color corDoPonto(BuildContext context, TipoDePonto tipo) =>
+    tipo == TipoDePonto.bebedouro ? context.cores.agua : context.cores.alimentacao;
 
 // Cadastrar ponto e registrar abastecimento é só para quem está logado
 bool _logado(BuildContext context) =>
@@ -111,25 +112,25 @@ class _PaginaMapaState extends State<PaginaMapa> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Cores.fundo,
+        backgroundColor: context.cores.fundo,
         leadingWidth: 64,
         leading: Padding(
           padding: const EdgeInsets.only(left: 12),
           child: IconButton(
             icon: const Icon(Icons.arrow_back),
             tooltip: 'Voltar',
-            color: Cores.principal,
+            color: context.cores.principal,
             onPressed: () => Navigator.maybePop(context),
           ),
         ),
         centerTitle: true,
-        title: const Text(
+        title: Text(
           'MAPA',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.8,
-            color: Cores.principal,
+            color: context.cores.principal,
           ),
         ),
       ),
@@ -161,15 +162,15 @@ class _PaginaMapaState extends State<PaginaMapa> {
                           // azul, como os pinos de comedouro e bebedouro
                           child: DecoratedBox(
                             decoration: BoxDecoration(
-                              color: camada.cor,
+                              color: camada.cor(context),
                               shape: BoxShape.circle,
                               gradient: camada == CamadaDoFiltro.alimentacao
-                                  ? const LinearGradient(
+                                  ? LinearGradient(
                                       colors: [
-                                        Cores.alimentacao,
-                                        Cores.alimentacao,
-                                        Cores.agua,
-                                        Cores.agua,
+                                        context.cores.alimentacao,
+                                        context.cores.alimentacao,
+                                        context.cores.agua,
+                                        context.cores.agua,
                                       ],
                                       stops: [0, 0.5, 0.5, 1],
                                     )
@@ -194,7 +195,7 @@ class _PaginaMapaState extends State<PaginaMapa> {
               showSelectedIcon: false,
               onSelectionChanged: (ligadas) =>
                   setState(() => _ligadas = ligadas),
-              style: estiloDasAbas(Cores.cartao),
+              style: estiloDasAbas(context, context.cores.cartao),
             ),
           ),
           Expanded(
@@ -328,7 +329,7 @@ class _TelaMapaState extends State<TelaMapa> {
   void _mostrarPonto(PontoDeAlimentacao ponto) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Cores.cartao,
+      backgroundColor: context.cores.cartao,
       showDragHandle: true,
       builder: (_) =>
           _ResumoDoPonto(ponto: ponto, servico: _servicoDeAlimentacao),
@@ -338,7 +339,7 @@ class _TelaMapaState extends State<TelaMapa> {
   void _mostrarResumo(Animal animal, Avistamento? ultimo) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Cores.cartao,
+      backgroundColor: context.cores.cartao,
       showDragHandle: true,
       builder: (_) => _ResumoDoAnimal(animal: animal, ultimo: ultimo),
     );
@@ -391,7 +392,7 @@ class _TelaMapaState extends State<TelaMapa> {
                     child: GestureDetector(
                       onTap: () => _mostrarResumo(pino.animal, pino.ultimo),
                       child: _Pino(
-                        cor: corDaCamada(pino.animal.tipo),
+                        cor: corDaCamada(context, pino.animal.tipo),
                         rotulo: pino.animal.nome,
                       ),
                     ),
@@ -415,7 +416,7 @@ class _TelaMapaState extends State<TelaMapa> {
                               ? ponto.tipo.rotulo
                               : '${ponto.tipo.rotulo} ${ponto.lugar}',
                           child: PinoDaPatinha(
-                            cor: corDoPonto(ponto.tipo),
+                            cor: corDoPonto(context, ponto.tipo),
                             simbolo: iconeDoPonto(ponto.tipo, tamanho: 22),
                           ),
                         ),
@@ -479,9 +480,9 @@ class _TelaMapaState extends State<TelaMapa> {
               tooltip: 'Cadastrar ponto de alimentação',
               onPressed: () =>
                   Navigator.pushNamed(context, AppRoutes.cadastrarPonto),
-              child: const Icon(
+              child: Icon(
                 Icons.add_location_alt_outlined,
-                color: Cores.principal,
+                color: context.cores.principal,
               ),
             ),
           ),
@@ -525,7 +526,7 @@ class _TelaMapaState extends State<TelaMapa> {
                     height: 22,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Icon(Icons.my_location, color: Cores.principal),
+                : Icon(Icons.my_location, color: context.cores.principal),
           ),
         ),
       ],
@@ -616,14 +617,14 @@ class _AvisoDoMapa extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: Cores.cartao,
+        color: context.cores.cartao,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Cores.borda),
+        border: Border.all(color: context.cores.borda),
       ),
       child: Text(
         texto,
         textAlign: TextAlign.center,
-        style: const TextStyle(color: Cores.textoFraco, fontSize: 14),
+        style: TextStyle(color: context.cores.textoFraco, fontSize: 14),
       ),
     );
   }
@@ -677,8 +678,8 @@ class _ResumoDoAnimal extends StatelessWidget {
                   'Visto pela última vez ${ultimo!.vistoHa(DateTime.now())}',
                   if (ultimo!.lugar.isNotEmpty) ultimo!.lugar,
                 ].join(', '),
-                style: const TextStyle(
-                  color: Cores.destaque,
+                style: TextStyle(
+                  color: context.cores.destaque,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
@@ -688,20 +689,20 @@ class _ResumoDoAnimal extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Padding(
+                Padding(
                   padding: EdgeInsets.only(top: 1),
                   child: Icon(
                     Icons.location_on_outlined,
                     size: 15,
-                    color: Cores.principal,
+                    color: context.cores.principal,
                   ),
                 ),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     lugar,
-                    style: const TextStyle(
-                      color: Cores.principal,
+                    style: TextStyle(
+                      color: context.cores.principal,
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
                     ),
@@ -709,7 +710,7 @@ class _ResumoDoAnimal extends StatelessWidget {
                 ),
                 Text(
                   ' · ${animal.publicadoHa(DateTime.now())}',
-                  style: const TextStyle(color: Cores.textoFraco, fontSize: 13),
+                  style: TextStyle(color: context.cores.textoFraco, fontSize: 13),
                 ),
               ],
             ),
@@ -732,7 +733,7 @@ class _ResumoDoAnimal extends StatelessWidget {
                 navegador.pushNamed(AppRoutes.details, arguments: animal);
               },
               style: FilledButton.styleFrom(
-                backgroundColor: Cores.principal,
+                backgroundColor: context.cores.principal,
                 minimumSize: const Size.fromHeight(48),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -793,14 +794,16 @@ class _ResumoDoPontoState extends State<_ResumoDoPonto> {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: corDoPonto(ponto.tipo).withValues(alpha: 0.15),
+                    color: corDoPonto(context, ponto.tipo).withValues(
+                      alpha: 0.15,
+                    ),
                     shape: BoxShape.circle,
                   ),
                   child: Center(
                     child: iconeDoPonto(
                       ponto.tipo,
                       tamanho: 24,
-                      cor: corDoPonto(ponto.tipo),
+                      cor: corDoPonto(context, ponto.tipo),
                     ),
                   ),
                 ),
@@ -829,7 +832,7 @@ class _ResumoDoPontoState extends State<_ResumoDoPonto> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Cores.fundo,
+                color: context.cores.fundo,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -847,9 +850,9 @@ class _ResumoDoPontoState extends State<_ResumoDoPonto> {
                     const SizedBox(height: 2),
                     Text(
                       ponto.referencia,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
-                        color: Cores.textoFraco,
+                        color: context.cores.textoFraco,
                       ),
                     ),
                   ],
@@ -863,9 +866,9 @@ class _ResumoDoPontoState extends State<_ResumoDoPonto> {
                             if (ultimo.registradoPor.isNotEmpty)
                               'por ${ultimo.registradoPor}',
                           ].join(', '),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
-                      color: Cores.principal,
+                      color: context.cores.principal,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -898,9 +901,9 @@ class _ResumoDoPontoState extends State<_ResumoDoPonto> {
                       jaRegistrou ? 'Você já registrou hoje' : 'Abasteci hoje',
                     ),
                     style: FilledButton.styleFrom(
-                      backgroundColor: Cores.principal,
-                      disabledBackgroundColor: Cores.principalClara,
-                      disabledForegroundColor: Cores.principal,
+                      backgroundColor: context.cores.principal,
+                      disabledBackgroundColor: context.cores.principalClara,
+                      disabledForegroundColor: context.cores.principal,
                       minimumSize: const Size.fromHeight(48),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
@@ -931,10 +934,10 @@ class _EtiquetaDaSituacao extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: ok
-            ? Cores.principalClara
+            ? context.cores.principalClara
             : urgente
-            ? Cores.destaque
-            : Cores.destaque.withValues(alpha: 0.15),
+            ? context.cores.destaque
+            : context.cores.destaque.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
@@ -943,10 +946,10 @@ class _EtiquetaDaSituacao extends StatelessWidget {
           fontSize: 12,
           fontWeight: FontWeight.w600,
           color: ok
-              ? Cores.principal
+              ? context.cores.principal
               : urgente
               ? Colors.white
-              : Cores.destaque,
+              : context.cores.destaque,
         ),
       ),
     );
@@ -969,7 +972,7 @@ class _PertoDeVoce extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Cores.cartao,
+      color: context.cores.cartao,
       elevation: 6,
       borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       clipBehavior: Clip.antiAlias,
@@ -982,59 +985,59 @@ class _PertoDeVoce extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 6, 4, 0),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.near_me_outlined,
                     size: 18,
-                    color: Cores.principal,
+                    color: context.cores.principal,
                   ),
                   const SizedBox(width: 8),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Perto de você',
                       style: TextStyle(
-                        color: Cores.principal,
+                        color: context.cores.principal,
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                   // O crédito obrigatório do mapa, que o painel cobriria
-                  const Text(
+                  Text(
                     '© OpenStreetMap',
-                    style: TextStyle(fontSize: 10, color: Cores.textoFraco),
+                    style: TextStyle(fontSize: 10, color: context.cores.textoFraco),
                   ),
                   IconButton(
                     tooltip: 'Fechar',
                     onPressed: aoFechar,
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.close,
                       size: 20,
-                      color: Cores.textoFraco,
+                      color: context.cores.textoFraco,
                     ),
                   ),
                 ],
               ),
             ),
-            const Divider(height: 1, color: Cores.borda),
+            Divider(height: 1, color: context.cores.borda),
             Expanded(
               child: itens.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Padding(
                         padding: EdgeInsets.all(16),
                         child: Text(
                           'Nada a até 1 km de você nas camadas ligadas.',
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: Cores.textoFraco),
+                          style: TextStyle(color: context.cores.textoFraco),
                         ),
                       ),
                     )
                   : ListView.separated(
                       padding: EdgeInsets.zero,
                       itemCount: itens.length,
-                      separatorBuilder: (_, _) => const Divider(
+                      separatorBuilder: (_, _) => Divider(
                         height: 1,
                         indent: 60,
-                        color: Cores.borda,
+                        color: context.cores.borda,
                       ),
                       itemBuilder: (context, indice) =>
                           _LinhaPerto(item: itens[indice], aoTocar: aoTocar),
@@ -1058,8 +1061,8 @@ class _LinhaPerto extends StatelessWidget {
     final animal = item.animal?.animal;
     final ponto = item.ponto;
     final cor = animal != null
-        ? corDaCamada(animal.tipo)
-        : corDoPonto(ponto!.tipo);
+        ? corDaCamada(context, animal.tipo)
+        : corDoPonto(context, ponto!.tipo);
     final titulo = animal != null ? animal.nome : ponto!.tipo.rotulo;
     final lugar = animal != null
         ? [
@@ -1103,9 +1106,9 @@ class _LinhaPerto extends StatelessWidget {
                       lugar,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: Cores.textoFraco,
+                        color: context.cores.textoFraco,
                       ),
                     ),
                 ],
@@ -1114,10 +1117,10 @@ class _LinhaPerto extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               textoDaDistancia(item.metros),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Cores.principal,
+                color: context.cores.principal,
               ),
             ),
           ],

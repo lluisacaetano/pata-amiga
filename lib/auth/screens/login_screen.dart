@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'auth_components.dart';
 import '../../telas/onboarding_screen.dart';
+import '../../tema/cores.dart';
 import '../../routes/route_names.dart';
 import '../../widgets/mascaras.dart';
 import '../../provider/usuario_provider.dart';
@@ -39,14 +40,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 semanticLabel: 'Ilustração de um cachorro',
               ),
               const SizedBox(height: 3),
-              const Text(
+              Text(
                 'Que bom te ver novamente!',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: 'Nunito',
                   fontSize: 34,
                   fontWeight: FontWeight.w900,
-                  color: Color(0xFF24543A),
+                  color: context.cores.principal,
                 ),
               ),
               const SizedBox(height: 22),

@@ -110,25 +110,25 @@ class _RegistrarAbastecimentoState extends State<RegistrarAbastecimento> {
     final ponto = widget.ponto;
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Cores.fundo,
+        backgroundColor: context.cores.fundo,
         leadingWidth: 64,
         leading: Padding(
           padding: const EdgeInsets.only(left: 12),
           child: IconButton(
             icon: const Icon(Icons.arrow_back),
             tooltip: 'Voltar',
-            color: Cores.principal,
+            color: context.cores.principal,
             onPressed: () => Navigator.maybePop(context),
           ),
         ),
         centerTitle: true,
-        title: const Text(
+        title: Text(
           'REGISTRAR ABASTECIMENTO',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.8,
-            color: Cores.principal,
+            color: context.cores.principal,
           ),
         ),
       ),
@@ -153,9 +153,9 @@ class _RegistrarAbastecimentoState extends State<RegistrarAbastecimento> {
                   const SizedBox(height: 2),
                   Text(
                     ponto.referencia,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
-                      color: Cores.textoFraco,
+                      color: context.cores.textoFraco,
                     ),
                   ),
                 ],
@@ -163,13 +163,13 @@ class _RegistrarAbastecimentoState extends State<RegistrarAbastecimento> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Cores.principalClara,
+                    color: context.cores.principalClara,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Row(
+                  child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.my_location, size: 18, color: Cores.principal),
+                      Icon(Icons.my_location, size: 18, color: context.cores.principal),
                       SizedBox(width: 10),
                       Expanded(
                         child: Text(
@@ -178,7 +178,7 @@ class _RegistrarAbastecimentoState extends State<RegistrarAbastecimento> {
                           'por dia.',
                           style: TextStyle(
                             fontSize: 13,
-                            color: Cores.texto,
+                            color: context.cores.texto,
                             height: 1.4,
                           ),
                         ),
@@ -198,8 +198,8 @@ class _RegistrarAbastecimentoState extends State<RegistrarAbastecimento> {
                     icon: const Icon(Icons.photo_camera_outlined),
                     label: const Text('Tirar foto do ponto abastecido'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Cores.principal,
-                      side: const BorderSide(color: Cores.principal),
+                      foregroundColor: context.cores.principal,
+                      side: BorderSide(color: context.cores.principal),
                       minimumSize: const Size.fromHeight(46),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -219,7 +219,7 @@ class _RegistrarAbastecimentoState extends State<RegistrarAbastecimento> {
                                   File(_foto!.path),
                                   fit: BoxFit.cover,
                                   errorBuilder: (_, _, _) =>
-                                      const ColoredBox(color: Cores.fundo),
+                                      ColoredBox(color: context.cores.fundo),
                                 ),
                         ),
                       ),
@@ -227,7 +227,7 @@ class _RegistrarAbastecimentoState extends State<RegistrarAbastecimento> {
                         top: 6,
                         right: 6,
                         child: Material(
-                          color: Cores.cartao,
+                          color: context.cores.cartao,
                           shape: const CircleBorder(),
                           child: IconButton(
                             tooltip: 'Remover foto',
@@ -246,18 +246,18 @@ class _RegistrarAbastecimentoState extends State<RegistrarAbastecimento> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.error_outline,
                     size: 18,
-                    color: Cores.destaque,
+                    color: context.cores.destaque,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       _recusa!,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
-                        color: Cores.destaque,
+                        color: context.cores.destaque,
                       ),
                     ),
                   ),
@@ -282,7 +282,7 @@ class _RegistrarAbastecimentoState extends State<RegistrarAbastecimento> {
                   : 'Confirmar abastecimento',
             ),
             style: FilledButton.styleFrom(
-              backgroundColor: Cores.principal,
+              backgroundColor: context.cores.principal,
               minimumSize: const Size.fromHeight(52),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
@@ -317,22 +317,22 @@ class _Cartao extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Cores.cartao,
+        color: context.cores.cartao,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Cores.borda),
+        border: Border.all(color: context.cores.borda),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              Icon(icone, size: 18, color: Cores.principal),
+              Icon(icone, size: 18, color: context.cores.principal),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   titulo,
-                  style: const TextStyle(
-                    color: Cores.principal,
+                  style: TextStyle(
+                    color: context.cores.principal,
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                   ),

@@ -30,7 +30,7 @@ Future<void> mudarStatus(
   // O mesmo painel de baixo das outras confirmações do app
   final confirmou = await showModalBottomSheet<bool>(
     context: context,
-    backgroundColor: Cores.cartao,
+    backgroundColor: context.cores.cartao,
     showDragHandle: true,
     builder: (painel) => _ConfirmarStatus(
       titulo: voltando
@@ -94,7 +94,7 @@ Future<void> _oferecerAdocao(
 ) async {
   final publicar = await showModalBottomSheet<bool>(
     context: context,
-    backgroundColor: Cores.cartao,
+    backgroundColor: context.cores.cartao,
     showDragHandle: true,
     builder: (painel) => _OfertaDeAdocao(
       nome: atual.nome,
@@ -166,15 +166,15 @@ class _ConfirmarStatus extends StatelessWidget {
             Text(
               titulo,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
             Text(
               texto,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
-                color: Cores.textoFraco,
+                color: context.cores.textoFraco,
                 height: 1.4,
               ),
             ),
@@ -182,7 +182,7 @@ class _ConfirmarStatus extends StatelessWidget {
             FilledButton(
               onPressed: aoConfirmar,
               style: FilledButton.styleFrom(
-                backgroundColor: Cores.principal,
+                backgroundColor: context.cores.principal,
                 minimumSize: const Size.fromHeight(48),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -193,7 +193,7 @@ class _ConfirmarStatus extends StatelessWidget {
             const SizedBox(height: 6),
             TextButton(
               onPressed: () => Navigator.pop(context),
-              style: TextButton.styleFrom(foregroundColor: Cores.textoFraco),
+              style: TextButton.styleFrom(foregroundColor: context.cores.textoFraco),
               child: const Text('Cancelar'),
             ),
           ],
@@ -219,12 +219,12 @@ class _OfertaDeAdocao extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Icon(Icons.check_circle, size: 40, color: Cores.principal),
+            Icon(Icons.check_circle, size: 40, color: context.cores.principal),
             const SizedBox(height: 10),
             const Text(
               'Resgate concluído',
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
             Text(
@@ -233,7 +233,7 @@ class _OfertaDeAdocao extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
-                color: Cores.textoFraco,
+                color: context.cores.textoFraco,
                 height: 1.4,
               ),
             ),
@@ -243,7 +243,7 @@ class _OfertaDeAdocao extends StatelessWidget {
               icon: const Icon(Icons.favorite_border, size: 18),
               label: const Text('Publicar para adoção'),
               style: FilledButton.styleFrom(
-                backgroundColor: Cores.principal,
+                backgroundColor: context.cores.principal,
                 minimumSize: const Size.fromHeight(48),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -253,7 +253,7 @@ class _OfertaDeAdocao extends StatelessWidget {
             const SizedBox(height: 6),
             TextButton(
               onPressed: () => Navigator.pop(context),
-              style: TextButton.styleFrom(foregroundColor: Cores.textoFraco),
+              style: TextButton.styleFrom(foregroundColor: context.cores.textoFraco),
               child: const Text('Agora não'),
             ),
           ],

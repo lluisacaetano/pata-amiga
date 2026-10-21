@@ -26,15 +26,15 @@ class FotoAnimal extends StatelessWidget {
       child: SizedBox(
         height: altura,
         width: double.infinity,
-        child: caminho.isEmpty ? _patinha() : _imagem(),
+        child: caminho.isEmpty ? _patinha(context) : _imagem(context),
       ),
     );
   }
 
   // A foto pode estar dentro do app (os animais de exemplo), na internet ou
   // no próprio celular (a que a pessoa escolheu da galeria no cadastro)
-  Widget _imagem() {
-    Widget erro(BuildContext _, Object _, StackTrace? _) => _patinha();
+  Widget _imagem(BuildContext context) {
+    Widget erro(BuildContext _, Object _, StackTrace? _) => _patinha(context);
     if (caminho.startsWith('http')) {
       return Image.network(caminho, fit: BoxFit.cover, errorBuilder: erro);
     }
@@ -46,9 +46,9 @@ class FotoAnimal extends StatelessWidget {
     return Image.asset(caminho, fit: BoxFit.cover, errorBuilder: erro);
   }
 
-  Widget _patinha() => Container(
-    color: Cores.principalClara,
+  Widget _patinha(BuildContext context) => Container(
+    color: context.cores.principalClara,
     alignment: Alignment.center,
-    child: const Icon(Icons.pets, size: 48, color: Cores.principal),
+    child: Icon(Icons.pets, size: 48, color: context.cores.principal),
   );
 }

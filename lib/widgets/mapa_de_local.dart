@@ -82,11 +82,11 @@ class MapaDeLocal extends StatelessWidget {
               ],
             ),
             // A ponta do pino marca o centro do mapa
-            const IgnorePointer(
+            IgnorePointer(
               child: Center(
                 child: Padding(
                   padding: EdgeInsets.only(bottom: 48),
-                  child: PinoDaPatinha(cor: Cores.destaque),
+                  child: PinoDaPatinha(cor: context.cores.destaque),
                 ),
               ),
             ),
@@ -94,7 +94,7 @@ class MapaDeLocal extends StatelessWidget {
               right: 10,
               bottom: 10,
               child: Material(
-                color: Cores.cartao,
+                color: context.cores.cartao,
                 shape: const CircleBorder(),
                 elevation: 2,
                 child: IconButton(
@@ -106,7 +106,7 @@ class MapaDeLocal extends StatelessWidget {
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Icons.my_location, color: Cores.principal),
+                      : Icon(Icons.my_location, color: context.cores.principal),
                 ),
               ),
             ),
@@ -185,19 +185,19 @@ class PreviaDoMapa extends StatelessWidget {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: Cores.cartao,
+                      color: context.cores.cartao,
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: const [
                         BoxShadow(color: Color(0x22000000), blurRadius: 4),
                       ],
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
                           Icons.map_outlined,
                           size: 16,
-                          color: Cores.principal,
+                          color: context.cores.principal,
                         ),
                         SizedBox(width: 6),
                         Text(
@@ -205,7 +205,7 @@ class PreviaDoMapa extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: Cores.principal,
+                            color: context.cores.principal,
                           ),
                         ),
                       ],
@@ -214,12 +214,12 @@ class PreviaDoMapa extends StatelessWidget {
                 ),
                 // O crédito do OpenStreetMap, obrigatório também na prévia
                 if (!_emTeste)
-                  const Positioned(
+                  Positioned(
                     left: 8,
                     bottom: 6,
                     child: Text(
                       '© OpenStreetMap',
-                      style: TextStyle(fontSize: 9, color: Cores.textoFraco),
+                      style: TextStyle(fontSize: 9, color: context.cores.textoFraco),
                     ),
                   ),
               ],

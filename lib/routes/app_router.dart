@@ -16,9 +16,12 @@ import '../widgets/acoes_do_registro.dart';
 import '../telas/onboarding_screen.dart';
 import '../telas/editar_perfil.dart';
 import '../telas/perfil_usuario.dart';
+import '../telas/configuracoes_aparencia.dart';
+import '../telas/configuracoes_acessibilidade.dart';
 import '../telas/registrar_abastecimento.dart';
 import '../telas/registrar_avistamento.dart';
 import '../telas/tela_mapa.dart'; // NOVO
+import '../telas/reportar.dart';
 import 'route_names.dart';
 
 export 'route_names.dart';
@@ -65,6 +68,9 @@ class AppRoutesConfig {
     },
     AppRoutes.perfilUsuario: (_) => const PerfilUsuario(),
     AppRoutes.editarPerfil: (_) => const EditarPerfil(),
+    AppRoutes.configuracoesAparencia: (_) => const ConfiguracoesAparencia(),
+    AppRoutes.configuracoesAcessibilidade: (_) =>
+        const ConfiguracoesAcessibilidade(),
 
     AppRoutes.mapa: (context) {
       // Vindo da ficha, o mapa recebe o animal para abrir com zoom nele
@@ -89,5 +95,7 @@ class AppRoutesConfig {
       }
       return RegistrarAvistamento(animal: animal);
     },
+
+    AppRoutes.reportar: (_) => const ReportarScreen(),
   };
 }

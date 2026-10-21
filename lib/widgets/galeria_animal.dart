@@ -21,11 +21,17 @@ class _GaleriaAnimalState extends State<GaleriaAnimal> {
   bool get _temAnterior => _atual > 0;
   bool get _temProxima => _atual < widget.fotos.length - 1;
 
-  void _irPara(int indice) => _paginas.animateToPage(
-    indice,
-    duration: const Duration(milliseconds: 250),
-    curve: Curves.easeOut,
-  );
+  void _irPara(BuildContext context, int indice) {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _paginas.jumpToPage(indice);
+    } else {
+      _paginas.animateToPage(
+        indice,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    }
+  }
 
   @override
   void dispose() {
@@ -48,7 +54,9 @@ class _GaleriaAnimalState extends State<GaleriaAnimal> {
               child: _Seta(
                 icone: Icons.chevron_left,
                 dica: 'Foto anterior',
-                aoTocar: _temAnterior ? () => _irPara(_atual - 1) : null,
+                aoTocar: _temAnterior
+                    ? () => _irPara(context, _atual - 1)
+                    : null,
               ),
             ),
           ),
@@ -60,7 +68,9 @@ class _GaleriaAnimalState extends State<GaleriaAnimal> {
               child: _Seta(
                 icone: Icons.chevron_right,
                 dica: 'Próxima foto',
-                aoTocar: _temProxima ? () => _irPara(_atual + 1) : null,
+                aoTocar: _temProxima
+                    ? () => _irPara(context, _atual + 1)
+                    : null,
               ),
             ),
           ),
