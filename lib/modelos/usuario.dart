@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class Usuario {
   final String nome;
   final String email;
@@ -12,6 +14,31 @@ class Usuario {
     this.telefone = '',
     this.foto,
   });
+
+  Map<String, Object?> toMap() => {
+    'nome': nome,
+    'email': email,
+    'telefone': telefone,
+    'foto': foto,
+  };
+
+  factory Usuario.fromMap(Map<String, Object?> map) => Usuario(
+    nome: map['nome'] as String? ?? '',
+    email: map['email'] as String? ?? '',
+    senha: '',
+    telefone: map['telefone'] as String? ?? '',
+    foto: map['foto'] as String?,
+  );
+
+  String toProfileJson() => jsonEncode(toMap());
+
+  static Usuario fromProfileJson(String json) {
+    final decoded = jsonDecode(json);
+    if (decoded is! Map<String, dynamic>) {
+      throw const FormatException('Dados do perfil inválidos.');
+    }
+    return Usuario.fromMap(decoded);
+  }
 
   String toJson() => '$email|$senha|$nome|$telefone|${foto ?? ''}';
 

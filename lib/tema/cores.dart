@@ -10,6 +10,11 @@ class Cores {
   static const Color textoFraco = Color(0xFF6E6E6E);
   static const Color borda = Color(0xFFDCD8D2);
   static const Color destaque = Color(0xFFD35D4E);
+  // Os pontos de alimentação no mapa: um ocre de ração, que convive com o
+  // verde e o coral sem se confundir com eles
+  static const Color alimentacao = Color(0xFFC98A2E);
+  // Os bebedouros: um azul de água, suave como o resto da paleta
+  static const Color agua = Color(0xFF4A86B4);
 }
 
 ThemeData temaPataAmiga() {
@@ -30,9 +35,17 @@ ThemeData temaPataAmiga() {
       scrolledUnderElevation: 0,
       surfaceTintColor: Colors.transparent,
     ),
+    // A ação do aviso, como o "Desfazer", no verde claro da paleta
+    snackBarTheme: const SnackBarThemeData(
+      actionTextColor: Cores.principalClara,
+    ),
+    popupMenuTheme: const PopupMenuThemeData(
+      color: Cores.cartao,
+      surfaceTintColor: Colors.transparent,
+    ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFFD97855),
+        backgroundColor: Cores.principal,
         foregroundColor: Colors.white,
       ),
     ),

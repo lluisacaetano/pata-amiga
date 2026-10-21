@@ -4,14 +4,15 @@
       "id": 1,
       "nome": "Thor",
       "especie": "cachorro",
-      "raca": "labrador",
+      "raca": "Border Collie",
       "sexo": "macho",
-      "porte": "grande",
+      "porte": "médio",
       "idade": "2 anos",
       "peso": "28 kg",
-      "cor": "caramelo",
-      "bairro": "centro",
-      "cidade": "mongaguá",
+      "cor": "preto e branco",
+      "rua": "Praça São Vicente Ferrer",
+      "bairro": "Centro",
+      "cidade": "Formiga",
       "tipo": "adocao",
       "status": "disponivel",
       "castrado": true,
@@ -29,21 +30,22 @@
         "assets/animais/thor-3.jpg"
       ],
       "publicadoEm": "2026-10-10T12:00:00.000",
-      "latitude": null,
-      "longitude": null
+      "latitude": -20.4641045,
+      "longitude": -45.4267203
     },
     {
       "id": 2,
       "nome": "Bidu",
       "especie": "cachorro",
-      "raca": "vira-lata",
+      "raca": "Poodle",
       "sexo": "macho",
-      "porte": "médio",
+      "porte": "pequeno",
       "idade": "4 anos",
       "peso": "14 kg",
-      "cor": "preto",
-      "bairro": "jussara",
-      "cidade": "mongaguá",
+      "cor": "branco",
+      "rua": "Rua Padre Leão João Dehon",
+      "bairro": "Santa Tereza",
+      "cidade": "Formiga",
       "tipo": "adocao",
       "status": "disponivel",
       "castrado": false,
@@ -61,21 +63,22 @@
         "assets/animais/bidu-3.jpg"
       ],
       "publicadoEm": "2026-10-12T12:00:00.000",
-      "latitude": null,
-      "longitude": null
+      "latitude": -20.4597638,
+      "longitude": -45.4296545
     },
     {
       "id": 3,
       "nome": "Amora",
       "especie": "gato",
-      "raca": "sem raça definida",
+      "raca": "Siamês",
       "sexo": "fêmea",
       "porte": "pequeno",
       "idade": "1 ano",
       "peso": "3 kg",
-      "cor": "cinza",
-      "bairro": "vila atlântica",
-      "cidade": "mongaguá",
+      "cor": "creme com pontas escuras",
+      "rua": "Rua do Expedicionário",
+      "bairro": "Quartéis",
+      "cidade": "Formiga",
       "tipo": "adocao",
       "status": "disponivel",
       "castrado": true,
@@ -93,8 +96,8 @@
         "assets/animais/amora-3.jpg"
       ],
       "publicadoEm": "2026-10-13T12:00:00.000",
-      "latitude": null,
-      "longitude": null
+      "latitude": -20.4697811,
+      "longitude": -45.4216775
     },
     {
       "id": 4,
@@ -106,8 +109,9 @@
       "idade": "3 anos",
       "peso": "5 kg",
       "cor": "laranja",
-      "bairro": "vera cruz",
-      "cidade": "mongaguá",
+      "rua": "Rua Antônio Vaz da Silva",
+      "bairro": "Alvorada",
+      "cidade": "Formiga",
       "tipo": "perdido",
       "status": "disponivel",
       "castrado": true,
@@ -125,21 +129,22 @@
         "assets/animais/simba-3.jpg"
       ],
       "publicadoEm": "2026-10-11T12:00:00.000",
-      "latitude": null,
-      "longitude": null
+      "latitude": -20.4750334,
+      "longitude": -45.429957
     },
     {
       "id": 5,
       "nome": "Nina",
       "especie": "cachorro",
-      "raca": "poodle",
+      "raca": "Yorkshire Terrier",
       "sexo": "fêmea",
       "porte": "pequeno",
       "idade": "5 anos",
       "peso": "6 kg",
-      "cor": "branca",
-      "bairro": "itaóca",
-      "cidade": "mongaguá",
+      "cor": "marrom e cinza",
+      "rua": "Avenida Inhazinha Pires",
+      "bairro": "Vila José Branco",
+      "cidade": "Formiga",
       "tipo": "perdido",
       "status": "disponivel",
       "castrado": true,
@@ -157,21 +162,22 @@
         "assets/animais/nina-3.jpg"
       ],
       "publicadoEm": "2026-10-13T18:00:00.000",
-      "latitude": null,
-      "longitude": null
+      "latitude": -20.4780129,
+      "longitude": -45.4179826
     },
     {
       "id": 6,
       "nome": "Fred",
-      "especie": "cachorro",
-      "raca": "vira-lata",
+      "especie": "gato",
+      "raca": "Sem raça definida",
       "sexo": "macho",
       "porte": "médio",
       "idade": "6 anos",
       "peso": "17 kg",
-      "cor": "marrom",
-      "bairro": "agenor de campos",
-      "cidade": "mongaguá",
+      "cor": "rajado",
+      "rua": "Rua Ana Parreira Barbosa",
+      "bairro": "Jardim América",
+      "cidade": "Formiga",
       "tipo": "resgate",
       "status": "disponivel",
       "castrado": false,
@@ -189,21 +195,22 @@
         "assets/animais/fred-3.jpg"
       ],
       "publicadoEm": "2026-10-12T20:00:00.000",
-      "latitude": null,
-      "longitude": null
+      "latitude": -20.4610009,
+      "longitude": -45.4241615
     },
     {
       "id": 7,
       "nome": "Mel",
       "especie": "cachorro",
-      "raca": "sem raça definida",
+      "raca": "Jack Russell Terrier",
       "sexo": "fêmea",
       "porte": "pequeno",
       "idade": "8 meses",
       "peso": "5 kg",
-      "cor": "caramelo",
-      "bairro": "flórida mirim",
-      "cidade": "mongaguá",
+      "cor": "branco e marrom",
+      "rua": "Rua Pará de Minas",
+      "bairro": "Jardim Alvorada",
+      "cidade": "Formiga",
       "tipo": "resgate",
       "status": "disponivel",
       "castrado": false,
@@ -221,8 +228,98 @@
         "assets/animais/mel-3.jpg"
       ],
       "publicadoEm": "2026-10-14T09:00:00.000",
-      "latitude": null,
-      "longitude": null
+      "latitude": -20.4721612,
+      "longitude": -45.4261062
+    }
+  ],
+  "avistamentos": [],
+  "pontosAlimentacao": [
+    {
+      "id": 1,
+      "tipo": "comedouro",
+      "referencia": "Perto dos bancos, no lado da igreja",
+      "rua": "Praça Ferreira Pires",
+      "bairro": "Centro",
+      "latitude": -20.4613736,
+      "longitude": -45.432412,
+      "cadastradoPor": "Ana",
+      "cadastradoEm": "2026-10-01T09:00:00.000"
+    },
+    {
+      "id": 2,
+      "tipo": "ambos",
+      "referencia": "No canteiro central",
+      "rua": "Praça Getúlio Vargas",
+      "bairro": "Centro",
+      "latitude": -20.4635453,
+      "longitude": -45.4298995,
+      "cadastradoPor": "Ana",
+      "cadastradoEm": "2026-10-01T09:00:00.000"
+    },
+    {
+      "id": 3,
+      "tipo": "bebedouro",
+      "referencia": "Ao lado do ponto de ônibus",
+      "rua": "Praça Ozório Garcia",
+      "bairro": "Sagrado Coração de Jesus",
+      "latitude": -20.4567653,
+      "longitude": -45.4370679,
+      "cadastradoPor": "Ana",
+      "cadastradoEm": "2026-10-01T09:00:00.000"
+    },
+    {
+      "id": 4,
+      "tipo": "comedouro",
+      "referencia": "Embaixo da árvore maior",
+      "rua": "Praça Francisco Balbino de Almeida",
+      "bairro": "São Geraldo",
+      "latitude": -20.4531729,
+      "longitude": -45.4195829,
+      "cadastradoPor": "Ana",
+      "cadastradoEm": "2026-10-01T09:00:00.000"
+    },
+    {
+      "id": 5,
+      "tipo": "ambos",
+      "referencia": "Perto do parquinho",
+      "rua": "Praça Padre Clemente",
+      "bairro": "Alvorada",
+      "latitude": -20.4752686,
+      "longitude": -45.4309333,
+      "cadastradoPor": "Ana",
+      "cadastradoEm": "2026-10-01T09:00:00.000"
+    }
+  ],
+  "abastecimentos": [
+    {
+      "id": 1,
+      "ponto": 1,
+      "data": "2026-10-18T08:00:00.000",
+      "registradoPor": "Ana"
+    },
+    {
+      "id": 2,
+      "ponto": 2,
+      "data": "2026-10-15T17:30:00.000",
+      "registradoPor": "Carla"
+    },
+    {
+      "id": 3,
+      "ponto": 3,
+      "data": "2026-10-08T10:00:00.000",
+      "registradoPor": "Ana"
+    },
+    {
+      "id": 4,
+      "ponto": 5,
+      "data": "2026-10-19T07:45:00.000",
+      "registradoPor": "Rita"
+    },
+    {
+      "id": 5,
+      "ponto": 1,
+      "data": "2026-10-12T08:00:00.000",
+      "registradoPor": "Ana"
     }
   ]
 }

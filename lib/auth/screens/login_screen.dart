@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import 'auth_components.dart';
 import '../../telas/onboarding_screen.dart';
 import '../../routes/route_names.dart';
 import '../../widgets/mascaras.dart';
+import '../../provider/usuario_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -95,6 +97,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 label: 'Entrar',
                 onPressed: () async {
                   if (!_formKey.currentState!.validate()) return;
+                  await context.read<UsuarioProvider>().iniciarSessao(
+                    _emailController.text,
+                  );
+                  if (!context.mounted) return;
                   await navegarAposAutenticacao(context);
                 },
               ),

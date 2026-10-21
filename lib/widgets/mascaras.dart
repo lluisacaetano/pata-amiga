@@ -26,6 +26,19 @@ class MascaraDeTelefone extends TextInputFormatter {
   }
 }
 
+// O mesmo formato da máscara para telefones que chegam sem ela, como os da
+// API: "37999990000" vira "(37) 99999-0000". O 55 do país, se vier, sai
+String formatarTelefone(String telefone) {
+  var digitos = telefone.replaceAll(RegExp(r'\D'), '');
+  if (digitos.length > 11 && digitos.startsWith('55')) {
+    digitos = digitos.substring(2);
+  }
+  if (digitos.isEmpty) return telefone.trim();
+  return MascaraDeTelefone()
+      .formatEditUpdate(TextEditingValue.empty, TextEditingValue(text: digitos))
+      .text;
+}
+
 // E-mail não tem formato fixo, então a máscara só barra o que nunca cabe
 // num endereço: espaço, letra maiúscula e um segundo @
 class MascaraDeEmail extends TextInputFormatter {

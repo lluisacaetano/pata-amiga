@@ -1,17 +1,23 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+
 import 'provider/usuario_provider.dart';
+
 import 'package:provider/provider.dart';
+
 import 'routes/app_router.dart';
 import 'estado/estado_pata_amiga.dart';
 import 'tema/cores.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final usuarioProvider = UsuarioProvider();
+  await usuarioProvider.restaurarSessao();
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => UsuarioProvider(),
+    ChangeNotifierProvider.value(
+      value: usuarioProvider,
       child: const AplicativoPataAmiga(),
     ),
   );
@@ -48,6 +54,11 @@ class _AplicativoPataAmigaState extends State<AplicativoPataAmiga> {
         title: 'Pata Amiga',
         debugShowCheckedModeBanner: false,
         theme: temaPataAmiga(),
+        // Os textos prontos do Flutter (calendário, botões de diálogo) em
+        // português, como o resto do app
+        locale: const Locale('pt', 'BR'),
+        supportedLocales: const [Locale('pt', 'BR')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
         initialRoute: AppRoutes.welcome,
         builder: (context, child) => Center(
           child: ConstrainedBox(

@@ -1,28 +1,44 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-
-
-
+import '../estado/estado_pata_amiga.dart';
 import '../modelos/animal.dart';
 import '../modelos/dono.dart';
+import '../modelos/filtros_do_feed.dart';
 import '../routes/route_names.dart';
 import '../tema/cores.dart';
 import '../widgets/barra_inferior.dart';
 import '../widgets/card_animal.dart';
 import '../widgets/escolha_de_tipo.dart';
+import '../widgets/painel_de_filtros.dart';
 import '../routes/app_router.dart';
 // [SPRINT 3 - NOVO] Camada de dados: API e cache local
+import '../services/alimentacao_service.dart';
 import '../services/animal_service.dart';
+import '../services/avistamento_service.dart';
 import '../services/cache_service.dart';
-
 
 enum EstadoFeed { carregando, cache, atualizado, erro }
 
 class FeedAdocao extends StatefulWidget {
-  const FeedAdocao({super.key});
+  // Os dois são opcionais: o app usa os de verdade, e os testes passam
+  // versões falsas para não depender da API no ar
+  final AnimalService? api;
+  final CacheService? cache;
+  final AvistamentoService? avistamentos;
+  final AlimentacaoService? alimentacao;
+
+  const FeedAdocao({
+    super.key,
+    this.api,
+    this.cache,
+    this.avistamentos,
+    this.alimentacao,
+  });
 
   @override
   State<FeedAdocao> createState() => _FeedAdocaoState();
@@ -38,9 +54,14 @@ class _FeedAdocaoState extends State<FeedAdocao> {
   final _pesquisa = TextEditingController();
   String _busca = '';
 
+  // Os filtros aplicados: valem nas três abas e somam com a pesquisa
+  FiltrosDoFeed _filtros = const FiltrosDoFeed();
+
   // [SPRINT 3 - NOVO] Serviços de dados
-  final _api = AnimalService();
-  final _cache = CacheService();
+  late final _api = widget.api ?? AnimalService();
+  late final _cache = widget.cache ?? CacheService();
+  late final _avistamentos = widget.avistamentos ?? AvistamentoService();
+  late final _alimentacao = widget.alimentacao ?? AlimentacaoService();
 
   // [SPRINT 3 - NOVO] Animais que vieram da API ou do cache.
   // Substitui a lista fixa animaisMock.
@@ -72,6 +93,30 @@ class _FeedAdocaoState extends State<FeedAdocao> {
   //        falha   -> com cache, continua no estado cache
   //                   sem cache, estado erro
   // É chamado ao abrir a tela e pelo botão "Tentar atualizar".
+  // Os avistamentos vêm à parte: se a API deles falhar, o feed segue igual,
+  // só o mapa fica sem o último ponto visto
+  Future<void> _carregarAvistamentos() async {
+    try {
+      final lista = await _avistamentos.buscarTodos();
+      if (!mounted) return;
+      PataAmigaScope.of(context).atualizarAvistamentos(lista);
+    } on Exception {
+      // sem avistamentos desta vez
+    }
+  }
+
+  // Os pontos de alimentação também vêm à parte, pelo mesmo motivo
+  Future<void> _carregarAlimentacao() async {
+    try {
+      final pontos = await _alimentacao.buscarPontos();
+      final abastecimentos = await _alimentacao.buscarAbastecimentos();
+      if (!mounted) return;
+      PataAmigaScope.of(context).atualizarAlimentacao(pontos, abastecimentos);
+    } on Exception {
+      // sem a camada de alimentação desta vez
+    }
+  }
+
   Future<void> _carregar() async {
     final salvos = await _cache.lerAnimais();
     final dataSalva = await _cache.dataDoCache();
@@ -87,7 +132,13 @@ class _FeedAdocaoState extends State<FeedAdocao> {
         _estado = EstadoFeed.carregando;
       }
     });
+    if (salvos != null) {
+      PataAmigaScope.of(context)
+          .atualizarAnimais([..._animaisApi, ..._animaisCriados]);
+    }
 
+    unawaited(_carregarAvistamentos());
+    unawaited(_carregarAlimentacao());
     try {
       final novos = await _api.buscarAnimais();
       await _cache.salvarAnimais(novos); // o cache nunca fica congelado
@@ -98,23 +149,17 @@ class _FeedAdocaoState extends State<FeedAdocao> {
         _estado = EstadoFeed.atualizado;
         _atualizando = false;
       });
+      PataAmigaScope.of(context)
+          .atualizarAnimais([..._animaisApi, ..._animaisCriados]);
     } catch (_) {
       // Sem internet, servidor fora do ar ou timeout
       if (!mounted) return;
       setState(() {
         _atualizando = false;
         if (salvos == null) _estado = EstadoFeed.erro;
-        // Se havia cache, o estado continua "cache"
+        // Se havia cache, o estado continua "cache", e a faixa laranja do
+        // topo já avisa que os dados podem estar desatualizados
       });
-      if (salvos != null) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            const SnackBar(
-              content: Text('Não foi possível atualizar. Mostrando dados salvos.'),
-            ),
-          );
-      }
     }
   }
 
@@ -141,36 +186,53 @@ class _FeedAdocaoState extends State<FeedAdocao> {
   }
   */
 
-    Future<void> _abrirCadastroAnimal() async {
+  Future<void> _abrirCadastroAnimal() async {
     final animal = (await Navigator.pushNamed(
       context,
       AppRoutes.registerAnimal,
     )) as Animal?;
     if (!mounted || animal == null) return;
 
-    
+    final estado = PataAmigaScope.of(context);
+
+    var salvoNaApi = false;
     try {
       await _api.criarAnimal(animal);
-      if (!mounted) return;
+      salvoNaApi = true;
+    } catch (_) {
+      // A API pode estar indisponível; o registro continua visível neste aparelho.
+    }
+
+    await estado.registrarCadastro(animal);
+    if (!mounted) return;
+    // O animal novo tem que aparecer na hora: abre a aba do tipo dele e
+    // limpa a busca, que poderia escondê-lo. Como o feed vai do mais recente
+    // para o mais antigo, ele fica no topo
+    _pesquisa.clear();
+    setState(() {
+      _abaAtual = animal.tipo;
+      _busca = '';
+    });
+    if (salvoNaApi) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${animal.nome} foi salvo na API.')),
       );
       // Busca a lista de novo: o animal volta com o id da API e o cache
       // local também é atualizado.
       await _carregar();
-    } catch (_) {
-     
-      if (!mounted) return;
-      setState(() => _animaisCriados.insert(0, animal));
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '${animal.nome} foi adicionado só neste aparelho. '
-            'Não foi possível enviar à API.',
-          ),
-        ),
-      );
+      return;
     }
+
+    setState(() => _animaisCriados.insert(0, animal));
+    estado.atualizarAnimais([..._animaisApi, ..._animaisCriados]);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '${animal.nome} foi adicionado só neste aparelho. '
+          'Não foi possível enviar à API.',
+        ),
+      ),
+    );
   }
 
   Future<void> _abrirDetalhes(Animal animal) async {
@@ -188,11 +250,31 @@ class _FeedAdocaoState extends State<FeedAdocao> {
     );
   }
 
-  List<Animal> get _animaisVisiveis {
+  List<Animal> get _animaisVisiveis => _visiveis(_filtros);
+
+  // Do estado compartilhado, e não das listas do feed: assim um status
+  // mudado na ficha aparece aqui na hora
+  List<Animal> get _todosOsAnimais {
+    final estado = PataAmigaScope.of(context);
+    return estado.animais.isNotEmpty
+        ? estado.animais
+        : [..._animaisApi, ..._animaisCriados];
+  }
+
+  List<Animal> _visiveis(FiltrosDoFeed filtros) {
     final termo = _busca.trim().toLowerCase();
     // [SPRINT 3 - ALTERADO] antes: [...animaisMock, ..._animaisCriados]
-    final encontrados = [..._animaisApi, ..._animaisCriados].where((animal) {
+    // Do estado compartilhado, e não das listas do feed: assim um status
+    // mudado na ficha aparece aqui na hora
+    final estado = PataAmigaScope.of(context);
+    final todos = estado.animais.isNotEmpty
+        ? estado.animais
+        : [..._animaisApi, ..._animaisCriados];
+    final encontrados = todos.where((animal) {
+      // Com desfecho (adotado, encontrado ou resgatado), sai do feed
+      if (animal.finalizado) return false;
       if (animal.tipo != _abaAtual) return false;
+      if (!filtros.combina(animal)) return false;
       if (termo.isEmpty) return true;
       return animal.nome.toLowerCase().contains(termo) ||
           animal.raca.toLowerCase().contains(termo) ||
@@ -202,6 +284,28 @@ class _FeedAdocaoState extends State<FeedAdocao> {
     encontrados.sort((a, b) => b.publicadoEm.compareTo(a.publicadoEm));
     return encontrados;
   }
+
+  // O painel conta, a cada toque, quantos animais da aba vão aparecer
+  Future<void> _abrirFiltros() async {
+    final escolhidos = await showModalBottomSheet<FiltrosDoFeed>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: Cores.fundo,
+      builder: (_) => PainelDeFiltros(
+        inicial: _filtros,
+        animais: [
+          for (final animal in _todosOsAnimais)
+            if (!animal.finalizado) animal,
+        ],
+        contar: (filtros) => _visiveis(filtros).length,
+      ),
+    );
+    if (escolhidos == null || !mounted) return;
+    setState(() => _filtros = escolhidos);
+  }
+
+  void _limparFiltros() => setState(() => _filtros = const FiltrosDoFeed());
 
   // Junta os cuidados marcados numa frase só, concordando com o sexo
   String _saude(Animal animal) {
@@ -317,31 +421,23 @@ class _FeedAdocaoState extends State<FeedAdocao> {
   Widget _bannerDeEstado() {
     switch (_estado) {
       case EstadoFeed.cache:
-        // Busca em andamento: ainda não é "sem conexão", só está atualizando
-        if (_atualizando) {
-          return _faixa(
-            cor: Colors.blueGrey,
-            icone: Icons.sync,
-            texto: 'Atualizando... mostrando dados salvos enquanto isso.',
-          );
-        }
+        // Busca em andamento: ainda não é "sem conexão", então não avisa nada
+        if (_atualizando) return const SizedBox.shrink();
         // A busca falhou: mostra o aviso de dado possivelmente desatualizado
         return _faixa(
           cor: Colors.orange,
           icone: Icons.cloud_off,
-          texto: 'Dados salvos em ${_formatarData(_dataCache)}. '
+          texto:
+              'Dados salvos em ${_formatarData(_dataCache)}. '
               'Podem estar desatualizados.',
           acao: TextButton(
             onPressed: _carregar,
             child: const Text('Tentar atualizar'),
           ),
         );
+      // Com internet, o feed só mostra os animais: a faixa fica para quando
+      // os dados vêm do aparelho
       case EstadoFeed.atualizado:
-        return _faixa(
-          cor: Colors.green,
-          icone: Icons.cloud_done,
-          texto: 'Atualizado em ${_formatarData(_dataCache)}.',
-        );
       case EstadoFeed.carregando:
       case EstadoFeed.erro:
         return const SizedBox.shrink();
@@ -356,7 +452,9 @@ class _FeedAdocaoState extends State<FeedAdocao> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_estado == EstadoFeed.erro) {
+    // Sem conexão e sem cache, mas com animal cadastrado neste aparelho, o
+    // feed mostra esse animal em vez da tela de erro
+    if (_estado == EstadoFeed.erro && _animaisCriados.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
@@ -400,10 +498,20 @@ class _FeedAdocaoState extends State<FeedAdocao> {
                 color: Cores.principal.withValues(alpha: 0.25),
               ),
               const SizedBox(height: 14),
-              const Text(
-                'Nenhum animal encontrado.',
-                style: TextStyle(color: Cores.textoFraco),
+              Text(
+                _filtros.vazio
+                    ? 'Nenhum animal encontrado.'
+                    : 'Nenhum animal com esses filtros.',
+                style: const TextStyle(color: Cores.textoFraco),
               ),
+              if (!_filtros.vazio)
+                TextButton(
+                  onPressed: _limparFiltros,
+                  style: TextButton.styleFrom(
+                    foregroundColor: Cores.principal,
+                  ),
+                  child: const Text('Limpar filtros'),
+                ),
             ],
           ),
         ),
@@ -483,6 +591,18 @@ class _FeedAdocaoState extends State<FeedAdocao> {
                 ),
               ),
             ),
+            const SizedBox(width: 4),
+            IconButton(
+              onPressed: _abrirFiltros,
+              tooltip: 'Filtros',
+              color: Cores.principal,
+              icon: Badge(
+                isLabelVisible: !_filtros.vazio,
+                label: Text('${_filtros.quantos}'),
+                backgroundColor: Cores.principal,
+                child: const Icon(Icons.tune),
+              ),
+            ),
           ],
         ),
       ),
@@ -498,6 +618,14 @@ class _FeedAdocaoState extends State<FeedAdocao> {
               fundoDaOpcao: Cores.cartao,
             ),
           ),
+          if (!_filtros.vazio)
+            _FiltrosAplicados(
+              filtros: _filtros,
+              aoTirar: (grupo, opcao) => setState(
+                () => _filtros = _filtros.alternar(grupo, opcao),
+              ),
+              aoLimpar: _limparFiltros,
+            ),
           // [SPRINT 3 - NOVO] Banner de estado (cache / atualizado)
           _bannerDeEstado(),
           // [SPRINT 3 - ALTERADO] O Expanded com a lista agora vem do _corpo()
@@ -511,17 +639,59 @@ class _FeedAdocaoState extends State<FeedAdocao> {
         tooltip: 'Cadastrar animal',
         child: const Icon(Icons.add),
       ),
-      bottomNavigationBar: BarraInferior(
-        atual: 0,
-        aoTocar: (indice) {
-          if (indice == 1) {
-            Navigator.pushNamed(context, AppRoutes.mapa);
-          } else if (indice == 3) {
-            Navigator.pushNamed(context, AppRoutes.perfilUsuario);
-          } else if (indice != 0) {
-            avisarProximaSprint(context);
-          }
-        },
+      bottomNavigationBar: BarraInferior(),
+    );
+  }
+}
+
+// Os filtros aplicados, logo abaixo das abas: cada um sai no X, e "Limpar"
+// tira todos de uma vez
+class _FiltrosAplicados extends StatelessWidget {
+  const _FiltrosAplicados({
+    required this.filtros,
+    required this.aoTirar,
+    required this.aoLimpar,
+  });
+
+  final FiltrosDoFeed filtros;
+  final void Function(GrupoDeFiltro grupo, String opcao) aoTirar;
+  final VoidCallback aoLimpar;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 44,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+        children: [
+          for (final grupo in GrupoDeFiltro.values)
+            for (final opcao in filtros.de(grupo))
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: InputChip(
+                  label: Text(rotuloDaOpcao(opcao)),
+                  onDeleted: () => aoTirar(grupo, opcao),
+                  deleteButtonTooltipMessage: 'Tirar o filtro',
+                  backgroundColor: Cores.principalClara,
+                  labelStyle: const TextStyle(
+                    fontSize: 13,
+                    color: Cores.principal,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  deleteIconColor: Cores.principal,
+                  side: BorderSide.none,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+              ),
+          TextButton(
+            onPressed: aoLimpar,
+            style: TextButton.styleFrom(foregroundColor: Cores.principal),
+            child: const Text('Limpar filtros'),
+          ),
+        ],
       ),
     );
   }

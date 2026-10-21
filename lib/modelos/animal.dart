@@ -31,14 +31,22 @@ extension RotuloTipo on TipoRegistro {
       : 'Onde ele está';
 }
 
-enum StatusAnimal { disponivel, adotado }
+// Cada tipo tem o seu desfecho: adoção termina em adotado, perdido em
+// encontrado e resgate em resgatado. Com desfecho, o animal sai do feed e do mapa
+enum StatusAnimal { disponivel, adotado, encontrado, resgatado }
 
 extension RotuloStatus on StatusAnimal {
-  String get rotulo =>
-      this == StatusAnimal.disponivel ? 'disponível' : 'adotado';
+  String get rotulo => switch (this) {
+    StatusAnimal.disponivel => 'disponível',
+    StatusAnimal.adotado => 'adotado',
+    StatusAnimal.encontrado => 'encontrado',
+    StatusAnimal.resgatado => 'resgatado',
+  };
 }
 
 class Animal {
+  // O id que a API dá; animal cadastrado só no aparelho não tem
+  final int? id;
   final String nome;
   final String especie;
   final String raca;
@@ -47,6 +55,9 @@ class Animal {
   final String idade;
   final String peso;
   final String cor;
+  // Fica guardada para o mapa e para o responsável; o feed e a ficha
+  // mostram só bairro e cidade
+  final String rua;
   final String bairro;
   final String cidade;
   final TipoRegistro tipo;
@@ -58,6 +69,9 @@ class Animal {
   // O que esse animal precisa e os outros não: remédio contínuo, dieta, deficiência
   final String necessidadesEspeciais;
   final Dono dono;
+  // A conta de quem cadastrou: só ela muda o status do animal. Os animais de
+  // exemplo da API não têm, então ninguém muda o deles
+  final String responsavelEmail;
   final List<String> fotos;
   final DateTime publicadoEm;
   // Salva a localização do aparelho quando a pessoa tocou no botão de localização
@@ -66,6 +80,7 @@ class Animal {
   final double? longitude;
 
   Animal({
+    this.id,
     required this.nome,
     required this.especie,
     required this.raca,
@@ -74,6 +89,7 @@ class Animal {
     required this.idade,
     required this.peso,
     required this.cor,
+    this.rua = '',
     required this.bairro,
     required this.cidade,
     required this.tipo,
@@ -84,6 +100,7 @@ class Animal {
     this.observacoes = '',
     this.necessidadesEspeciais = '',
     required this.dono,
+    this.responsavelEmail = '',
     this.fotos = const [],
     required this.publicadoEm,
     this.latitude,
@@ -95,6 +112,7 @@ class Animal {
   // Campos com `?? ''` ou `?? false` são opcionais: JSON incompleto não quebra.
   // Se um campo novo for criado no model, lembrar de incluir aqui e no toJson.
   factory Animal.fromJson(Map<String, dynamic> json) => Animal(
+        id: (json['id'] as num?)?.toInt(),
         nome: json['nome'] as String,
         especie: json['especie'] as String,
         raca: json['raca'] as String? ?? '',
@@ -103,6 +121,7 @@ class Animal {
         idade: json['idade'] as String,
         peso: json['peso'] as String? ?? '',
         cor: json['cor'] as String? ?? '',
+        rua: json['rua'] as String? ?? '',
         bairro: json['bairro'] as String,
         cidade: json['cidade'] as String,
         // Enums chegam como texto com o nome do valor ("adocao", "disponivel")
@@ -116,6 +135,7 @@ class Animal {
         necessidadesEspeciais: json['necessidadesEspeciais'] as String? ?? '',
         // O dono é um objeto aninhado: usa o Dono.fromJson (dono.dart)
         dono: Dono.fromJson(json['dono'] as Map<String, dynamic>),
+        responsavelEmail: json['responsavelEmail'] as String? ?? '',
         fotos: List<String>.from(json['fotos'] as List? ?? []),
         // A data chega como texto ISO 8601 (ex.: 2026-10-14T12:00:00.000)
         publicadoEm: DateTime.parse(json['publicadoEm'] as String),
@@ -128,6 +148,7 @@ class Animal {
   // no SharedPreferences. Tem que espelhar o fromJson: se um campo faltar
   // aqui, ele some quando o app ler do cache em modo avião.
   Map<String, dynamic> toJson() => {
+        if (id != null) 'id': id,
         'nome': nome,
         'especie': especie,
         'raca': raca,
@@ -136,6 +157,7 @@ class Animal {
         'idade': idade,
         'peso': peso,
         'cor': cor,
+        'rua': rua,
         'bairro': bairro,
         'cidade': cidade,
         'tipo': tipo.name,
@@ -146,6 +168,7 @@ class Animal {
         'observacoes': observacoes,
         'necessidadesEspeciais': necessidadesEspeciais,
         'dono': dono.toJson(),
+        'responsavelEmail': responsavelEmail,
         'fotos': fotos,
         'publicadoEm': publicadoEm.toIso8601String(),
         'latitude': latitude,
@@ -157,6 +180,38 @@ class Animal {
 
   // Os mapas só conseguem desenhar o animal quando as duas coordenadas existem
   bool get temPonto => latitude != null && longitude != null;
+
+  // Como o avistamento acha o animal: pelo id da API, ou pelo nome quando o
+  // animal ainda só existe no aparelho
+  String get chave => id?.toString() ?? nome;
+
+  // Já teve desfecho: foi adotado, encontrado ou resgatado
+  bool get finalizado => status != StatusAnimal.disponivel;
+
+  // O desfecho que este tipo de registro pode ter
+  StatusAnimal get desfecho => switch (tipo) {
+    TipoRegistro.adocao => StatusAnimal.adotado,
+    TipoRegistro.perdido => StatusAnimal.encontrado,
+    TipoRegistro.resgate => StatusAnimal.resgatado,
+  };
+
+  // Como o status aparece: enquanto não há desfecho, cada tipo diz o seu
+  String get rotuloDoStatus => finalizado
+      ? status.rotulo
+      : switch (tipo) {
+          TipoRegistro.adocao => 'disponível',
+          TipoRegistro.perdido => 'procurando',
+          TipoRegistro.resgate => 'precisa de ajuda',
+        };
+
+  // Se quem está logado é quem cadastrou o animal
+  bool eDoResponsavel(String email) =>
+      email.trim().isNotEmpty &&
+      responsavelEmail.trim().toLowerCase() == email.trim().toLowerCase();
+
+  // O mesmo animal com outro status, para a mudança não alterar o original
+  Animal comStatus(StatusAnimal novo) =>
+      Animal.fromJson({...toJson(), 'status': novo.name});
 
   // Descrição curta do animal, exibida embaixo do nome no card do feed.
   String get resumo =>

@@ -9,5 +9,9 @@ abstract final class AppRoutes {
   static const registerAnimal = '/cadastro-animal';
   static const onboarding = '/onboarding';
   static const perfilUsuario = '/perfil-usuario';
+  static const editarPerfil = '/editar-perfil';
   static const mapa = '/mapa';
+  static const registrarAvistamento = '/registrar-avistamento';
+  static const cadastrarPonto = '/cadastrar-ponto';
+  static const registrarAbastecimento = '/registrar-abastecimento';
 }
