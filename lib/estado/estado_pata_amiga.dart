@@ -65,16 +65,67 @@ class EstadoPataAmiga extends ChangeNotifier {
   }
 
   List<Animal> get animaisCurtidos => _animais
-      .where(
-        (animal) =>
-            _curtidos.contains(animal.nome) &&
-            animal.status != StatusAnimal.adotado,
-      )
+      .where((animal) => _curtidos.contains(animal.nome) && !animal.finalizado)
       .toList(growable: false);
 
   void atualizarAnimais(List<Animal> animais) {
     _animais = List.unmodifiable(animais);
     notifyListeners();
+  }
+
+  // Troca um animal pela versão nova (o status mudou), no feed e nos
+  // cadastros do usuário, e grava os cadastros no aparelho
+  // Na edição, o nome pode mudar, e o animal só do aparelho é achado pelo
+  // nome: por isso dá para dizer qual era a chave antes
+  Future<void> substituirAnimal(Animal novo, {String? chaveAntiga}) async {
+    final chave = chaveAntiga ?? novo.chave;
+    _animais = [
+      for (final animal in _animais) animal.chave == chave ? novo : animal,
+    ];
+    final indice = _meusCadastros.indexWhere((animal) => animal.chave == chave);
+    if (indice >= 0) _meusCadastros[indice] = novo;
+    notifyListeners();
+    if (indice >= 0) {
+      final armazenamento = await SharedPreferences.getInstance();
+      await armazenamento.setString(
+        _chaveMeusCadastros,
+        jsonEncode(
+          _meusCadastros.map((registro) => registro.toJson()).toList(),
+        ),
+      );
+    }
+  }
+
+  // A versão mais nova de um animal: a tela pode ter recebido uma cópia antiga
+  Animal atual(Animal animal) => _animais.firstWhere(
+    (item) => item.chave == animal.chave,
+    orElse: () => _meusCadastros.firstWhere(
+      (item) => item.chave == animal.chave,
+      orElse: () => animal,
+    ),
+  );
+
+  // Os cadastros de quem está logado: os feitos neste aparelho e os da API
+  // registrados no e-mail dele, do mais novo para o mais antigo
+  List<Animal> cadastrosDe(String email) {
+    final chaves = _meusCadastros.map((animal) => animal.chave).toSet();
+    return [
+      ..._meusCadastros,
+      ..._animais.where(
+        (animal) =>
+            !chaves.contains(animal.chave) && animal.eDoResponsavel(email),
+      ),
+    ]..sort((a, b) => b.publicadoEm.compareTo(a.publicadoEm));
+  }
+
+  // Quem pode mudar o status: o e-mail de quem cadastrou ou, nos cadastros
+  // gravados antes de o app guardar o e-mail, quem os fez neste aparelho
+  bool podeMudarStatus(Animal animal, String email) {
+    if (animal.responsavelEmail.trim().isNotEmpty) {
+      return animal.eDoResponsavel(email);
+    }
+    return email.trim().isNotEmpty &&
+        _meusCadastros.any((item) => item.chave == animal.chave);
   }
 
   Future<void> carregarCurtidos() async {
@@ -147,9 +198,8 @@ class PataAmigaScope extends InheritedNotifier<EstadoPataAmiga> {
 
   // Para quem só precisa ler uma vez, como no initState, sem passar a ouvir
   // as mudanças; devolve null se a tela estiver fora do escopo
-  static EstadoPataAmiga? talvez(BuildContext context) => context
-      .getInheritedWidgetOfExactType<PataAmigaScope>()
-      ?.notifier;
+  static EstadoPataAmiga? talvez(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<PataAmigaScope>()?.notifier;
 
   static EstadoPataAmiga of(BuildContext context) {
     final scope = context.dependOnInheritedWidgetOfExactType<PataAmigaScope>();

@@ -9,7 +9,9 @@ import '../modelos/animal.dart';
 import '../modelos/usuario.dart';
 import '../provider/usuario_provider.dart';
 import '../routes/route_names.dart';
+import '../services/animal_service.dart';
 import '../tema/cores.dart';
+import '../widgets/acoes_do_registro.dart';
 import '../widgets/barra_inferior.dart';
 import '../widgets/escolha_de_tipo.dart';
 import '../widgets/etiqueta.dart';
@@ -18,8 +20,20 @@ import '../widgets/mascaras.dart';
 
 enum _SecaoPerfil { curtidos, meusCadastros }
 
+// Os grupos de "Meus registros", na ordem em que aparecem: primeiro o que
+// ainda precisa de alguém, depois cada desfecho
+const _gruposDeRegistro = [
+  (titulo: 'Em aberto', status: StatusAnimal.disponivel),
+  (titulo: 'Adotados', status: StatusAnimal.adotado),
+  (titulo: 'Resgatados', status: StatusAnimal.resgatado),
+  (titulo: 'Encontrados', status: StatusAnimal.encontrado),
+];
+
 class PerfilUsuario extends StatefulWidget {
-  const PerfilUsuario({super.key});
+  // Os testes passam uma API falsa; o app usa a de verdade
+  final AnimalService? api;
+
+  const PerfilUsuario({super.key, this.api});
 
   @override
   State<PerfilUsuario> createState() => _PerfilUsuarioState();
@@ -57,6 +71,43 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
       );
   }
 
+  // Um grupo de "Meus registros": o título com quantos são e as linhas.
+  // Grupo vazio não aparece
+  List<Widget> _grupo(
+    String titulo,
+    List<Animal> animais,
+    EstadoPataAmiga estado,
+    String email,
+  ) {
+    if (animais.isEmpty) return const [];
+    return [
+      _TituloDoGrupo(titulo: titulo, quantidade: animais.length),
+      for (final animal in animais)
+        _LinhaDeCadastro(
+          animal: animal,
+          aoAbrir: () => _abrirDetalhes(animal),
+          // Num aparelho dividido, os cadastros de outra conta só abrem
+          aoEscolher: estado.podeMudarStatus(animal, email)
+              ? (acao) => _agir(acao, animal)
+              : null,
+        ),
+    ];
+  }
+
+  Future<void> _agir(_AcaoDoRegistro acao, Animal animal) => switch (acao) {
+    _AcaoDoRegistro.editar => editarRegistro(context, animal, api: widget.api),
+    _AcaoDoRegistro.mudarStatus => mudarStatus(
+      context,
+      animal,
+      api: widget.api,
+    ),
+    _AcaoDoRegistro.publicar => publicarParaAdocao(
+      context,
+      animal,
+      api: widget.api,
+    ),
+  };
+
   Future<void> _sair() async {
     await context.read<UsuarioProvider>().encerrarSessao();
     if (!mounted) return;
@@ -69,7 +120,7 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
     final estado = PataAmigaScope.of(context);
     final usuario = context.watch<UsuarioProvider>().usuario;
     final curtidos = estado.animaisCurtidos;
-    final cadastros = estado.meusCadastros;
+    final cadastros = estado.cadastrosDe(usuario.email);
 
     return Scaffold(
       appBar: AppBar(
@@ -136,18 +187,24 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
             cadastros.isEmpty
                 ? _ListaVazia(
                     icone: Icons.pets_outlined,
-                    titulo: 'Nenhum animal cadastrado ainda',
+                    titulo: 'Nenhum animal registrado ainda',
                     texto:
                         'Os animais que você cadastrar pelo botão + do feed '
                         'aparecem aqui.',
                     aoVerAnimais: _voltarAoFeed,
                   )
                 : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      for (final animal in cadastros)
-                        _LinhaDeCadastro(
-                          animal: animal,
-                          aoAbrir: () => _abrirDetalhes(animal),
+                      for (final grupo in _gruposDeRegistro)
+                        ..._grupo(
+                          grupo.titulo,
+                          [
+                            for (final animal in cadastros)
+                              if (animal.status == grupo.status) animal,
+                          ],
+                          estado,
+                          usuario.email,
                         ),
                     ],
                   ),
@@ -303,7 +360,7 @@ class _SeletorDeSecao extends StatelessWidget {
           ButtonSegment(value: _SecaoPerfil.curtidos, label: Text('Curtidos')),
           ButtonSegment(
             value: _SecaoPerfil.meusCadastros,
-            label: Text('Meus cadastros'),
+            label: Text('Meus registros'),
           ),
         ],
         selected: {secao},
@@ -415,21 +472,15 @@ class _CartaoCurtido extends StatelessWidget {
           Row(
             children: [
               Etiqueta(rotuloSingular(animal.tipo)),
-              // Disponível ou adotado só diz algo sobre adoção
-              if (animal.tipo == TipoRegistro.adocao) ...[
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    comMaiuscula(animal.status.rotulo),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Cores.textoFraco,
-                      fontSize: 12,
-                    ),
-                  ),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  comMaiuscula(animal.rotuloDoStatus),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Cores.textoFraco, fontSize: 12),
                 ),
-              ],
+              ),
             ],
           ),
           const SizedBox(height: 6),
@@ -442,11 +493,51 @@ class _CartaoCurtido extends StatelessWidget {
 
 // Os cadastros em lista, porque aqui o que importa é a situação de cada
 // registro e há quanto tempo ele foi publicado, mais do que a foto
+enum _AcaoDoRegistro { editar, mudarStatus, publicar }
+
+// O nome do grupo e quantos registros ele tem, acima das linhas
+class _TituloDoGrupo extends StatelessWidget {
+  const _TituloDoGrupo({required this.titulo, required this.quantidade});
+
+  final String titulo;
+  final int quantidade;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(2, 6, 2, 10),
+      child: Row(
+        children: [
+          Text(
+            titulo,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: Cores.principal,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '$quantidade',
+            style: const TextStyle(fontSize: 14, color: Cores.textoFraco),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _LinhaDeCadastro extends StatelessWidget {
-  const _LinhaDeCadastro({required this.animal, required this.aoAbrir});
+  const _LinhaDeCadastro({
+    required this.animal,
+    required this.aoAbrir,
+    this.aoEscolher,
+  });
 
   final Animal animal;
   final VoidCallback aoAbrir;
+  // Sem ação, a linha só abre a ficha
+  final ValueChanged<_AcaoDoRegistro>? aoEscolher;
 
   @override
   Widget build(BuildContext context) {
@@ -481,8 +572,8 @@ class _LinhaDeCadastro extends StatelessWidget {
                     runSpacing: 4,
                     children: [
                       Etiqueta(rotuloSingular(animal.tipo)),
-                      if (animal.status == StatusAnimal.adotado)
-                        Etiqueta(animal.status.rotulo, cheia: true),
+                      if (animal.finalizado)
+                        Etiqueta(animal.rotuloDoStatus, cheia: true),
                     ],
                   ),
                   const SizedBox(height: 6),
@@ -490,7 +581,33 @@ class _LinhaDeCadastro extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: Cores.textoFraco),
+            if (aoEscolher == null)
+              const Icon(Icons.chevron_right, color: Cores.textoFraco)
+            else
+              PopupMenuButton<_AcaoDoRegistro>(
+                tooltip: 'Opções de ${animal.nome}',
+                icon: const Icon(Icons.more_vert, color: Cores.textoFraco),
+                onSelected: aoEscolher,
+                itemBuilder: (_) => [
+                  const PopupMenuItem(
+                    value: _AcaoDoRegistro.editar,
+                    child: Text('Editar registro'),
+                  ),
+                  PopupMenuItem(
+                    value: _AcaoDoRegistro.mudarStatus,
+                    child: Text(
+                      animal.finalizado
+                          ? 'Voltar para ${animal.comStatus(StatusAnimal.disponivel).rotuloDoStatus}'
+                          : 'Marcar como ${animal.comStatus(animal.desfecho).rotuloDoStatus}',
+                    ),
+                  ),
+                  if (animal.status == StatusAnimal.resgatado)
+                    const PopupMenuItem(
+                      value: _AcaoDoRegistro.publicar,
+                      child: Text('Publicar para adoção'),
+                    ),
+                ],
+              ),
           ],
         ),
       ),

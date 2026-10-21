@@ -12,6 +12,7 @@ import '../telas/feed_adocao.dart';
 import '../telas/detalhes_animal.dart';
 import '../telas/cadastrar_ponto.dart';
 import '../telas/cadastro_animal.dart';
+import '../widgets/acoes_do_registro.dart';
 import '../telas/onboarding_screen.dart';
 import '../telas/editar_perfil.dart';
 import '../telas/perfil_usuario.dart';
@@ -53,7 +54,15 @@ class AppRoutesConfig {
       return DetalhesAnimal(animal: animal);
     },
 
-    AppRoutes.registerAnimal: (_) => const CadastroAnimal(),
+    AppRoutes.registerAnimal: (context) {
+      // Sem argumento, um cadastro novo; com um animal, a publicação do
+      // resgate para adoção; com uma edição, o registro inteiro
+      final argumento = ModalRoute.of(context)?.settings.arguments;
+      return CadastroAnimal(
+        base: argumento is Animal ? argumento : null,
+        editando: argumento is EdicaoDoRegistro ? argumento.animal : null,
+      );
+    },
     AppRoutes.perfilUsuario: (_) => const PerfilUsuario(),
     AppRoutes.editarPerfil: (_) => const EditarPerfil(),
 
