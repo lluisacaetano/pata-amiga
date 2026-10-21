@@ -75,13 +75,14 @@ class EstadoPataAmiga extends ChangeNotifier {
 
   // Troca um animal pela versão nova (o status mudou), no feed e nos
   // cadastros do usuário, e grava os cadastros no aparelho
-  Future<void> substituirAnimal(Animal novo) async {
+  // Na edição, o nome pode mudar, e o animal só do aparelho é achado pelo
+  // nome: por isso dá para dizer qual era a chave antes
+  Future<void> substituirAnimal(Animal novo, {String? chaveAntiga}) async {
+    final chave = chaveAntiga ?? novo.chave;
     _animais = [
-      for (final animal in _animais) animal.chave == novo.chave ? novo : animal,
+      for (final animal in _animais) animal.chave == chave ? novo : animal,
     ];
-    final indice = _meusCadastros.indexWhere(
-      (animal) => animal.chave == novo.chave,
-    );
+    final indice = _meusCadastros.indexWhere((animal) => animal.chave == chave);
     if (indice >= 0) _meusCadastros[indice] = novo;
     notifyListeners();
     if (indice >= 0) {
