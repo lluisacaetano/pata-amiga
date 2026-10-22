@@ -21,8 +21,8 @@
       "observacoes": "Brincalhão e muito carinhoso.",
       "necessidadesEspeciais": "",
       "dono": {
-        "nome": "Maria",
-        "telefone": "13999990000"
+        "nome": "Abrigo Focinhos (exemplo)",
+        "telefone": "13999997777"
       },
       "fotos": [
         "assets/animais/thor-1.jpg",
@@ -31,7 +31,9 @@
       ],
       "publicadoEm": "2026-10-10T12:00:00.000",
       "latitude": -20.4641045,
-      "longitude": -45.4267203
+      "longitude": -45.4267203,
+      "responsavelEmail": "ong@example.org",
+      "ongId": 1
     },
     {
       "id": 2,
@@ -87,8 +89,8 @@
       "observacoes": "Calma e adora colo.",
       "necessidadesEspeciais": "",
       "dono": {
-        "nome": "João",
-        "telefone": "13999991111"
+        "nome": "Abrigo Focinhos (exemplo)",
+        "telefone": "13999997777"
       },
       "fotos": [
         "assets/animais/amora-1.jpg",
@@ -97,7 +99,9 @@
       ],
       "publicadoEm": "2026-10-13T12:00:00.000",
       "latitude": -20.4697811,
-      "longitude": -45.4216775
+      "longitude": -45.4216775,
+      "responsavelEmail": "ong@example.org",
+      "ongId": 1
     },
     {
       "id": 4,
@@ -186,8 +190,8 @@
       "observacoes": "Encontrado na avenida, magro e assustado. Aceita carinho e água.",
       "necessidadesEspeciais": "Precisa de avaliação veterinária.",
       "dono": {
-        "nome": "Rita",
-        "telefone": "13999995555"
+        "nome": "Abrigo Focinhos (exemplo)",
+        "telefone": "13999997777"
       },
       "fotos": [
         "assets/animais/fred-1.jpg",
@@ -196,7 +200,9 @@
       ],
       "publicadoEm": "2026-10-12T20:00:00.000",
       "latitude": -20.4610009,
-      "longitude": -45.4241615
+      "longitude": -45.4241615,
+      "responsavelEmail": "ong@example.org",
+      "ongId": 1
     },
     {
       "id": 7,
@@ -321,5 +327,23 @@
       "data": "2026-10-12T08:00:00.000",
       "registradoPor": "Ana"
     }
-  ]
+  ],
+  "ongs": [
+    {
+      "id": 1,
+      "nome": "Abrigo Focinhos (exemplo)",
+      "descricao": "ONG fictícia, criada só para demonstrar o perfil de ONG no Pata Amiga. Resgata cães e gatos abandonados, cuida da saúde deles e procura famílias para adoção.",
+      "politicaDeAdocao": "Conversa inicial pelo WhatsApp, visita ao abrigo para conhecer o animal e assinatura do termo de adoção responsável. Todos são entregues castrados e vacinados.",
+      "telefone": "13999997777",
+      "chavePix": "doacoes@example.org",
+      "foto": "assets/ongs/abrigo-focinhos.jpg",
+      "rua": "Praça São Vicente Férrer",
+      "bairro": "Centro",
+      "latitude": -20.4647,
+      "longitude": -45.4264,
+      "responsavelEmail": "ong@example.org",
+      "criadaEm": "2026-10-01T09:00:00.000"
+    }
+  ],
+  "denuncias": []
 }

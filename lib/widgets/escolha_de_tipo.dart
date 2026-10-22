@@ -26,7 +26,7 @@ ButtonStyle estiloDasAbas(BuildContext context, Color fundoDaOpcao) =>
   ),
   foregroundColor: WidgetStateProperty.resolveWith(
     (estados) =>
-        estados.contains(WidgetState.selected) ? Colors.white : context.cores.texto,
+        estados.contains(WidgetState.selected) ? context.sobrePrincipal : context.cores.texto,
   ),
   textStyle: WidgetStateProperty.resolveWith(
     (estados) => TextStyle(

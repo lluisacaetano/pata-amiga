@@ -72,6 +72,9 @@ class Animal {
   // A conta de quem cadastrou: só ela muda o status do animal. Os animais de
   // exemplo da API não têm, então ninguém muda o deles
   final String responsavelEmail;
+  // A ONG em nome de quem o animal foi publicado; null quando foi em nome da
+  // própria pessoa. É por ele que o perfil da ONG lista os animais dela
+  final int? ongId;
   final List<String> fotos;
   final DateTime publicadoEm;
   // Salva a localização do aparelho quando a pessoa tocou no botão de localização
@@ -101,6 +104,7 @@ class Animal {
     this.necessidadesEspeciais = '',
     required this.dono,
     this.responsavelEmail = '',
+    this.ongId,
     this.fotos = const [],
     required this.publicadoEm,
     this.latitude,
@@ -136,6 +140,7 @@ class Animal {
         // O dono é um objeto aninhado: usa o Dono.fromJson (dono.dart)
         dono: Dono.fromJson(json['dono'] as Map<String, dynamic>),
         responsavelEmail: json['responsavelEmail'] as String? ?? '',
+        ongId: (json['ongId'] as num?)?.toInt(),
         fotos: List<String>.from(json['fotos'] as List? ?? []),
         // A data chega como texto ISO 8601 (ex.: 2026-10-14T12:00:00.000)
         publicadoEm: DateTime.parse(json['publicadoEm'] as String),
@@ -169,6 +174,7 @@ class Animal {
         'necessidadesEspeciais': necessidadesEspeciais,
         'dono': dono.toJson(),
         'responsavelEmail': responsavelEmail,
+        if (ongId != null) 'ongId': ongId,
         'fotos': fotos,
         'publicadoEm': publicadoEm.toIso8601String(),
         'latitude': latitude,

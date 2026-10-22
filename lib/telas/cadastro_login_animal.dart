@@ -118,7 +118,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
               label: const Text('Publicar no feed'),
               style: FilledButton.styleFrom(
                 backgroundColor: context.cores.principal,
-                foregroundColor: Colors.white,
+                foregroundColor: context.sobrePrincipal,
                 minimumSize: const Size.fromHeight(52),
               ),
             ),

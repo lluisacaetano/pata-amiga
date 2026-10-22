@@ -22,7 +22,7 @@ class Etiqueta extends StatelessWidget {
       child: Text(
         comMaiuscula(texto),
         style: TextStyle(
-          color: cheia ? Colors.white : context.cores.principal,
+          color: cheia ? context.sobrePrincipal : context.cores.principal,
           fontSize: 12,
           fontWeight: FontWeight.w600,
         ),

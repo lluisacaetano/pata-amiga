@@ -108,6 +108,11 @@ class PaletaPataAmiga extends ThemeExtension<PaletaPataAmiga> {
 
 extension CoresContexto on BuildContext {
   PaletaPataAmiga get cores => PaletaPataAmiga.de(this);
+
+  // A cor do que fica sobre o verde principal (texto de botão, etiqueta
+  // cheia, aba escolhida): branco no claro e verde-escuro no noturno, onde
+  // o principal é claro e o branco sumiria
+  Color get sobrePrincipal => Theme.of(this).colorScheme.onPrimary;
 }
 
 ThemeData temaPataAmiga({Brightness brilho = Brightness.light}) {
@@ -118,7 +123,9 @@ ThemeData temaPataAmiga({Brightness brilho = Brightness.light}) {
     fundo: escuro ? const Color(0xFF101510) : Cores.fundo,
     cartao: escuro ? const Color(0xFF1C241E) : Cores.cartao,
     texto: escuro ? const Color(0xFFF3F5F3) : Cores.texto,
-    textoFraco: escuro ? const Color(0xFFE0E5E1) : Cores.textoFraco,
+    // No noturno, o texto secundário precisa ser mais apagado que o principal,
+    // ou os dois se confundem
+    textoFraco: escuro ? const Color(0xFFA7B3AA) : Cores.textoFraco,
     borda: escuro ? const Color(0xFF59645B) : Cores.borda,
     destaque: escuro ? const Color(0xFFFF9387) : Cores.destaque,
     alimentacao: escuro ? const Color(0xFFFFCB72) : Cores.alimentacao,

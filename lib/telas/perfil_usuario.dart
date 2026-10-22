@@ -13,12 +13,16 @@ import '../services/animal_service.dart';
 import '../tema/cores.dart';
 import '../widgets/acoes_do_registro.dart';
 import '../widgets/barra_inferior.dart';
+import '../widgets/vinculo_com_ong.dart';
 import '../widgets/escolha_de_tipo.dart';
 import '../widgets/etiqueta.dart';
 import '../widgets/foto_animal.dart';
 import '../widgets/mascaras.dart';
+import '../widgets/sino_de_notificacoes.dart';
 
 enum _SecaoPerfil { curtidos, meusCadastros }
+
+enum _OpcaoDoMenu { denuncias, aparencia, acessibilidade, sair }
 
 // Os grupos de "Meus registros", na ordem em que aparecem: primeiro o que
 // ainda precisa de alguém, depois cada desfecho
@@ -82,15 +86,28 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
     if (animais.isEmpty) return const [];
     return [
       _TituloDoGrupo(titulo: titulo, quantidade: animais.length),
-      for (final animal in animais)
-        _LinhaDeCadastro(
-          animal: animal,
-          aoAbrir: () => _abrirDetalhes(animal),
-          // Num aparelho dividido, os cadastros de outra conta só abrem
-          aoEscolher: estado.podeMudarStatus(animal, email)
-              ? (acao) => _agir(acao, animal)
-              : null,
-        ),
+      // Os registros em cards de duas colunas, como os curtidos
+      GridView.count(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 0.66,
+        padding: const EdgeInsets.only(bottom: 12),
+        children: [
+          for (final animal in animais)
+            _CartaoDeRegistro(
+              animal: animal,
+              aoAbrir: () => _abrirDetalhes(animal),
+              ong: estado.ongDe(email)?.nome,
+              // Num aparelho dividido, os cadastros de outra conta só abrem
+              aoEscolher: estado.podeMudarStatus(animal, email)
+                  ? (acao) => _agir(acao, animal)
+                  : null,
+            ),
+        ],
+      ),
     ];
   }
 
@@ -101,12 +118,49 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
       animal,
       api: widget.api,
     ),
+    _AcaoDoRegistro.enviarParaOng => _transferir(animal),
     _AcaoDoRegistro.publicar => publicarParaAdocao(
       context,
       animal,
       api: widget.api,
     ),
   };
+
+  // A ONG é buscada na hora: a pessoa pode ter saído dela com o menu aberto
+  Future<void> _transferir(Animal animal) async {
+    final email = context.read<UsuarioProvider>().usuario.email;
+    final ong = PataAmigaScope.of(context).ongDe(email);
+    if (ong == null) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('Você não faz mais parte de uma ONG.')),
+        );
+      return;
+    }
+    await enviarParaOng(context, animal, ong, api: widget.api);
+  }
+
+  PopupMenuItem<_OpcaoDoMenu> _itemDoMenu(
+    _OpcaoDoMenu opcao,
+    IconData icone,
+    String texto, {
+    Color? cor,
+  }) => PopupMenuItem(
+    value: opcao,
+    child: Row(
+      children: [
+        Icon(icone, size: 20, color: cor ?? context.cores.principal),
+        const SizedBox(width: 12),
+        Flexible(
+          child: Text(
+            texto,
+            style: TextStyle(color: cor ?? context.cores.texto),
+          ),
+        ),
+      ],
+    ),
+  );
 
   Future<void> _sair() async {
     await context.read<UsuarioProvider>().encerrarSessao();
@@ -146,12 +200,59 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
           ),
         ),
         actions: [
-          IconButton(
-            tooltip: 'Sair da conta',
-            icon: Icon(Icons.logout, color: context.cores.principal),
-            onPressed: _sair,
+          // Quem administra uma ONG recebe aqui os pedidos para entrar nela
+          SinoDeNotificacoes(email: usuario.email),
+          // Aparência, acessibilidade e sair ficam num menu só, no canto,
+          // em vez de ocupar o meio do perfil
+          PopupMenuButton<_OpcaoDoMenu>(
+            tooltip: 'Mais opções',
+            icon: Icon(Icons.more_vert, color: context.cores.principal),
+            color: context.cores.cartao,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            onSelected: (opcao) => switch (opcao) {
+              _OpcaoDoMenu.denuncias => Navigator.pushNamed(
+                context,
+                AppRoutes.minhasDenuncias,
+              ),
+              _OpcaoDoMenu.aparencia => Navigator.pushNamed(
+                context,
+                AppRoutes.configuracoesAparencia,
+              ),
+              _OpcaoDoMenu.acessibilidade => Navigator.pushNamed(
+                context,
+                AppRoutes.configuracoesAcessibilidade,
+              ),
+              _OpcaoDoMenu.sair => _sair(),
+            },
+            itemBuilder: (_) => [
+              _itemDoMenu(
+                _OpcaoDoMenu.denuncias,
+                Icons.shield_outlined,
+                'Minhas denúncias',
+              ),
+              const PopupMenuDivider(),
+              _itemDoMenu(
+                _OpcaoDoMenu.aparencia,
+                Icons.palette_outlined,
+                'Aparência',
+              ),
+              _itemDoMenu(
+                _OpcaoDoMenu.acessibilidade,
+                Icons.accessibility_new,
+                'Acessibilidade',
+              ),
+              const PopupMenuDivider(),
+              _itemDoMenu(
+                _OpcaoDoMenu.sair,
+                Icons.logout,
+                'Sair da conta',
+                cor: context.cores.destaque,
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
         ],
       ),
       body: ListView(
@@ -161,25 +262,9 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
             usuario: usuario,
             aoEditar: () =>
                 Navigator.pushNamed(context, AppRoutes.editarPerfil),
-          ),
-          const SizedBox(height: 20),
-          _OpcaoConfiguracao(
-            icone: Icons.palette_outlined,
-            titulo: 'Aparência',
-            descricao: 'Tema claro, escuro ou do sistema',
-            aoAbrir: () => Navigator.pushNamed(
-              context,
-              AppRoutes.configuracoesAparencia,
-            ),
-          ),
-          const SizedBox(height: 10),
-          _OpcaoConfiguracao(
-            icone: Icons.accessibility_new,
-            titulo: 'Acessibilidade',
-            descricao: 'Texto, contraste e animações',
-            aoAbrir: () => Navigator.pushNamed(
-              context,
-              AppRoutes.configuracoesAcessibilidade,
+            vinculo: VinculoComOng(
+              ong: estado.ongDe(usuario.email),
+              pedida: estado.ongPedidaPor(usuario.email),
             ),
           ),
           const SizedBox(height: 24),
@@ -216,6 +301,11 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      // Quem entrou numa ONG descobre que pode levar os
+                      // animais disponíveis para ela
+                      if (estado.ongDe(usuario.email) case final ong?
+                          when cadastros.isNotEmpty)
+                        _DicaDaOng(ong: ong.nome),
                       for (final grupo in _gruposDeRegistro)
                         ..._grupo(
                           grupo.titulo,
@@ -230,46 +320,22 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
                   ),
         ],
       ),
-      bottomNavigationBar: BarraInferior(atual: 3),
+      bottomNavigationBar: BarraInferior(atual: 4),
     );
   }
 }
 
-class _OpcaoConfiguracao extends StatelessWidget {
-  const _OpcaoConfiguracao({
-    required this.icone,
-    required this.titulo,
-    required this.descricao,
-    required this.aoAbrir,
-  });
-
-  final IconData icone;
-  final String titulo;
-  final String descricao;
-  final VoidCallback aoAbrir;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
-      child: ListTile(
-        leading: Icon(icone, color: context.cores.principal),
-        title: Text(titulo, style: const TextStyle(fontWeight: FontWeight.w700)),
-        subtitle: Text(descricao),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: aoAbrir,
-      ),
-    );
-  }
-}
-
-// Foto, nome e contato abertos no fundo da tela, sem cartão em volta: é a
-// pessoa, não um bloco de dados
 class _Cabecalho extends StatelessWidget {
-  const _Cabecalho({required this.usuario, required this.aoEditar});
+  const _Cabecalho({
+    required this.usuario,
+    required this.aoEditar,
+    this.vinculo,
+  });
 
   final Usuario usuario;
   final VoidCallback aoEditar;
+  // A ONG de que a pessoa faz parte, embaixo do contato
+  final Widget? vinculo;
 
   @override
   Widget build(BuildContext context) {
@@ -306,6 +372,10 @@ class _Cabecalho extends StatelessWidget {
                       icone: Icons.phone_outlined,
                       texto: formatarTelefone(usuario.telefone),
                     ),
+                  ],
+                  if (vinculo case final vinculo?) ...[
+                    const SizedBox(height: 8),
+                    vinculo,
                   ],
                 ],
               ),
@@ -539,9 +609,8 @@ class _CartaoCurtido extends StatelessWidget {
   }
 }
 
-// Os cadastros em lista, porque aqui o que importa é a situação de cada
-// registro e há quanto tempo ele foi publicado, mais do que a foto
-enum _AcaoDoRegistro { editar, mudarStatus, publicar }
+// O que se faz com um registro pelo menu do card
+enum _AcaoDoRegistro { editar, mudarStatus, publicar, enviarParaOng }
 
 // O nome do grupo e quantos registros ele tem, acima das linhas
 class _TituloDoGrupo extends StatelessWidget {
@@ -575,89 +644,125 @@ class _TituloDoGrupo extends StatelessWidget {
   }
 }
 
-class _LinhaDeCadastro extends StatelessWidget {
-  const _LinhaDeCadastro({
+class _CartaoDeRegistro extends StatelessWidget {
+  const _CartaoDeRegistro({
     required this.animal,
     required this.aoAbrir,
     this.aoEscolher,
+    this.ong,
   });
 
   final Animal animal;
   final VoidCallback aoAbrir;
+  // A ONG de que a pessoa faz parte: o animal disponível pode ir para ela
+  final String? ong;
   // Sem ação, a linha só abre a ficha
   final ValueChanged<_AcaoDoRegistro>? aoEscolher;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: _CartaoDoFeed(
-        aoTocar: aoAbrir,
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 76,
-              child: FotoAnimal(caminho: animal.foto, altura: 76),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return _CartaoDoFeed(
+      aoTocar: aoAbrir,
+      padding: const EdgeInsets.all(8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // A foto fica com o que sobrar da altura do card, como nos
+          // curtidos; as opções ficam no círculo branco do canto
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, restricoes) => Stack(
                 children: [
-                  Text(
-                    animal.nome.toUpperCase(),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                  FotoAnimal(
+                    caminho: animal.foto,
+                    altura: restricoes.maxHeight,
+                  ),
+                  if (aoEscolher != null)
+                    Positioned(
+                      top: 6,
+                      right: 6,
+                      child: Material(
+                        color: context.cores.cartao,
+                        shape: const CircleBorder(),
+                        elevation: 1,
+                        child: SizedBox(
+                          width: 40,
+                          height: 40,
+                          child: PopupMenuButton<_AcaoDoRegistro>(
+                            tooltip: 'Opções de ${animal.nome}',
+                            icon: Icon(
+                              Icons.more_vert,
+                              color: context.cores.principal,
+                              size: 20,
+                            ),
+                            onSelected: aoEscolher,
+                            itemBuilder: (_) => [
+                              const PopupMenuItem(
+                                value: _AcaoDoRegistro.editar,
+                                child: Text('Editar registro'),
+                              ),
+                              PopupMenuItem(
+                                value: _AcaoDoRegistro.mudarStatus,
+                                child: Text(
+                                  animal.finalizado
+                                      ? 'Voltar para ${animal.comStatus(StatusAnimal.disponivel).rotuloDoStatus}'
+                                      : 'Marcar como ${animal.comStatus(animal.desfecho).rotuloDoStatus}',
+                                ),
+                              ),
+                              if (animal.status == StatusAnimal.resgatado)
+                                const PopupMenuItem(
+                                  value: _AcaoDoRegistro.publicar,
+                                  child: Text('Publicar para adoção'),
+                                ),
+                              if (ong != null)
+                                PopupMenuItem(
+                                  value: _AcaoDoRegistro.enviarParaOng,
+                                  child: Text('Transferir para $ong'),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      Etiqueta(rotuloSingular(animal.tipo)),
-                      if (animal.finalizado)
-                        Etiqueta(animal.rotuloDoStatus, cheia: true),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  _Lugar(animal: animal, comData: true),
                 ],
               ),
             ),
-            if (aoEscolher == null)
-              Icon(Icons.chevron_right, color: context.cores.textoFraco)
-            else
-              PopupMenuButton<_AcaoDoRegistro>(
-                tooltip: 'Opções de ${animal.nome}',
-                icon: Icon(Icons.more_vert, color: context.cores.textoFraco),
-                onSelected: aoEscolher,
-                itemBuilder: (_) => [
-                  const PopupMenuItem(
-                    value: _AcaoDoRegistro.editar,
-                    child: Text('Editar registro'),
-                  ),
-                  PopupMenuItem(
-                    value: _AcaoDoRegistro.mudarStatus,
-                    child: Text(
-                      animal.finalizado
-                          ? 'Voltar para ${animal.comStatus(StatusAnimal.disponivel).rotuloDoStatus}'
-                          : 'Marcar como ${animal.comStatus(animal.desfecho).rotuloDoStatus}',
-                    ),
-                  ),
-                  if (animal.status == StatusAnimal.resgatado)
-                    const PopupMenuItem(
-                      value: _AcaoDoRegistro.publicar,
-                      child: Text('Publicar para adoção'),
-                    ),
-                ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            animal.nome.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Etiqueta(rotuloSingular(animal.tipo)),
+              const SizedBox(width: 6),
+              Flexible(
+                child: animal.finalizado
+                    ? Etiqueta(animal.rotuloDoStatus, cheia: true)
+                    : Text(
+                        comMaiuscula(animal.rotuloDoStatus),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: context.cores.textoFraco,
+                          fontSize: 12,
+                        ),
+                      ),
               ),
-          ],
-        ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          _Lugar(animal: animal),
+          const SizedBox(height: 2),
+          Text(
+            'Publicado ${animal.publicadoHa(DateTime.now())}',
+            style: TextStyle(color: context.cores.textoFraco, fontSize: 12),
+          ),
+        ],
       ),
     );
   }
@@ -692,13 +797,11 @@ class _CartaoDoFeed extends StatelessWidget {
   }
 }
 
-// O lugar em verde com o alfinete, como no card do feed. Nos cadastros vem
-// junto há quanto tempo foi publicado
+// O lugar em verde com o alfinete, como no card do feed
 class _Lugar extends StatelessWidget {
-  const _Lugar({required this.animal, this.comData = false});
+  const _Lugar({required this.animal});
 
   final Animal animal;
-  final bool comData;
 
   @override
   Widget build(BuildContext context) {
@@ -722,11 +825,6 @@ class _Lugar extends StatelessWidget {
             ),
           ),
         ),
-        if (comData)
-          Text(
-            ' · ${animal.publicadoHa(DateTime.now())}',
-            style: TextStyle(color: context.cores.textoFraco, fontSize: 13),
-          ),
       ],
     );
   }
@@ -784,6 +882,45 @@ class _ListaVazia extends StatelessWidget {
             child: const Text(
               'Ver animais no feed',
               style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DicaDaOng extends StatelessWidget {
+  const _DicaDaOng({required this.ong});
+
+  final String ong;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.cores.principalClara,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.volunteer_activism_outlined,
+            color: context.cores.principal,
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Você faz parte de $ong. Pelo menu de cada animal, dá para '
+              'transferir o cadastro para a ONG.',
+              style: TextStyle(
+                fontSize: 13,
+                color: context.cores.principal,
+                height: 1.35,
+              ),
             ),
           ),
         ],

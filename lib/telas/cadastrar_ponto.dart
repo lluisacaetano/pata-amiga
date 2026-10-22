@@ -43,6 +43,15 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
   Future<void> _cadastrar() async {
     setState(() => _tentou = true);
     if (_tipo == null || _salvando) return;
+    // O endereço é obrigatório: é por ele que os outros acham o ponto
+    if (_local.rua.trim().isEmpty || _local.bairro.trim().isEmpty) {
+      setState(
+        () => _recusa =
+            'Marque no mapa onde fica o ponto, com rua e bairro, antes de '
+            'cadastrar.',
+      );
+      return;
+    }
     setState(() {
       _salvando = true;
       _recusa = null;
@@ -268,12 +277,12 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
           FilledButton.icon(
             onPressed: _salvando ? null : _cadastrar,
             icon: _salvando
-                ? const SizedBox(
+                ? SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Colors.white,
+                      color: context.sobrePrincipal,
                     ),
                   )
                 : const Icon(Icons.add_location_alt_outlined, size: 18),

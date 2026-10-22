@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../modelos/animal.dart';
 import '../modelos/avistamento.dart';
+import '../modelos/ong.dart';
 import '../modelos/ponto_de_alimentacao.dart';
 
 class EstadoPataAmiga extends ChangeNotifier {
@@ -59,6 +60,57 @@ class EstadoPataAmiga extends ChangeNotifier {
     notifyListeners();
   }
 
+  // As ONGs e abrigos, para a lista do menu, o perfil e a ficha do animal
+  List<Ong> _ongs = [];
+  List<Ong> get ongs => List.unmodifiable(_ongs);
+
+  void atualizarOngs(List<Ong> ongs) {
+    _ongs = List.of(ongs);
+    notifyListeners();
+  }
+
+  // Põe a ONG criada ou troca a editada pela versão nova
+  void salvarOng(Ong ong) {
+    final indice = _ongs.indexWhere((item) => item.id == ong.id);
+    _ongs = indice >= 0
+        ? [for (final item in _ongs) item.id == ong.id ? ong : item]
+        : [..._ongs, ong];
+    notifyListeners();
+  }
+
+  // A ONG de que essa pessoa faz parte, ou null: cada conta tem no máximo
+  // uma, criada por ela ou em que o pedido para entrar foi aprovado
+  Ong? ongDe(String email) {
+    for (final ong in _ongs) {
+      if (ong.fazParte(email)) return ong;
+    }
+    return null;
+  }
+
+  // Os avisos das ONGs para essa pessoa (aprovado, recusado, removido),
+  // enquanto ela não os dispensa
+  List<(Ong, AvisoDaOng)> avisosPara(String email) => [
+    for (final ong in _ongs)
+      if (ong.avisoPara(email) case final aviso?) (ong, aviso),
+  ];
+
+  // A ONG em que essa pessoa pediu para entrar e ainda espera resposta
+  Ong? ongPedidaPor(String email) {
+    for (final ong in _ongs) {
+      if (ong.pediuEntrada(email)) return ong;
+    }
+    return null;
+  }
+
+  // Os animais publicados em nome da ONG, do mais novo para o mais antigo:
+  // o recém-cadastrado é sempre o primeiro. Os que a pessoa publicou em nome
+  // próprio não entram, mesmo sendo da mesma conta
+  List<Animal> animaisDa(Ong ong) =>
+      _animais
+          .where((animal) => ong.id != null && animal.ongId == ong.id)
+          .toList()
+        ..sort((a, b) => b.publicadoEm.compareTo(a.publicadoEm));
+
   void adicionarAvistamento(Avistamento avistamento) {
     _avistamentos = [..._avistamentos, avistamento];
     notifyListeners();
@@ -106,21 +158,29 @@ class EstadoPataAmiga extends ChangeNotifier {
   );
 
   // Os cadastros de quem está logado: os feitos neste aparelho e os da API
-  // registrados no e-mail dele, do mais novo para o mais antigo
+  // registrados no e-mail dele, do mais novo para o mais antigo. Os
+  // publicados em nome de uma ONG ficam só no perfil dela, para não
+  // aparecerem duas vezes
   List<Animal> cadastrosDe(String email) {
     final chaves = _meusCadastros.map((animal) => animal.chave).toSet();
     return [
-      ..._meusCadastros,
-      ..._animais.where(
-        (animal) =>
-            !chaves.contains(animal.chave) && animal.eDoResponsavel(email),
-      ),
-    ]..sort((a, b) => b.publicadoEm.compareTo(a.publicadoEm));
+        ..._meusCadastros,
+        ..._animais.where(
+          (animal) =>
+              !chaves.contains(animal.chave) && animal.eDoResponsavel(email),
+        ),
+      ].where((animal) => animal.ongId == null).toList()
+      ..sort((a, b) => b.publicadoEm.compareTo(a.publicadoEm));
   }
 
   // Quem pode mudar o status: o e-mail de quem cadastrou ou, nos cadastros
   // gravados antes de o app guardar o e-mail, quem os fez neste aparelho
   bool podeMudarStatus(Animal animal, String email) {
+    // O animal da ONG é de toda a ONG: quem faz parte dela, admin ou membro,
+    // cuida de qualquer um, mesmo os que outra pessoa cadastrou
+    // Quem saiu ou foi removido da ONG deixa de cuidar dos animais dela,
+    // mesmo dos que cadastrou
+    if (animal.ongId != null) return ongDe(email)?.id == animal.ongId;
     if (animal.responsavelEmail.trim().isNotEmpty) {
       return animal.eDoResponsavel(email);
     }

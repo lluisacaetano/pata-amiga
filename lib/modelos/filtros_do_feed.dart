@@ -4,8 +4,9 @@ import 'animal.dart';
 export '../dados/racas.dart' show semRacaDefinida;
 
 // Os grupos de filtro do feed, na ordem em que aparecem no painel. Todos usam
-// dados que o cadastro já pede
-enum GrupoDeFiltro { especie, porte, sexo, raca, bairro, saude }
+// dados que o cadastro já pede. A ONG guarda o id, e não o nome, porque o
+// nome pode mudar; quem mostra o nome é a tela
+enum GrupoDeFiltro { especie, porte, sexo, raca, bairro, ong, saude }
 
 extension TituloDoGrupo on GrupoDeFiltro {
   String get titulo => switch (this) {
@@ -14,6 +15,7 @@ extension TituloDoGrupo on GrupoDeFiltro {
     GrupoDeFiltro.sexo => 'Sexo',
     GrupoDeFiltro.raca => 'Raça',
     GrupoDeFiltro.bairro => 'Bairro',
+    GrupoDeFiltro.ong => 'ONG',
     GrupoDeFiltro.saude => 'Saúde',
   };
 }
@@ -83,6 +85,7 @@ Set<String> valoresDe(Animal animal, GrupoDeFiltro grupo) => switch (grupo) {
   GrupoDeFiltro.bairro => {
     if (animal.bairro.trim().isNotEmpty) animal.bairro.trim(),
   },
+  GrupoDeFiltro.ong => {if (animal.ongId != null) '${animal.ongId}'},
   GrupoDeFiltro.saude => {
     if (animal.castrado) 'castrado',
     if (animal.vacinado) 'vacinado',
@@ -103,6 +106,9 @@ List<String> opcoesDe(GrupoDeFiltro grupo, Iterable<Animal> animais) =>
         for (final animal in animais)
           ...valoresDe(animal, GrupoDeFiltro.bairro),
       }),
+      GrupoDeFiltro.ong => {
+        for (final animal in animais) ...valoresDe(animal, GrupoDeFiltro.ong),
+      }.toList(),
     };
 
 // Como a opção aparece na tela: as fixas começam com maiúscula, e raça e

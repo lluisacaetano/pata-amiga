@@ -96,7 +96,7 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
       if (achados.isEmpty) {
         aviso =
             'Não encontrei esse endereço em Formiga. Confira o nome ou '
-            'arraste o mapa.';
+            'destrave o mapa e arraste.';
       } else if (mounted) {
         _ponto = LatLng(achados.first.latitude, achados.first.longitude);
         _mapa.move(_ponto, 17);
@@ -212,6 +212,17 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
 
   Future<void> _registrar() async {
     if (_salvando) return;
+    // O endereço é obrigatório: é ele que diz ao tutor onde procurar
+    final endereco = _endereco;
+    if (endereco == null ||
+        endereco.rua.trim().isEmpty ||
+        endereco.bairro.trim().isEmpty) {
+      _avisar(
+        'Marque no mapa onde o animal foi visto, com rua e bairro, antes de '
+        'registrar.',
+      );
+      return;
+    }
     setState(() => _salvando = true);
     final nome = context.read<UsuarioProvider?>()?.usuario.nome.trim() ?? '';
     final novo = Avistamento(
@@ -324,7 +335,7 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
               children: [
                 Text(
                   'Escreva o endereço, toque na mira para usar sua localização '
-                  'ou arraste o mapa até o pino ficar onde você viu o animal.',
+                  'ou destrave o mapa e arraste até o pino ficar onde você viu o animal.',
                   style: TextStyle(fontSize: 13, color: context.cores.textoFraco),
                 ),
                 const SizedBox(height: 10),
@@ -454,12 +465,12 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
           FilledButton.icon(
             onPressed: _salvando ? null : _registrar,
             icon: _salvando
-                ? const SizedBox(
+                ? SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Colors.white,
+                      color: context.sobrePrincipal,
                     ),
                   )
                 : const Icon(Icons.visibility_outlined, size: 18),

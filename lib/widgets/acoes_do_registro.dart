@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../estado/estado_pata_amiga.dart';
 import '../modelos/animal.dart';
+import '../modelos/ong.dart';
 import '../routes/route_names.dart';
 import '../services/animal_service.dart';
 import '../tema/cores.dart';
@@ -63,6 +64,59 @@ Future<void> mudarStatus(
   if (novo == StatusAnimal.resgatado && context.mounted) {
     await _oferecerAdocao(context, atual, api);
   }
+}
+
+// Quem entrou numa ONG leva para ela um animal que tinha publicado em nome
+// próprio: ele passa a sair com o contato da ONG e a aparecer no perfil dela,
+// e sai de "Meus registros". A partir daí, qualquer pessoa da ONG cuida dele
+Future<void> enviarParaOng(
+  BuildContext context,
+  Animal atual,
+  Ong ong, {
+  AnimalService? api,
+}) async {
+  final confirmou = await showModalBottomSheet<bool>(
+    context: context,
+    backgroundColor: context.cores.cartao,
+    showDragHandle: true,
+    builder: (painel) => _ConfirmarStatus(
+      titulo: 'Transferir ${atual.nome} para ${ong.nome}?',
+      texto:
+          'O animal passa a aparecer no perfil da ONG, com o contato dela, e '
+          'sai de Meus registros. Qualquer pessoa da ONG poderá atualizar o '
+          'status e o registro dele.',
+      aoConfirmar: () => Navigator.pop(painel, true),
+    ),
+  );
+  if (confirmou != true || !context.mounted) return;
+
+  final estado = PataAmigaScope.of(context);
+  final mensageiro = ScaffoldMessenger.of(context);
+  final daOng = Animal.fromJson({
+    ...atual.toJson(),
+    'ongId': ong.id,
+    'dono': {'nome': ong.nome, 'telefone': ong.telefone},
+  });
+  try {
+    await (api ?? AnimalService()).atualizarAnimal(daOng);
+  } on Exception {
+    mensageiro
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível transferir agora. Tente de novo.'),
+        ),
+      );
+    return;
+  }
+  await estado.substituirAnimal(daOng);
+  mensageiro
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: Text('${atual.nome} agora aparece no perfil de ${ong.nome}.'),
+      ),
+    );
 }
 
 // Abre o cadastro com todos os dados do registro. O formulário grava na API
