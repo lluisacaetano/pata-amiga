@@ -112,22 +112,14 @@ void main() {
     await tester.tap(find.text('Registrar denúncia'));
     await tester.pumpAndSettle();
 
-    expect(
-      find.text('Preencha os campos obrigatórios marcados em vermelho.'),
-      findsOneWidget,
-    );
+    // Só os campos em vermelho, como nos outros formulários
+    expect(find.byType(SnackBar), findsNothing);
     expect(find.text('Campo obrigatório'), findsNWidgets(2));
     expect(find.text('Adicione pelo menos uma foto.'), findsOneWidget);
     expect(servico.gravadas, isEmpty);
 
-    // Sem nome e telefone no perfil, identificada não sai; anônima, sim
-    const semContato =
-        'Seu perfil está sem nome ou telefone. Complete o perfil ou envie '
-        'sem se identificar.';
-    expect(find.text(semContato), findsOneWidget);
-    await tester.tap(find.text('Enviar sem me identificar'));
-    await tester.pumpAndSettle();
-    expect(find.text(semContato), findsNothing);
+    // A denúncia é sempre anônima: o formulário não pede identificação
+    expect(find.text('Enviar sem me identificar'), findsNothing);
   });
 
   test('a anônima não leva quem denunciou para a API', () {
@@ -146,6 +138,7 @@ void main() {
     expect(json['denuncianteNome'], '');
     expect(json['denuncianteTelefone'], '');
     expect(denuncia.mensagemParaOCanal, contains('Denúncia anônima'));
+    expect(denuncia.mensagemParaOCanal, contains('sigilo'));
     expect(denuncia.mensagemParaOCanal, isNot(contains('Dani Teste')));
     expect(Denuncia.fromJson(json).protocolo, 'PA-20261022-0001');
   });
@@ -253,7 +246,9 @@ void main() {
     expect(find.text('Cachorro sem água no quintal.'), findsOneWidget);
     expect(find.text('Rua Pará de Minas'), findsOneWidget);
     expect(
-      find.text('Denúncia anônima: seu nome e seu contato não foram enviados.'),
+      find.text(
+        'Denúncia anônima: o registro não inclui o nome nem o telefone de quem denunciou.',
+      ),
       findsOneWidget,
     );
   });

@@ -199,8 +199,10 @@ class _Ficha extends StatelessWidget {
           const _Rotulo('Onde aconteceu'),
           const SizedBox(height: 4),
           _QuadroDoLugar(denuncia: denuncia),
-          if ((denuncia.latitude, denuncia.longitude)
-              case (final double latitude, final double longitude)) ...[
+          if ((denuncia.latitude, denuncia.longitude) case (
+            final double latitude,
+            final double longitude,
+          )) ...[
             const SizedBox(height: 8),
             PreviaDoMapa(
               ponto: LatLng(latitude, longitude),
@@ -218,7 +220,7 @@ class _Ficha extends StatelessWidget {
           const SizedBox(height: 4),
           if (denuncia.anonima)
             Text(
-              'Denúncia anônima: seu nome e seu contato não foram enviados.',
+              'Denúncia anônima: o registro não inclui o nome nem o telefone de quem denunciou.',
               style: TextStyle(
                 fontSize: 14,
                 height: 1.4,

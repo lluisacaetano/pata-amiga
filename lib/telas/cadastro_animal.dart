@@ -567,16 +567,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     setState(() => _tentouCadastrar = true);
     if (!_completo) {
       // O botão fica no fim e os campos em vermelho mais acima: a tela sobe
-      // e avisa, para ninguém achar que o botão não funcionou
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Preencha os campos obrigatórios marcados em vermelho.',
-            ),
-          ),
-        );
+      // até eles, para ninguém achar que o botão não funcionou
       _rolagem.animateTo(
         0,
         duration: const Duration(milliseconds: 300),

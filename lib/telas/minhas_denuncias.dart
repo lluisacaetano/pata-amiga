@@ -295,8 +295,7 @@ class _CartaoDaDenuncia extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         'Registrada ${quandoFoi(denuncia.registradaEm, DateTime.now())}'
-                        '${denuncia.bairro.isEmpty ? '' : ', ${denuncia.bairro}'}'
-                        '${denuncia.anonima ? ', anônima' : ''}',
+                        '${denuncia.bairro.isEmpty ? '' : ', ${denuncia.bairro}'}',
                         style: TextStyle(
                           fontSize: 13,
                           color: context.cores.textoFraco,

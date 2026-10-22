@@ -3074,10 +3074,7 @@ void main() {
       await tester.pumpAndSettle();
       // Nome, descrição, política, telefone e Pix: só a foto é opcional
       expect(find.text('Campo obrigatório'), findsNWidgets(5));
-      expect(
-        find.text('Preencha os campos obrigatórios marcados em vermelho.'),
-        findsOneWidget,
-      );
+      expect(find.byType(SnackBar), findsNothing);
       expect(servico.salvas, isEmpty);
 
       final campos = find.byType(TextField);

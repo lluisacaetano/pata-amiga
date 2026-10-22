@@ -139,7 +139,8 @@ class Denuncia {
       'O que aconteceu: $descricao',
       if (fotos.isNotEmpty) 'Fotos: ${fotos.length}, em anexo',
       anonima
-          ? 'Denúncia anônima'
+          ? 'Denúncia anônima. Solicita-se sigilo sobre o número que enviou '
+                'esta mensagem.'
           : 'Denunciante: $denuncianteNome, $denuncianteTelefone',
     ].join('\n');
   }

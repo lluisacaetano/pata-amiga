@@ -157,8 +157,7 @@ class _CadastroOngState extends State<CadastroOng> {
     if (_salvando || !_podeEditar) return;
     if (!_completo) {
       // O botão fica no fim e os campos em vermelho lá em cima: a tela sobe
-      // até eles e avisa
-      _avisar('Preencha os campos obrigatórios marcados em vermelho.');
+      // até eles
       _rolagem.animateTo(
         0,
         duration: const Duration(milliseconds: 300),
