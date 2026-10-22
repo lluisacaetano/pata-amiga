@@ -725,11 +725,15 @@ void main() {
 
     await tester.tap(find.text('Perdido'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Escolher').first);
+    await tester.tap(
+      find.widgetWithText(DropdownButtonFormField<String>, 'Escolher').first,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Cachorro').last);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Escolher').first);
+    await tester.tap(
+      find.widgetWithText(DropdownButtonFormField<String>, 'Escolher').first,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Pequeno').last);
     await tester.pumpAndSettle();

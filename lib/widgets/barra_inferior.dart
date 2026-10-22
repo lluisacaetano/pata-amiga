@@ -40,6 +40,8 @@ void navegarPelaBarra(
       }
     case 1:
       navegador.pushNamed(AppRoutes.mapa);
+    case 2:
+      navegador.pushNamed(AppRoutes.reportar);
     case 3:
       navegador.pushNamed(AppRoutes.perfilUsuario);
     default:
@@ -60,15 +62,15 @@ class BarraInferior extends StatelessWidget {
     return BottomNavigationBar(
       currentIndex: atual,
       type: BottomNavigationBarType.fixed,
-      backgroundColor: Cores.cartao,
+      backgroundColor: context.cores.cartao,
       onTap: (indice) => navegarPelaBarra(
         context,
         indice,
         atual: atual,
         aoIrParaInicio: aoIrParaInicio,
       ),
-      selectedItemColor: Cores.principal,
-      unselectedItemColor: Cores.textoFraco,
+      selectedItemColor: context.cores.principal,
+      unselectedItemColor: context.cores.textoFraco,
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.pets), label: 'Início'),
         BottomNavigationBarItem(icon: Icon(Icons.map_outlined), label: 'Mapa'),

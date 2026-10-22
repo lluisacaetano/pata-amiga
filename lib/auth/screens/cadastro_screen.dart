@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'auth_components.dart';
+import '../../routes/route_names.dart';
 import '../../telas/onboarding_screen.dart';
+import '../../tema/cores.dart';
 import '../../widgets/mascaras.dart';
 import '../../provider/usuario_provider.dart';
 
@@ -38,14 +40,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
             children: [
               const AuthBrandMark(size: 58),
               const SizedBox(height: 10),
-              const Text(
+              Text(
                 'Criar conta',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: 'Roboto',
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF24543A),
+                  color: context.cores.principal,
                 ),
               ),
               const SizedBox(height: 18),
@@ -154,12 +156,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Expanded(
+                  Expanded(
                     child: Padding(
-                      padding: EdgeInsets.only(top: 7),
-                      child: Text(
-                        'Li e aceito os Termos de Uso e a Política de Privacidade',
-                        style: TextStyle(fontFamily: 'Roboto', fontSize: 14),
+                      padding: const EdgeInsets.only(top: 7),
+                      child: Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          const Text('Li e aceito '),
+                          _linkDocumento(
+                            context,
+                            'Termos de Uso',
+                            AppRoutes.terms,
+                          ),
+                          const Text(' e a '),
+                          _linkDocumento(
+                            context,
+                            'Política de Privacidade',
+                            AppRoutes.privacy,
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -201,6 +216,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _linkDocumento(BuildContext context, String texto, String rota) {
+    return InkWell(
+      onTap: () => Navigator.of(context).pushNamed(rota),
+      child: Text(
+        texto,
+        style: TextStyle(
+          fontFamily: 'Roboto',
+          fontSize: 14,
+          color: context.cores.principal,
+          decoration: TextDecoration.underline,
         ),
       ),
     );

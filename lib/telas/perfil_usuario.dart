@@ -124,31 +124,31 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Cores.fundo,
+        backgroundColor: context.cores.fundo,
         leadingWidth: 64,
         leading: Padding(
           padding: const EdgeInsets.only(left: 12),
           child: IconButton(
             icon: const Icon(Icons.arrow_back),
             tooltip: 'Voltar',
-            color: Cores.principal,
+            color: context.cores.principal,
             onPressed: () => Navigator.maybePop(context),
           ),
         ),
         centerTitle: true,
-        title: const Text(
+        title: Text(
           'MEU PERFIL',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.8,
-            color: Cores.principal,
+            color: context.cores.principal,
           ),
         ),
         actions: [
           IconButton(
             tooltip: 'Sair da conta',
-            icon: const Icon(Icons.logout, color: Cores.principal),
+            icon: Icon(Icons.logout, color: context.cores.principal),
             onPressed: _sair,
           ),
           const SizedBox(width: 8),
@@ -161,6 +161,26 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
             usuario: usuario,
             aoEditar: () =>
                 Navigator.pushNamed(context, AppRoutes.editarPerfil),
+          ),
+          const SizedBox(height: 20),
+          _OpcaoConfiguracao(
+            icone: Icons.palette_outlined,
+            titulo: 'Aparência',
+            descricao: 'Tema claro, escuro ou do sistema',
+            aoAbrir: () => Navigator.pushNamed(
+              context,
+              AppRoutes.configuracoesAparencia,
+            ),
+          ),
+          const SizedBox(height: 10),
+          _OpcaoConfiguracao(
+            icone: Icons.accessibility_new,
+            titulo: 'Acessibilidade',
+            descricao: 'Texto, contraste e animações',
+            aoAbrir: () => Navigator.pushNamed(
+              context,
+              AppRoutes.configuracoesAcessibilidade,
+            ),
           ),
           const SizedBox(height: 24),
           _SeletorDeSecao(
@@ -215,6 +235,34 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
   }
 }
 
+class _OpcaoConfiguracao extends StatelessWidget {
+  const _OpcaoConfiguracao({
+    required this.icone,
+    required this.titulo,
+    required this.descricao,
+    required this.aoAbrir,
+  });
+
+  final IconData icone;
+  final String titulo;
+  final String descricao;
+  final VoidCallback aoAbrir;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: ListTile(
+        leading: Icon(icone, color: context.cores.principal),
+        title: Text(titulo, style: const TextStyle(fontWeight: FontWeight.w700)),
+        subtitle: Text(descricao),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: aoAbrir,
+      ),
+    );
+  }
+}
+
 // Foto, nome e contato abertos no fundo da tela, sem cartão em volta: é a
 // pessoa, não um bloco de dados
 class _Cabecalho extends StatelessWidget {
@@ -241,8 +289,8 @@ class _Cabecalho extends StatelessWidget {
                     nome.isEmpty ? 'Sem nome' : nome,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Cores.texto,
+                    style: TextStyle(
+                      color: context.cores.texto,
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
                       height: 1.2,
@@ -270,8 +318,8 @@ class _Cabecalho extends StatelessWidget {
           icon: const Icon(Icons.edit_outlined, size: 18),
           label: const Text('Editar perfil'),
           style: OutlinedButton.styleFrom(
-            foregroundColor: Cores.principal,
-            side: const BorderSide(color: Cores.principal),
+            foregroundColor: context.cores.principal,
+            side: BorderSide(color: context.cores.principal),
             minimumSize: const Size.fromHeight(44),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -303,16 +351,16 @@ class _Avatar extends StatelessWidget {
     // O anel claro destaca a foto do fundo da tela
     return Container(
       padding: const EdgeInsets.all(3),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Cores.principalClara,
+        color: context.cores.principalClara,
       ),
       child: CircleAvatar(
         radius: 36,
-        backgroundColor: Cores.principalClara,
+        backgroundColor: context.cores.principalClara,
         backgroundImage: imagem,
         child: imagem == null
-            ? const Icon(Icons.person_outline, size: 36, color: Cores.principal)
+            ? Icon(Icons.person_outline, size: 36, color: context.cores.principal)
             : null,
       ),
     );
@@ -329,14 +377,14 @@ class _Contato extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icone, size: 15, color: Cores.textoFraco),
+        Icon(icone, size: 15, color: context.cores.textoFraco),
         const SizedBox(width: 6),
         Expanded(
           child: Text(
             texto,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Cores.textoFraco, fontSize: 14),
+            style: TextStyle(color: context.cores.textoFraco, fontSize: 14),
           ),
         ),
       ],
@@ -366,7 +414,7 @@ class _SeletorDeSecao extends StatelessWidget {
         selected: {secao},
         showSelectedIcon: false,
         onSelectionChanged: (escolha) => aoEscolher(escolha.first),
-        style: estiloDasAbas(Cores.cartao),
+        style: estiloDasAbas(context, context.cores.cartao),
       ),
     );
   }
@@ -442,16 +490,16 @@ class _CartaoCurtido extends StatelessWidget {
                     top: 6,
                     right: 6,
                     child: Material(
-                      color: Cores.cartao,
+                      color: context.cores.cartao,
                       shape: const CircleBorder(),
                       elevation: 1,
                       child: IconButton(
                         tooltip: 'Remover dos curtidos',
                         visualDensity: VisualDensity.compact,
                         onPressed: aoRemover,
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.favorite,
-                          color: Cores.principal,
+                          color: context.cores.principal,
                           size: 20,
                         ),
                       ),
@@ -478,7 +526,7 @@ class _CartaoCurtido extends StatelessWidget {
                   comMaiuscula(animal.rotuloDoStatus),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Cores.textoFraco, fontSize: 12),
+                  style: TextStyle(color: context.cores.textoFraco, fontSize: 12),
                 ),
               ),
             ],
@@ -510,16 +558,16 @@ class _TituloDoGrupo extends StatelessWidget {
         children: [
           Text(
             titulo,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w600,
-              color: Cores.principal,
+              color: context.cores.principal,
             ),
           ),
           const SizedBox(width: 8),
           Text(
             '$quantidade',
-            style: const TextStyle(fontSize: 14, color: Cores.textoFraco),
+            style: TextStyle(fontSize: 14, color: context.cores.textoFraco),
           ),
         ],
       ),
@@ -582,11 +630,11 @@ class _LinhaDeCadastro extends StatelessWidget {
               ),
             ),
             if (aoEscolher == null)
-              const Icon(Icons.chevron_right, color: Cores.textoFraco)
+              Icon(Icons.chevron_right, color: context.cores.textoFraco)
             else
               PopupMenuButton<_AcaoDoRegistro>(
                 tooltip: 'Opções de ${animal.nome}',
-                icon: const Icon(Icons.more_vert, color: Cores.textoFraco),
+                icon: Icon(Icons.more_vert, color: context.cores.textoFraco),
                 onSelected: aoEscolher,
                 itemBuilder: (_) => [
                   const PopupMenuItem(
@@ -630,10 +678,10 @@ class _CartaoDoFeed extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Cores.cartao,
+      color: context.cores.cartao,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: Cores.borda),
+        side: BorderSide(color: context.cores.borda),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -656,10 +704,10 @@ class _Lugar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const Icon(
+        Icon(
           Icons.location_on_outlined,
           size: 15,
-          color: Cores.principal,
+          color: context.cores.principal,
         ),
         const SizedBox(width: 4),
         Flexible(
@@ -667,8 +715,8 @@ class _Lugar extends StatelessWidget {
             '${animal.bairro}, ${animal.cidade}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Cores.principal,
+            style: TextStyle(
+              color: context.cores.principal,
               fontSize: 13,
               fontWeight: FontWeight.w500,
             ),
@@ -677,7 +725,7 @@ class _Lugar extends StatelessWidget {
         if (comData)
           Text(
             ' · ${animal.publicadoHa(DateTime.now())}',
-            style: const TextStyle(color: Cores.textoFraco, fontSize: 13),
+            style: TextStyle(color: context.cores.textoFraco, fontSize: 13),
           ),
       ],
     );
@@ -706,15 +754,15 @@ class _ListaVazia extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 32,
-            backgroundColor: Cores.principalClara,
-            child: Icon(icone, size: 30, color: Cores.principal),
+            backgroundColor: context.cores.principalClara,
+            child: Icon(icone, size: 30, color: context.cores.principal),
           ),
           const SizedBox(height: 16),
           Text(
             titulo,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Cores.texto,
+            style: TextStyle(
+              color: context.cores.texto,
               fontSize: 16,
               fontWeight: FontWeight.w700,
             ),
@@ -723,8 +771,8 @@ class _ListaVazia extends StatelessWidget {
           Text(
             texto,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Cores.textoFraco,
+            style: TextStyle(
+              color: context.cores.textoFraco,
               fontSize: 14,
               height: 1.4,
             ),
@@ -732,7 +780,7 @@ class _ListaVazia extends StatelessWidget {
           const SizedBox(height: 18),
           TextButton(
             onPressed: aoVerAnimais,
-            style: TextButton.styleFrom(foregroundColor: Cores.principal),
+            style: TextButton.styleFrom(foregroundColor: context.cores.principal),
             child: const Text(
               'Ver animais no feed',
               style: TextStyle(fontWeight: FontWeight.w600),

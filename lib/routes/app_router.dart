@@ -5,6 +5,7 @@ import '../modelos/animal.dart';
 import '../modelos/ponto_de_alimentacao.dart';
 import '../auth/auth_router.dart';
 import '../auth/screens/cadastro_screen.dart';
+import '../auth/screens/documento_legal_screen.dart';
 import '../auth/screens/login_screen.dart';
 import '../auth/screens/recuperar_senha.dart';
 import '../telas/home_screen.dart';
@@ -16,9 +17,12 @@ import '../widgets/acoes_do_registro.dart';
 import '../telas/onboarding_screen.dart';
 import '../telas/editar_perfil.dart';
 import '../telas/perfil_usuario.dart';
+import '../telas/configuracoes_aparencia.dart';
+import '../telas/configuracoes_acessibilidade.dart';
 import '../telas/registrar_abastecimento.dart';
 import '../telas/registrar_avistamento.dart';
 import '../telas/tela_mapa.dart'; // NOVO
+import '../telas/reportar.dart';
 import 'route_names.dart';
 
 export 'route_names.dart';
@@ -30,6 +34,12 @@ class AppRoutesConfig {
     AppRoutes.login: (_) => const LoginScreen(),
 
     AppRoutes.register: (_) => const RegisterScreen(),
+
+    AppRoutes.terms: (_) =>
+        const DocumentoLegalScreen(tipo: TipoDocumentoLegal.termos),
+
+    AppRoutes.privacy: (_) =>
+        const DocumentoLegalScreen(tipo: TipoDocumentoLegal.privacidade),
 
     AppRoutes.recoverPassword: (_) => const RecoverPasswordScreen(),
 
@@ -46,9 +56,7 @@ class AppRoutesConfig {
       final animal = ModalRoute.of(context)?.settings.arguments;
 
       if (animal is! Animal) {
-        throw ArgumentError(
-          'A rota de detalhes precisa receber um Animal.',
-        );
+        throw ArgumentError('A rota de detalhes precisa receber um Animal.');
       }
 
       return DetalhesAnimal(animal: animal);
@@ -65,6 +73,9 @@ class AppRoutesConfig {
     },
     AppRoutes.perfilUsuario: (_) => const PerfilUsuario(),
     AppRoutes.editarPerfil: (_) => const EditarPerfil(),
+    AppRoutes.configuracoesAparencia: (_) => const ConfiguracoesAparencia(),
+    AppRoutes.configuracoesAcessibilidade: (_) =>
+        const ConfiguracoesAcessibilidade(),
 
     AppRoutes.mapa: (context) {
       // Vindo da ficha, o mapa recebe o animal para abrir com zoom nele
@@ -89,5 +100,7 @@ class AppRoutesConfig {
       }
       return RegistrarAvistamento(animal: animal);
     },
+
+    AppRoutes.reportar: (_) => const ReportarScreen(),
   };
 }

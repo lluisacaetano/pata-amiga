@@ -607,14 +607,14 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Cores.fundo,
+        backgroundColor: context.cores.fundo,
         leadingWidth: 64,
         leading: Padding(
           padding: const EdgeInsets.only(left: 12),
           child: IconButton(
             icon: const Icon(Icons.arrow_back),
             tooltip: 'Voltar',
-            color: Cores.principal,
+            color: context.cores.principal,
             onPressed: () => Navigator.maybePop(context),
           ),
         ),
@@ -625,11 +625,11 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
               : widget.base == null
               ? 'CADASTRAR ANIMAL'
               : 'PUBLICAR PARA ADOÇÃO',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.8,
-            color: Cores.principal,
+            color: context.cores.principal,
           ),
         ),
       ),
@@ -658,7 +658,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
                     escolhido: _tipo,
                     aoEscolher: (escolha) => setState(() => _tipo = escolha),
                     rotulo: rotuloSingular,
-                    fundoDaOpcao: Cores.fundo,
+                    fundoDaOpcao: context.cores.fundo,
                   ),
                   if (_tipo != null) ...[
                     const SizedBox(height: 16),
@@ -817,7 +817,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.search, size: 20),
-                      color: Cores.principal,
+                      color: context.cores.principal,
                       tooltip: 'Buscar no mapa',
                     ),
                   ),
@@ -847,10 +847,10 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
                   const SizedBox(height: 14),
                   const _Rotulo('Ponto no mapa'),
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     'Busque a rua pela lupa, toque na mira para usar sua '
                     'localização ou arraste o mapa até o pino.',
-                    style: TextStyle(fontSize: 12, color: Cores.textoFraco),
+                    style: TextStyle(fontSize: 12, color: context.cores.textoFraco),
                   ),
                   const SizedBox(height: 8),
                   MapaDeLocal(
@@ -917,7 +917,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
                     : 'Cadastrar',
               ),
               style: FilledButton.styleFrom(
-                backgroundColor: Cores.principal,
+                backgroundColor: context.cores.principal,
                 minimumSize: const Size.fromHeight(52),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -977,15 +977,15 @@ class _BlocoDeFotos extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        const Text(
+        Text(
           'Você pode escolher até $_maximoDeFotos fotos.',
-          style: TextStyle(fontSize: 12, color: Cores.textoFraco),
+          style: TextStyle(fontSize: 12, color: context.cores.textoFraco),
         ),
         if (fotos.isNotEmpty) ...[
           const SizedBox(height: 10),
-          const Text(
+          Text(
             'A primeira foto é a capa. Segure e arraste para ordenar.',
-            style: TextStyle(fontSize: 12, color: Cores.textoFraco),
+            style: TextStyle(fontSize: 12, color: context.cores.textoFraco),
           ),
           const SizedBox(height: 8),
           SizedBox(
@@ -1044,14 +1044,14 @@ class _AdicionarFoto extends StatelessWidget {
         height: 72,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Cores.fundo,
+          color: context.cores.fundo,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Cores.borda),
+          border: Border.all(color: context.cores.borda),
         ),
-        child: const Icon(
+        child: Icon(
           Icons.add_a_photo_outlined,
           size: 22,
-          color: Cores.principal,
+          color: context.cores.principal,
         ),
       ),
     );
@@ -1113,14 +1113,14 @@ class _BotaoDeRemover extends StatelessWidget {
               width: _desenhoDoBadge,
               height: _desenhoDoBadge,
               decoration: BoxDecoration(
-                color: Cores.destaque,
+                color: context.cores.destaque,
                 shape: BoxShape.circle,
-                border: Border.all(color: Cores.cartao, width: 1.5),
+                border: Border.all(color: context.cores.cartao, width: 1.5),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.close_rounded,
                 size: 12,
-                color: Cores.cartao,
+                color: context.cores.cartao,
               ),
             ),
           ),
@@ -1138,15 +1138,15 @@ class _SeloDeCapa extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Cores.principal,
+        color: context.cores.principal,
         borderRadius: BorderRadius.circular(4),
       ),
-      child: const Padding(
+      child: Padding(
         padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         child: Text(
           'Capa',
           style: TextStyle(
-            color: Cores.cartao,
+            color: context.cores.cartao,
             fontSize: 10,
             fontWeight: FontWeight.w600,
           ),
@@ -1224,9 +1224,9 @@ class _Cartao extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Cores.cartao,
+        color: context.cores.cartao,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Cores.borda),
+        border: Border.all(color: context.cores.borda),
       ),
       child: child,
     );
@@ -1243,12 +1243,12 @@ class _TituloDoCartao extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icone, size: 16, color: Cores.principal),
+        Icon(icone, size: 16, color: context.cores.principal),
         const SizedBox(width: 6),
         Text(
           texto,
-          style: const TextStyle(
-            color: Cores.principal,
+          style: TextStyle(
+            color: context.cores.principal,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -1258,26 +1258,30 @@ class _TituloDoCartao extends StatelessWidget {
   }
 }
 
-InputDecoration _caixa(String? exemplo, {bool comErro = false, Widget? acao}) =>
-    InputDecoration(
+InputDecoration _caixa(
+  BuildContext context,
+  String? exemplo, {
+  bool comErro = false,
+  Widget? acao,
+}) => InputDecoration(
       isDense: true,
       filled: true,
-      fillColor: Cores.fundo,
+      fillColor: context.cores.fundo,
       hintText: exemplo,
       suffixIcon: acao,
-      hintStyle: const TextStyle(fontSize: 14, color: Cores.textoFraco),
+      hintStyle: TextStyle(fontSize: 14, color: context.cores.textoFraco),
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(
-          color: comErro ? Cores.destaque : Cores.borda,
+          color: comErro ? context.cores.destaque : context.cores.borda,
           width: comErro ? 1.5 : 1,
         ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(
-          color: comErro ? Cores.destaque : Cores.principal,
+          color: comErro ? context.cores.destaque : context.cores.principal,
           width: 1.5,
         ),
       ),
@@ -1320,7 +1324,12 @@ class _Campo extends StatelessWidget {
           inputFormatters: formatadores,
           textCapitalization: TextCapitalization.sentences,
           style: const TextStyle(fontSize: 15),
-          decoration: _caixa(exemplo, comErro: comErro, acao: acao),
+          decoration: _caixa(
+            context,
+            exemplo,
+            comErro: comErro,
+            acao: acao,
+          ),
         ),
         if (comErro) const _Recado('Campo obrigatório', erro: true),
         if (aviso != null && !comErro) _Recado(aviso!),
@@ -1343,7 +1352,7 @@ class _Recado extends StatelessWidget {
         texto,
         style: TextStyle(
           fontSize: 12,
-          color: erro ? Cores.destaque : Cores.textoFraco,
+          color: erro ? context.cores.destaque : context.cores.textoFraco,
         ),
       ),
     );
@@ -1375,13 +1384,13 @@ class _Selecao extends StatelessWidget {
         DropdownButtonFormField<String>(
           initialValue: valor,
           isDense: true,
-          decoration: _caixa(null, comErro: comErro),
-          hint: const Text(
+          decoration: _caixa(context, null, comErro: comErro),
+          hint: Text(
             'Escolher',
-            style: TextStyle(fontSize: 14, color: Cores.textoFraco),
+            style: TextStyle(fontSize: 14, color: context.cores.textoFraco),
           ),
-          icon: const Icon(Icons.keyboard_arrow_down, color: Cores.textoFraco),
-          style: const TextStyle(fontSize: 15, color: Cores.texto),
+          icon: Icon(Icons.keyboard_arrow_down, color: context.cores.textoFraco),
+          style: TextStyle(fontSize: 15, color: context.cores.texto),
           items: [
             for (final opcao in opcoes)
               DropdownMenuItem(value: opcao, child: Text(_comMaiuscula(opcao))),
@@ -1403,11 +1412,11 @@ class _Rotulo extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       texto.toUpperCase(),
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 11,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.5,
-        color: Cores.textoFraco,
+        color: context.cores.textoFraco,
       ),
     );
   }

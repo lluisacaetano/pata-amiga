@@ -16,15 +16,24 @@ class AuthBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final escuro = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFFBFDCC8), // verde mais aparente
-      Color(0xFFDCEBDD), // verde pastel
-      Color(0xFFF2F5EE), // quase branco
-      Color(0xFFFFF1E5), ],
+          colors: escuro
+              ? [
+                  context.cores.fundo,
+                  context.cores.principalClara,
+                  const Color(0xFF253329),
+                ]
+              : [
+                  const Color(0xFFBFDCC8),
+                  const Color(0xFFDCEBDD),
+                  const Color(0xFFF2F5EE),
+                  const Color(0xFFFFF1E5),
+                ],
         ),
       ),
       child: SafeArea(
@@ -46,7 +55,7 @@ class AuthBackground extends StatelessWidget {
                 child: IconButton(
                   icon: const Icon(Icons.arrow_back),
                   tooltip: 'Voltar',
-                  color: Cores.principal,
+                  color: context.cores.principal,
                   onPressed: () => Navigator.maybePop(context),
                 ),
               ),
@@ -104,7 +113,7 @@ class AuthField extends StatelessWidget {
   Widget build(BuildContext context) {
     final outline = OutlineInputBorder(
       borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: Cores.borda),
+      borderSide: BorderSide(color: context.cores.borda),
     );
 
     return Column(
@@ -112,11 +121,11 @@ class AuthField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: 'Roboto',
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: Cores.texto,
+            color: context.cores.texto,
           ),
         ),
         const SizedBox(height: 6),
@@ -126,24 +135,24 @@ class AuthField extends StatelessWidget {
           inputFormatters: inputFormatters,
           obscureText: obscureText,
           validator: validator,
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: 'Roboto',
             fontSize: 16,
-            color: Cores.texto,
+            color: context.cores.texto,
           ),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: Cores.textoFraco),
-            prefixIcon: Icon(prefixIcon, size: 20, color: Cores.textoFraco),
+            hintStyle: TextStyle(color: context.cores.textoFraco),
+            prefixIcon: Icon(prefixIcon, size: 20, color: context.cores.textoFraco),
             suffixIcon: suffixIcon == null
                 ? null
                 : IconButton(
                     tooltip: obscureText ? 'Mostrar senha' : 'Ocultar senha',
                     onPressed: onSuffixPressed,
-                    icon: Icon(suffixIcon, size: 20, color: Cores.textoFraco),
+                    icon: Icon(suffixIcon, size: 20, color: context.cores.textoFraco),
                   ),
             filled: true,
-            fillColor: Colors.white.withValues(alpha: 0.9),
+            fillColor: context.cores.cartao.withValues(alpha: 0.9),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 14,
               vertical: 14,
@@ -151,7 +160,7 @@ class AuthField extends StatelessWidget {
             border: outline,
             enabledBorder: outline,
             focusedBorder: outline.copyWith(
-              borderSide: const BorderSide(color: Cores.principal, width: 1.5),
+              borderSide: BorderSide(color: context.cores.principal, width: 1.5),
             ),
           ),
         ),
@@ -208,8 +217,10 @@ class AuthButton extends StatelessWidget {
         child: FilledButton(
           onPressed: onPressed,
           style: style.copyWith(
-            backgroundColor: const WidgetStatePropertyAll(Cores.principal),
-            foregroundColor: const WidgetStatePropertyAll(Colors.white),
+            backgroundColor: WidgetStatePropertyAll(context.cores.principal),
+            foregroundColor: WidgetStatePropertyAll(
+              Theme.of(context).colorScheme.onPrimary,
+            ),
           ),
           child: contents,
         ),
@@ -221,9 +232,9 @@ class AuthButton extends StatelessWidget {
       child: OutlinedButton(
         onPressed: onPressed,
         style: style.copyWith(
-          foregroundColor: const WidgetStatePropertyAll(Cores.texto),
-          side: const WidgetStatePropertyAll(BorderSide(color: Cores.borda)),
-          backgroundColor: const WidgetStatePropertyAll(Colors.white),
+          foregroundColor: WidgetStatePropertyAll(context.cores.texto),
+          side: WidgetStatePropertyAll(BorderSide(color: context.cores.borda)),
+          backgroundColor: WidgetStatePropertyAll(context.cores.cartao),
         ),
         child: contents,
       ),

@@ -291,7 +291,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      backgroundColor: Cores.fundo,
+      backgroundColor: context.cores.fundo,
       builder: (_) => PainelDeFiltros(
         inicial: _filtros,
         animais: [
@@ -410,7 +410,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
           Icon(icone, size: 20, color: cor),
           const SizedBox(width: 8),
           Expanded(child: Text(texto, style: const TextStyle(fontSize: 13))),
-          if (acao != null) acao,
+          ?acao,
         ],
       ),
     );
@@ -464,14 +464,14 @@ class _FeedAdocaoState extends State<FeedAdocao> {
               Icon(
                 Icons.wifi_off,
                 size: 56,
-                color: Cores.principal.withValues(alpha: 0.25),
+                color: context.cores.principal.withValues(alpha: 0.25),
               ),
               const SizedBox(height: 14),
-              const Text(
+              Text(
                 'Sem conexão e sem dados salvos.\n'
                 'Conecte-se à internet para carregar os animais.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Cores.textoFraco),
+                style: TextStyle(color: context.cores.textoFraco),
               ),
               const SizedBox(height: 14),
               ElevatedButton(
@@ -495,20 +495,20 @@ class _FeedAdocaoState extends State<FeedAdocao> {
               Icon(
                 Icons.pets,
                 size: 56,
-                color: Cores.principal.withValues(alpha: 0.25),
+                color: context.cores.principal.withValues(alpha: 0.25),
               ),
               const SizedBox(height: 14),
               Text(
                 _filtros.vazio
                     ? 'Nenhum animal encontrado.'
                     : 'Nenhum animal com esses filtros.',
-                style: const TextStyle(color: Cores.textoFraco),
+                style: TextStyle(color: context.cores.textoFraco),
               ),
               if (!_filtros.vazio)
                 TextButton(
                   onPressed: _limparFiltros,
                   style: TextButton.styleFrom(
-                    foregroundColor: Cores.principal,
+                    foregroundColor: context.cores.principal,
                   ),
                   child: const Text('Limpar filtros'),
                 ),
@@ -537,7 +537,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Cores.fundo,
+        backgroundColor: context.cores.fundo,
         titleSpacing: 16,
         title: Row(
           children: [
@@ -545,13 +545,13 @@ class _FeedAdocaoState extends State<FeedAdocao> {
               children: [
                 Image.asset('assets/marca/pata.png', width: 26),
                 const SizedBox(width: 6),
-                const Text(
+                Text(
                   'PATA\nAMIGA',
                   style: TextStyle(
                     fontSize: 12,
                     height: 1.1,
                     fontWeight: FontWeight.bold,
-                    color: Cores.principal,
+                    color: context.cores.principal,
                   ),
                 ),
               ],
@@ -578,14 +578,14 @@ class _FeedAdocaoState extends State<FeedAdocao> {
                           ),
                     contentPadding: EdgeInsets.zero,
                     filled: true,
-                    fillColor: Cores.cartao,
+                    fillColor: context.cores.cartao,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(20),
-                      borderSide: const BorderSide(color: Cores.borda),
+                      borderSide: BorderSide(color: context.cores.borda),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(20),
-                      borderSide: const BorderSide(color: Cores.borda),
+                      borderSide: BorderSide(color: context.cores.borda),
                     ),
                   ),
                 ),
@@ -595,11 +595,11 @@ class _FeedAdocaoState extends State<FeedAdocao> {
             IconButton(
               onPressed: _abrirFiltros,
               tooltip: 'Filtros',
-              color: Cores.principal,
+              color: context.cores.principal,
               icon: Badge(
                 isLabelVisible: !_filtros.vazio,
                 label: Text('${_filtros.quantos}'),
-                backgroundColor: Cores.principal,
+                backgroundColor: context.cores.principal,
                 child: const Icon(Icons.tune),
               ),
             ),
@@ -615,7 +615,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
               escolhido: _abaAtual,
               aoEscolher: (escolha) => setState(() => _abaAtual = escolha),
               rotulo: rotuloPlural,
-              fundoDaOpcao: Cores.cartao,
+              fundoDaOpcao: context.cores.cartao,
             ),
           ),
           if (!_filtros.vazio)
@@ -634,7 +634,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _abrirCadastroAnimal,
-        backgroundColor: Cores.principal,
+        backgroundColor: context.cores.principal,
         foregroundColor: Colors.white,
         tooltip: 'Cadastrar animal',
         child: const Icon(Icons.add),
@@ -673,13 +673,13 @@ class _FiltrosAplicados extends StatelessWidget {
                   label: Text(rotuloDaOpcao(opcao)),
                   onDeleted: () => aoTirar(grupo, opcao),
                   deleteButtonTooltipMessage: 'Tirar o filtro',
-                  backgroundColor: Cores.principalClara,
-                  labelStyle: const TextStyle(
+                  backgroundColor: context.cores.principalClara,
+                  labelStyle: TextStyle(
                     fontSize: 13,
-                    color: Cores.principal,
+                    color: context.cores.principal,
                     fontWeight: FontWeight.w600,
                   ),
-                  deleteIconColor: Cores.principal,
+                  deleteIconColor: context.cores.principal,
                   side: BorderSide.none,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
@@ -688,7 +688,7 @@ class _FiltrosAplicados extends StatelessWidget {
               ),
           TextButton(
             onPressed: aoLimpar,
-            style: TextButton.styleFrom(foregroundColor: Cores.principal),
+            style: TextButton.styleFrom(foregroundColor: context.cores.principal),
             child: const Text('Limpar filtros'),
           ),
         ],

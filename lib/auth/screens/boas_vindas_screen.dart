@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'auth_components.dart';
 import '../../routes/route_names.dart';
+import '../../tema/cores.dart';
 
 class BoasVindasScreen extends StatelessWidget {
   const BoasVindasScreen({super.key});
@@ -22,7 +23,7 @@ class BoasVindasScreen extends StatelessWidget {
                   // Pata ATRÁS
                   const Positioned(top: 0, child: AuthBrandMark(size: 68)),
 
-                  const Positioned(
+                  Positioned(
                     left: 0,
                     right: 0,
                     bottom: 0,
@@ -33,7 +34,7 @@ class BoasVindasScreen extends StatelessWidget {
                         fontFamily: 'Nunito',
                         fontSize: 59,
                         fontWeight: FontWeight.w900,
-                        color: Color(0xFF24543A),
+                        color: context.cores.principal,
                       ),
                     ),
                   ),
@@ -54,13 +55,13 @@ class BoasVindasScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height:12),
-            const Text(
+            Text(
               'Encontre um novo melhor amigo.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: 'Roboto',
                 fontSize: 20,
-                color: Color(0xFF454B47),
+                color: context.cores.textoFraco,
               ),
             ),
             const SizedBox(height: 28),
