@@ -8,18 +8,12 @@ enum TamanhoTexto { normal, grande, extragrande }
 class PreferenciasAplicativoProvider extends ChangeNotifier {
   static const _chaveTema = 'preferencia_tema';
   static const _chaveTamanhoTexto = 'preferencia_tamanho_texto';
-  static const _chaveAltoContraste = 'preferencia_alto_contraste';
-  static const _chaveReducaoAnimacoes = 'preferencia_reducao_animacoes';
 
   PreferenciaTema _tema = PreferenciaTema.sistema;
   TamanhoTexto _tamanhoTexto = TamanhoTexto.normal;
-  bool _altoContraste = false;
-  bool _reduzirAnimacoes = false;
 
   PreferenciaTema get tema => _tema;
   TamanhoTexto get tamanhoTexto => _tamanhoTexto;
-  bool get altoContraste => _altoContraste;
-  bool get reduzirAnimacoes => _reduzirAnimacoes;
 
   double get escalaTexto => switch (_tamanhoTexto) {
     TamanhoTexto.normal => 1,
@@ -37,9 +31,6 @@ class PreferenciasAplicativoProvider extends ChangeNotifier {
       (opcao) => opcao.name == preferencias.getString(_chaveTamanhoTexto),
       orElse: () => TamanhoTexto.normal,
     );
-    _altoContraste = preferencias.getBool(_chaveAltoContraste) ?? false;
-    _reduzirAnimacoes =
-        preferencias.getBool(_chaveReducaoAnimacoes) ?? false;
   }
 
   Future<void> definirTema(PreferenciaTema tema) async {
@@ -56,17 +47,4 @@ class PreferenciasAplicativoProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> definirAltoContraste(bool ativado) async {
-    final preferencias = await SharedPreferences.getInstance();
-    await preferencias.setBool(_chaveAltoContraste, ativado);
-    _altoContraste = ativado;
-    notifyListeners();
-  }
-
-  Future<void> definirReducaoAnimacoes(bool ativada) async {
-    final preferencias = await SharedPreferences.getInstance();
-    await preferencias.setBool(_chaveReducaoAnimacoes, ativada);
-    _reduzirAnimacoes = ativada;
-    notifyListeners();
-  }
 }

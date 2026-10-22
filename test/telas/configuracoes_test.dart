@@ -4,10 +4,10 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:pata_amiga/estado/estado_pata_amiga.dart';
+import 'package:pata_amiga/main.dart';
 import 'package:pata_amiga/provider/preferencias_aplicativo_provider.dart';
 import 'package:pata_amiga/provider/usuario_provider.dart';
 import 'package:pata_amiga/routes/app_router.dart';
-import 'package:pata_amiga/routes/route_names.dart';
 import 'package:pata_amiga/telas/configuracoes_acessibilidade.dart';
 import 'package:pata_amiga/telas/configuracoes_aparencia.dart';
 import 'package:pata_amiga/telas/perfil_usuario.dart';
@@ -39,13 +39,11 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  test('carrega e persiste todas as preferências', () async {
+  test('carrega e persiste tema e tamanho do texto', () async {
     final preferencias = PreferenciasAplicativoProvider();
     await preferencias.carregar();
     await preferencias.definirTema(PreferenciaTema.escuro);
     await preferencias.definirTamanhoTexto(TamanhoTexto.extragrande);
-    await preferencias.definirAltoContraste(true);
-    await preferencias.definirReducaoAnimacoes(true);
 
     final restauradas = PreferenciasAplicativoProvider();
     await restauradas.carregar();
@@ -53,8 +51,33 @@ void main() {
     expect(restauradas.tema, PreferenciaTema.escuro);
     expect(restauradas.tamanhoTexto, TamanhoTexto.extragrande);
     expect(restauradas.escalaTexto, 1.4);
-    expect(restauradas.altoContraste, isTrue);
-    expect(restauradas.reduzirAnimacoes, isTrue);
+  });
+
+  testWidgets('aplica acessibilidade à árvore inteira do aplicativo', (
+    tester,
+  ) async {
+    final preferencias = PreferenciasAplicativoProvider();
+    await preferencias.carregar();
+    await preferencias.definirTamanhoTexto(TamanhoTexto.grande);
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider(
+        create: (_) => UsuarioProvider(),
+        child: ChangeNotifierProvider.value(
+          value: preferencias,
+          child: const AplicativoPataAmiga(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final contexto = tester.element(find.text('Pata Amiga'));
+    final media = MediaQuery.of(contexto);
+    expect(media.textScaler.scale(10), 12);
+    expect(
+      Theme.of(contexto).colorScheme.primary,
+      Cores.principal,
+    );
   });
 
   testWidgets('a tela de aparência troca o tema globalmente', (tester) async {
@@ -90,14 +113,10 @@ void main() {
 
     await tester.tap(find.text('Grande'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Alto contraste'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Reduzir animações'));
-    await tester.pumpAndSettle();
 
     expect(preferencias.tamanhoTexto, TamanhoTexto.grande);
-    expect(preferencias.altoContraste, isTrue);
-    expect(preferencias.reduzirAnimacoes, isTrue);
+    expect(find.text('Alto contraste'), findsNothing);
+    expect(find.text('Reduzir animações'), findsNothing);
   });
 
   testWidgets('perfil abre telas independentes de configuração', (

@@ -60,11 +60,8 @@ class _AplicativoPataAmigaState extends State<AplicativoPataAmiga> {
       child: MaterialApp(
         title: 'Pata Amiga',
         debugShowCheckedModeBanner: false,
-        theme: temaPataAmiga(altoContraste: preferencias.altoContraste),
-        darkTheme: temaPataAmiga(
-          brilho: Brightness.dark,
-          altoContraste: preferencias.altoContraste,
-        ),
+        theme: temaPataAmiga(),
+        darkTheme: temaPataAmiga(brilho: Brightness.dark),
         themeMode: switch (preferencias.tema) {
           PreferenciaTema.claro => ThemeMode.light,
           PreferenciaTema.escuro => ThemeMode.dark,
@@ -83,10 +80,6 @@ class _AplicativoPataAmigaState extends State<AplicativoPataAmiga> {
               textScaler: TextScaler.linear(
                 media.textScaler.scale(1) * preferencias.escalaTexto,
               ),
-              highContrast:
-                  media.highContrast || preferencias.altoContraste,
-              disableAnimations:
-                  media.disableAnimations || preferencias.reduzirAnimacoes,
             ),
             child: Center(
               child: ConstrainedBox(

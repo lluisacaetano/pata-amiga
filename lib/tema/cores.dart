@@ -110,27 +110,16 @@ extension CoresContexto on BuildContext {
   PaletaPataAmiga get cores => PaletaPataAmiga.de(this);
 }
 
-ThemeData temaPataAmiga({
-  Brightness brilho = Brightness.light,
-  bool altoContraste = false,
-}) {
+ThemeData temaPataAmiga({Brightness brilho = Brightness.light}) {
   final escuro = brilho == Brightness.dark;
   final paleta = PaletaPataAmiga(
-    principal: escuro
-        ? (altoContraste ? const Color(0xFFB5F2C1) : const Color(0xFF8DCEA0))
-        : (altoContraste ? const Color(0xFF174A2B) : Cores.principal),
+    principal: escuro ? const Color(0xFF8DCEA0) : Cores.principal,
     principalClara: escuro ? const Color(0xFF253D2D) : Cores.principalClara,
     fundo: escuro ? const Color(0xFF101510) : Cores.fundo,
     cartao: escuro ? const Color(0xFF1C241E) : Cores.cartao,
-    texto: escuro
-        ? const Color(0xFFF3F5F3)
-        : (altoContraste ? const Color(0xFF111111) : Cores.texto),
-    textoFraco: escuro
-        ? const Color(0xFFE0E5E1)
-        : (altoContraste ? const Color(0xFF3D3D3D) : Cores.textoFraco),
-    borda: escuro
-        ? (altoContraste ? const Color(0xFFB0B8B1) : const Color(0xFF59645B))
-        : (altoContraste ? const Color(0xFF555555) : Cores.borda),
+    texto: escuro ? const Color(0xFFF3F5F3) : Cores.texto,
+    textoFraco: escuro ? const Color(0xFFE0E5E1) : Cores.textoFraco,
+    borda: escuro ? const Color(0xFF59645B) : Cores.borda,
     destaque: escuro ? const Color(0xFFFF9387) : Cores.destaque,
     alimentacao: escuro ? const Color(0xFFFFCB72) : Cores.alimentacao,
     agua: escuro ? const Color(0xFF91C8F0) : Cores.agua,
@@ -141,7 +130,6 @@ ThemeData temaPataAmiga({
     colorScheme: ColorScheme.fromSeed(
       seedColor: paleta.principal,
       brightness: brilho,
-      contrastLevel: altoContraste ? 1 : 0,
       surface: paleta.cartao,
     ),
   );
