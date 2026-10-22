@@ -27,6 +27,7 @@ import '../telas/registrar_abastecimento.dart';
 import '../telas/registrar_avistamento.dart';
 import '../telas/tela_mapa.dart'; // NOVO
 import '../telas/reportar.dart';
+import '../telas/minhas_denuncias.dart';
 import 'route_names.dart';
 
 export 'route_names.dart';
@@ -122,5 +123,7 @@ class AppRoutesConfig {
     },
 
     AppRoutes.reportar: (_) => const ReportarScreen(),
+
+    AppRoutes.minhasDenuncias: (_) => const MinhasDenuncias(),
   };
 }

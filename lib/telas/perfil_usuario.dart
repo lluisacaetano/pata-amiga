@@ -22,7 +22,7 @@ import '../widgets/sino_de_notificacoes.dart';
 
 enum _SecaoPerfil { curtidos, meusCadastros }
 
-enum _OpcaoDoMenu { aparencia, acessibilidade, sair }
+enum _OpcaoDoMenu { denuncias, aparencia, acessibilidade, sair }
 
 // Os grupos de "Meus registros", na ordem em que aparecem: primeiro o que
 // ainda precisa de alguém, depois cada desfecho
@@ -152,7 +152,12 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
       children: [
         Icon(icone, size: 20, color: cor ?? context.cores.principal),
         const SizedBox(width: 12),
-        Text(texto, style: TextStyle(color: cor ?? context.cores.texto)),
+        Flexible(
+          child: Text(
+            texto,
+            style: TextStyle(color: cor ?? context.cores.texto),
+          ),
+        ),
       ],
     ),
   );
@@ -207,6 +212,10 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
               borderRadius: BorderRadius.circular(14),
             ),
             onSelected: (opcao) => switch (opcao) {
+              _OpcaoDoMenu.denuncias => Navigator.pushNamed(
+                context,
+                AppRoutes.minhasDenuncias,
+              ),
               _OpcaoDoMenu.aparencia => Navigator.pushNamed(
                 context,
                 AppRoutes.configuracoesAparencia,
@@ -218,6 +227,12 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
               _OpcaoDoMenu.sair => _sair(),
             },
             itemBuilder: (_) => [
+              _itemDoMenu(
+                _OpcaoDoMenu.denuncias,
+                Icons.shield_outlined,
+                'Minhas denúncias',
+              ),
+              const PopupMenuDivider(),
               _itemDoMenu(
                 _OpcaoDoMenu.aparencia,
                 Icons.palette_outlined,
