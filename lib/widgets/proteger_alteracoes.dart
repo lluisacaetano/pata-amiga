@@ -36,7 +36,7 @@ class ProtegerAlteracoes extends StatelessWidget {
 Future<bool> confirmarSaida(BuildContext context) async =>
     await showModalBottomSheet<bool>(
       context: context,
-      backgroundColor: Cores.cartao,
+      backgroundColor: context.cores.cartao,
       showDragHandle: true,
       builder: (painel) => SafeArea(
         child: Padding(
@@ -51,12 +51,12 @@ Future<bool> confirmarSaida(BuildContext context) async =>
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 6),
-              const Text(
+              Text(
                 'O que você preencheu nesta tela será perdido.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
-                  color: Cores.textoFraco,
+                  color: context.cores.textoFraco,
                   height: 1.4,
                 ),
               ),
@@ -64,7 +64,7 @@ Future<bool> confirmarSaida(BuildContext context) async =>
               FilledButton(
                 onPressed: () => Navigator.pop(painel, false),
                 style: FilledButton.styleFrom(
-                  backgroundColor: Cores.principal,
+                  backgroundColor: context.cores.principal,
                   minimumSize: const Size.fromHeight(48),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
@@ -76,7 +76,7 @@ Future<bool> confirmarSaida(BuildContext context) async =>
               TextButton(
                 onPressed: () => Navigator.pop(painel, true),
                 style: TextButton.styleFrom(
-                  foregroundColor: Cores.destaque,
+                  foregroundColor: context.cores.destaque,
                   textStyle: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 child: const Text('Sair sem salvar'),

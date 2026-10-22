@@ -267,25 +267,25 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Cores.fundo,
+        backgroundColor: context.cores.fundo,
         leadingWidth: 64,
         leading: Padding(
           padding: const EdgeInsets.only(left: 12),
           child: IconButton(
             icon: const Icon(Icons.arrow_back),
             tooltip: 'Voltar',
-            color: Cores.principal,
+            color: context.cores.principal,
             onPressed: () => Navigator.maybePop(context),
           ),
         ),
         centerTitle: true,
-        title: const Text(
+        title: Text(
           'REGISTRAR AVISTAMENTO',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.8,
-            color: Cores.principal,
+            color: context.cores.principal,
           ),
         ),
       ),
@@ -305,9 +305,9 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
                   vertical: 14,
                 ),
                 decoration: BoxDecoration(
-                  color: Cores.fundo,
+                  color: context.cores.fundo,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Cores.borda),
+                  border: Border.all(color: context.cores.borda),
                 ),
                 child: Row(
                   children: [
@@ -317,10 +317,10 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
                         style: const TextStyle(fontSize: 15),
                       ),
                     ),
-                    const Icon(
+                    Icon(
                       Icons.calendar_today_outlined,
                       size: 18,
-                      color: Cores.principal,
+                      color: context.cores.principal,
                     ),
                   ],
                 ),
@@ -333,10 +333,10 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
+                Text(
                   'Escreva o endereço, toque na mira para usar sua localização '
                   'ou destrave o mapa e arraste até o pino ficar onde você viu o animal.',
-                  style: TextStyle(fontSize: 13, color: Cores.textoFraco),
+                  style: TextStyle(fontSize: 13, color: context.cores.textoFraco),
                 ),
                 const SizedBox(height: 10),
                 TextField(
@@ -348,11 +348,11 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
                   decoration: InputDecoration(
                     isDense: true,
                     filled: true,
-                    fillColor: Cores.fundo,
+                    fillColor: context.cores.fundo,
                     hintText: 'Buscar endereço (rua e número)',
-                    hintStyle: const TextStyle(
+                    hintStyle: TextStyle(
                       fontSize: 14,
-                      color: Cores.textoFraco,
+                      color: context.cores.textoFraco,
                     ),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 12,
@@ -367,16 +367,16 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
                               height: 18,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Icon(Icons.search, color: Cores.principal),
+                          : Icon(Icons.search, color: context.cores.principal),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Cores.borda),
+                      borderSide: BorderSide(color: context.cores.borda),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Cores.principal,
+                      borderSide: BorderSide(
+                        color: context.cores.principal,
                         width: 1.5,
                       ),
                     ),
@@ -387,9 +387,9 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
                     padding: const EdgeInsets.only(top: 5, left: 2),
                     child: Text(
                       _avisoDaBusca!,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: Cores.destaque,
+                        color: context.cores.destaque,
                       ),
                     ),
                   ),
@@ -421,8 +421,8 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
                     icon: const Icon(Icons.add_photo_alternate_outlined),
                     label: const Text('Escolher uma foto'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Cores.principal,
-                      side: const BorderSide(color: Cores.principal),
+                      foregroundColor: context.cores.principal,
+                      side: BorderSide(color: context.cores.principal),
                       minimumSize: const Size.fromHeight(46),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -448,7 +448,7 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
                         top: 6,
                         right: 6,
                         child: Material(
-                          color: Cores.cartao,
+                          color: context.cores.cartao,
                           shape: const CircleBorder(),
                           child: IconButton(
                             tooltip: 'Remover foto',
@@ -476,7 +476,7 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
                 : const Icon(Icons.visibility_outlined, size: 18),
             label: Text(_salvando ? 'Registrando…' : 'Registrar avistamento'),
             style: FilledButton.styleFrom(
-              backgroundColor: Cores.principal,
+              backgroundColor: context.cores.principal,
               minimumSize: const Size.fromHeight(52),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
@@ -505,9 +505,9 @@ class _CabecalhoDoAnimal extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Cores.cartao,
+        color: context.cores.cartao,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Cores.borda),
+        border: Border.all(color: context.cores.borda),
       ),
       child: Row(
         children: [
@@ -532,11 +532,11 @@ class _CabecalhoDoAnimal extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Marque quando e onde, para ajudar quem está procurando.',
                   style: TextStyle(
                     fontSize: 13,
-                    color: Cores.textoFraco,
+                    color: context.cores.textoFraco,
                     height: 1.4,
                   ),
                 ),
@@ -568,7 +568,7 @@ class _EnderecoDoPino extends StatelessWidget {
         : lugar;
     return Row(
       children: [
-        const Icon(Icons.place_outlined, size: 16, color: Cores.principal),
+        Icon(Icons.place_outlined, size: 16, color: context.cores.principal),
         const SizedBox(width: 6),
         Expanded(
           child: Text(
@@ -576,8 +576,8 @@ class _EnderecoDoPino extends StatelessWidget {
             style: TextStyle(
               fontSize: 14,
               color: lugar.isEmpty || buscando
-                  ? Cores.textoFraco
-                  : Cores.principal,
+                  ? context.cores.textoFraco
+                  : context.cores.principal,
               fontWeight: lugar.isEmpty || buscando
                   ? FontWeight.normal
                   : FontWeight.w600,
@@ -607,21 +607,21 @@ class _Cartao extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Cores.cartao,
+        color: context.cores.cartao,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Cores.borda),
+        border: Border.all(color: context.cores.borda),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              Icon(icone, size: 18, color: Cores.principal),
+              Icon(icone, size: 18, color: context.cores.principal),
               const SizedBox(width: 8),
               Text(
                 titulo,
-                style: const TextStyle(
-                  color: Cores.principal,
+                style: TextStyle(
+                  color: context.cores.principal,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),

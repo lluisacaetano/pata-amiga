@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../routes/route_names.dart';
+import '../tema/cores.dart';
 
 /// Modelo de cada página do carrossel.
 class OnboardingPage {
@@ -54,8 +55,6 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  static const _verde = Color(0xFF2E7D5B);
-
   static const _paginas = [
     OnboardingPage(
       title: 'Bem-vindo ao Pata Amiga',
@@ -90,6 +89,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void _proxima() {
     if (_ehUltima) {
       _finalizar();
+    } else if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.nextPage(duration: Duration.zero, curve: Curves.linear);
     } else {
       _controller.nextPage(
         duration: const Duration(milliseconds: 350),
@@ -108,16 +109,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFBFDCC8),
-              Color(0xFFDCEBDD),
-              Color(0xFFF2F5EE),
-              Color(0xFFFFF1E5),
-            ],
+            colors: Theme.of(context).brightness == Brightness.dark
+                ? [
+                    context.cores.fundo,
+                    context.cores.principalClara,
+                    const Color(0xFF253329),
+                  ]
+                : [
+                    const Color(0xFFBFDCC8),
+                    const Color(0xFFDCEBDD),
+                    const Color(0xFFF2F5EE),
+                    const Color(0xFFFFF1E5),
+                  ],
           ),
         ),
         child: SafeArea(
@@ -131,10 +138,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     minimumSize: const Size(96, 56),
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Pular',
                     style: TextStyle(
-                      color: _verde,
+                      color: context.cores.principal,
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
                     ),
@@ -154,12 +161,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 children: List.generate(_paginas.length, (i) {
                   final ativa = i == _paginaAtual;
                   return AnimatedContainer(
-                    duration: const Duration(milliseconds: 250),
+                    duration: MediaQuery.disableAnimationsOf(context)
+                        ? Duration.zero
+                        : const Duration(milliseconds: 250),
                     margin: const EdgeInsets.symmetric(horizontal: 4),
                     height: 8,
                     width: ativa ? 24 : 8,
                     decoration: BoxDecoration(
-                      color: ativa ? _verde : Colors.grey.shade300,
+                      color: ativa
+                          ? context.cores.principal
+                          : context.cores.borda,
                       borderRadius: BorderRadius.circular(4),
                     ),
                   );
@@ -173,8 +184,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   child: ElevatedButton(
                     onPressed: _proxima,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _verde,
-                      foregroundColor: Colors.white,
+                      backgroundColor: context.cores.principal,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -212,14 +223,14 @@ class _PaginaView extends StatelessWidget {
                 height: 240,
                 fit: BoxFit.contain,
                 // Se o arquivo não existir, mostra o ícone em vez de quebrar.
-                errorBuilder: (_, __, ___) => Icon(
+                errorBuilder: (_, _, _) => Icon(
                   pagina.icon,
                   size: 140,
-                  color: const Color(0xFF2E7D5B),
+                  color: context.cores.principal,
                 ),
               )
             else
-              Icon(pagina.icon, size: 140, color: const Color(0xFF2E7D5B)),
+              Icon(pagina.icon, size: 140, color: context.cores.principal),
             const SizedBox(height: 40),
             Text(
               pagina.title,
@@ -234,7 +245,7 @@ class _PaginaView extends StatelessWidget {
             Text(
               pagina.description,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
+              style: TextStyle(fontSize: 16, color: context.cores.textoFraco),
             ),
           ],
         ),

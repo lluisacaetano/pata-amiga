@@ -88,10 +88,10 @@ class _EscolhaDeOngState extends State<EscolhaDeOng> {
           'Você faz parte de alguma ONG ou abrigo?',
           style:
               widget.estiloDaPergunta ??
-              const TextStyle(
+              TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: Cores.texto,
+                color: context.cores.texto,
               ),
         ),
         const SizedBox(height: 8),
@@ -105,7 +105,7 @@ class _EscolhaDeOngState extends State<EscolhaDeOng> {
             selected: {_fazParte},
             showSelectedIcon: false,
             onSelectionChanged: (escolha) => _responder(escolha.first),
-            style: estiloDasAbas(Cores.fundo),
+            style: estiloDasAbas(context, context.cores.fundo),
           ),
         ),
         if (_fazParte) ...[
@@ -113,30 +113,37 @@ class _EscolhaDeOngState extends State<EscolhaDeOng> {
           if (_semConexao)
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Não foi possível carregar as ONGs.',
-                    style: TextStyle(fontSize: 13, color: Cores.destaque),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: context.cores.destaque,
+                    ),
                   ),
                 ),
                 TextButton(
                   onPressed: _carregar,
-                  style: TextButton.styleFrom(foregroundColor: Cores.principal),
+                  style: TextButton.styleFrom(
+                    foregroundColor: context.cores.principal,
+                  ),
                   child: const Text('Tentar de novo'),
                 ),
               ],
             )
           else if (ongs == null)
-            const Center(
+            Center(
               child: Padding(
                 padding: EdgeInsets.all(12),
-                child: CircularProgressIndicator(color: Cores.principal),
+                child: CircularProgressIndicator(
+                  color: context.cores.principal,
+                ),
               ),
             )
           else if (ongs.isEmpty)
-            const Text(
+            Text(
               'Nenhuma ONG cadastrada ainda.',
-              style: TextStyle(fontSize: 13, color: Cores.textoFraco),
+              style: TextStyle(fontSize: 13, color: context.cores.textoFraco),
             )
           else ...[
             // O mesmo select com busca do bairro e da raça, em ordem
@@ -158,10 +165,10 @@ class _EscolhaDeOngState extends State<EscolhaDeOng> {
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               'Quem administra a ONG recebe o seu pedido e precisa aprovar antes '
               'de você publicar animais em nome dela.',
-              style: TextStyle(fontSize: 12, color: Cores.textoFraco),
+              style: TextStyle(fontSize: 12, color: context.cores.textoFraco),
             ),
           ],
         ],

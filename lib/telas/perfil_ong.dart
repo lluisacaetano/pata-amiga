@@ -100,25 +100,25 @@ class PerfilOng extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Cores.fundo,
+        backgroundColor: context.cores.fundo,
         leadingWidth: 64,
         leading: Padding(
           padding: const EdgeInsets.only(left: 12),
           child: IconButton(
             icon: const Icon(Icons.arrow_back),
             tooltip: 'Voltar',
-            color: Cores.principal,
+            color: context.cores.principal,
             onPressed: () => Navigator.maybePop(context),
           ),
         ),
         centerTitle: true,
-        title: const Text(
+        title: Text(
           'ONG',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.8,
-            color: Cores.principal,
+            color: context.cores.principal,
           ),
         ),
         actions: [
@@ -126,7 +126,7 @@ class PerfilOng extends StatelessWidget {
           if (atual.eDoResponsavel(email))
             IconButton(
               tooltip: 'Editar perfil da ONG',
-              icon: const Icon(Icons.edit_outlined, color: Cores.principal),
+              icon: Icon(Icons.edit_outlined, color: context.cores.principal),
               onPressed: () => Navigator.pushNamed(
                 context,
                 AppRoutes.cadastroOng,
@@ -151,10 +151,10 @@ class PerfilOng extends StatelessWidget {
                   children: [
                     Text(
                       atual.nome,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 21,
                         fontWeight: FontWeight.w700,
-                        color: Cores.texto,
+                        color: context.cores.texto,
                         height: 1.2,
                       ),
                     ),
@@ -162,18 +162,18 @@ class PerfilOng extends StatelessWidget {
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.location_on_outlined,
                             size: 16,
-                            color: Cores.principal,
+                            color: context.cores.principal,
                           ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               endereco,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 14,
-                                color: Cores.principal,
+                                color: context.cores.principal,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -199,7 +199,7 @@ class PerfilOng extends StatelessWidget {
               icon: const Icon(Icons.chat_bubble_outline),
               label: const Text('Conversar no WhatsApp'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Cores.principal,
+                backgroundColor: context.cores.principal,
                 foregroundColor: Colors.white,
                 textStyle: const TextStyle(
                   fontSize: 15,
@@ -226,9 +226,9 @@ class PerfilOng extends StatelessWidget {
             const SizedBox(height: 26),
             const _TituloDaSecao('Animais da ONG'),
             const SizedBox(height: 10),
-            const Text(
+            Text(
               'A ONG ainda não cadastrou nenhum animal.',
-              style: TextStyle(fontSize: 14, color: Cores.textoFraco),
+              style: TextStyle(fontSize: 14, color: context.cores.textoFraco),
             ),
           ],
           for (final (tipo, titulo) in const [
@@ -274,7 +274,7 @@ class PerfilOng extends StatelessWidget {
               titulo: 'Onde fica',
               child: PreviaDoMapa(
                 ponto: LatLng(atual.latitude!, atual.longitude!),
-                cor: Cores.principal,
+                cor: context.cores.principal,
                 aoTocar: () => _abrirNoMapa(atual),
               ),
             ),
@@ -297,14 +297,14 @@ class _FaixaDoPix extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
       decoration: BoxDecoration(
-        color: Cores.principalClara,
+        color: context.cores.principalClara,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             Icons.volunteer_activism_outlined,
-            color: Cores.principal,
+            color: context.cores.principal,
             size: 22,
           ),
           const SizedBox(width: 12),
@@ -312,19 +312,22 @@ class _FaixaDoPix extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Doe pelo Pix, no app do seu banco',
-                  style: TextStyle(fontSize: 12, color: Cores.principal),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: context.cores.principal,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   chave,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: Cores.texto,
+                    color: context.cores.texto,
                   ),
                 ),
               ],
@@ -335,7 +338,7 @@ class _FaixaDoPix extends StatelessWidget {
             icon: const Icon(Icons.copy, size: 18),
             label: const Text('Copiar'),
             style: TextButton.styleFrom(
-              foregroundColor: Cores.principal,
+              foregroundColor: context.cores.principal,
               textStyle: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -360,10 +363,10 @@ class _TituloDaSecao extends StatelessWidget {
       children: [
         Text(
           texto,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
-            color: Cores.texto,
+            color: context.cores.texto,
           ),
         ),
         if (quantidade != null) ...[
@@ -371,15 +374,15 @@ class _TituloDaSecao extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
-              color: Cores.principalClara,
+              color: context.cores.principalClara,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               '$quantidade',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
-                color: Cores.principal,
+                color: context.cores.principal,
               ),
             ),
           ),
@@ -422,10 +425,10 @@ class _CartaoDoAnimal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Cores.cartao,
+      color: context.cores.cartao,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: Cores.borda),
+        side: BorderSide(color: context.cores.borda),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -466,8 +469,8 @@ class _CartaoDoAnimal extends StatelessWidget {
                       comMaiuscula(animal.rotuloDoStatus),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Cores.textoFraco,
+                      style: TextStyle(
+                        color: context.cores.textoFraco,
                         fontSize: 12,
                       ),
                     ),
@@ -477,10 +480,10 @@ class _CartaoDoAnimal extends StatelessWidget {
               const SizedBox(height: 6),
               Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.location_on_outlined,
                     size: 15,
-                    color: Cores.principal,
+                    color: context.cores.principal,
                   ),
                   const SizedBox(width: 4),
                   Flexible(
@@ -488,8 +491,8 @@ class _CartaoDoAnimal extends StatelessWidget {
                       '${animal.bairro}, ${animal.cidade}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Cores.principal,
+                      style: TextStyle(
+                        color: context.cores.principal,
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                       ),
@@ -522,21 +525,21 @@ class _Cartao extends StatelessWidget {
       margin: const EdgeInsets.only(top: 18),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Cores.cartao,
+        color: context.cores.cartao,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Cores.borda),
+        border: Border.all(color: context.cores.borda),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              Icon(icone, size: 18, color: Cores.principal),
+              Icon(icone, size: 18, color: context.cores.principal),
               const SizedBox(width: 8),
               Text(
                 titulo,
-                style: const TextStyle(
-                  color: Cores.principal,
+                style: TextStyle(
+                  color: context.cores.principal,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
@@ -562,7 +565,7 @@ class _PessoasDaOng extends StatelessWidget {
   Future<void> _remover(BuildContext context, PessoaDaOng pessoa) async {
     final confirmou = await showModalBottomSheet<bool>(
       context: context,
-      backgroundColor: Cores.cartao,
+      backgroundColor: context.cores.cartao,
       showDragHandle: true,
       builder: (painel) => SafeArea(
         child: Padding(
@@ -580,13 +583,13 @@ class _PessoasDaOng extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 6),
-              const Text(
+              Text(
                 'A pessoa deixa de publicar em nome da ONG e recebe um aviso. '
                 'Os animais que ela já publicou continuam no perfil da ONG.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
-                  color: Cores.textoFraco,
+                  color: context.cores.textoFraco,
                   height: 1.4,
                 ),
               ),
@@ -594,7 +597,7 @@ class _PessoasDaOng extends StatelessWidget {
               FilledButton(
                 onPressed: () => Navigator.pop(painel, false),
                 style: FilledButton.styleFrom(
-                  backgroundColor: Cores.principal,
+                  backgroundColor: context.cores.principal,
                   minimumSize: const Size.fromHeight(48),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
@@ -606,7 +609,7 @@ class _PessoasDaOng extends StatelessWidget {
               TextButton(
                 onPressed: () => Navigator.pop(painel, true),
                 style: TextButton.styleFrom(
-                  foregroundColor: Cores.destaque,
+                  foregroundColor: context.cores.destaque,
                   textStyle: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 child: const Text('Remover'),
@@ -633,17 +636,22 @@ class _PessoasDaOng extends StatelessWidget {
       ..showSnackBar(SnackBar(content: Text(aviso)));
   }
 
-  Widget _linha(String nome, String detalhe, {Widget? acao}) => Padding(
+  Widget _linha(
+    BuildContext context,
+    String nome,
+    String detalhe, {
+    Widget? acao,
+  }) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 6),
     child: Row(
       children: [
         CircleAvatar(
           radius: 20,
-          backgroundColor: Cores.principalClara,
+          backgroundColor: context.cores.principalClara,
           child: Text(
             iniciaisDa(nome),
-            style: const TextStyle(
-              color: Cores.principal,
+            style: TextStyle(
+              color: context.cores.principal,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -663,7 +671,10 @@ class _PessoasDaOng extends StatelessWidget {
               if (detalhe.isNotEmpty)
                 Text(
                   detalhe,
-                  style: const TextStyle(fontSize: 13, color: Cores.textoFraco),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: context.cores.textoFraco,
+                  ),
                 ),
             ],
           ),
@@ -680,29 +691,31 @@ class _PessoasDaOng extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _linha(
+          context,
           (usuario?.nome.trim().isNotEmpty ?? false) ? usuario!.nome : 'Você',
           'Administra a ONG',
         ),
         for (final pessoa in ong.membros)
           _linha(
+            context,
             pessoa.nome,
             formatarTelefone(pessoa.telefone),
             acao: TextButton(
               onPressed: () => _remover(context, pessoa),
               style: TextButton.styleFrom(
-                foregroundColor: Cores.destaque,
+                foregroundColor: context.cores.destaque,
                 textStyle: const TextStyle(fontWeight: FontWeight.w600),
               ),
               child: const Text('Remover'),
             ),
           ),
         if (ong.membros.isEmpty)
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(top: 6),
             child: Text(
               'Ainda só você. Quem disser que faz parte da ONG aparece no '
               'sino de notificações para você aprovar.',
-              style: TextStyle(fontSize: 13, color: Cores.textoFraco),
+              style: TextStyle(fontSize: 13, color: context.cores.textoFraco),
             ),
           ),
       ],

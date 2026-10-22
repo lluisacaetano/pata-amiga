@@ -6,7 +6,7 @@ import '../modelos/animal.dart';
 import 'endereco_da_api.dart';
 
 class AnimalService {
-  static const _baseUrl = enderecoDaApi;
+  static final _baseUrl = enderecoDaApi;
 
   Future<List<Animal>> buscarAnimais() async {
     final resp = await http

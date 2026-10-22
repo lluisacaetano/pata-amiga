@@ -110,12 +110,12 @@ class _SinoDeNotificacoesState extends State<SinoDeNotificacoes> {
       icon: Badge(
         isLabelVisible: quantos > 0,
         label: Text('$quantos'),
-        backgroundColor: Cores.destaque,
+        backgroundColor: context.cores.destaque,
         child: Icon(
           quantos > 0
               ? Icons.notifications_active_outlined
               : Icons.notifications_none,
-          color: Cores.principal,
+          color: context.cores.principal,
         ),
       ),
     );
@@ -189,7 +189,7 @@ class _ListaDePedidosState extends State<_ListaDePedidos> {
   void _verPerfil(Ong ong, PessoaDaOng pessoa, Ong? outra) =>
       showModalBottomSheet<void>(
         context: context,
-        backgroundColor: Cores.cartao,
+        backgroundColor: context.cores.cartao,
         showDragHandle: true,
         builder: (painel) => PerfilDeQuemPediu(
           pessoa: pessoa,
@@ -257,7 +257,7 @@ class _ListaDePedidosState extends State<_ListaDePedidos> {
                       onPressed: _respondendo != null
                           ? null
                           : () => _responder(ong, pessoa, aprovar: false),
-                      style: _estiloDoTexto(Cores.destaque),
+                      style: _estiloDoTexto(context.cores.destaque),
                       child: const Text('Recusar'),
                     ),
                     const SizedBox(width: 4),
@@ -266,7 +266,7 @@ class _ListaDePedidosState extends State<_ListaDePedidos> {
                           ? null
                           : () => _responder(ong, pessoa, aprovar: true),
                       style: FilledButton.styleFrom(
-                        backgroundColor: Cores.principal,
+                        backgroundColor: context.cores.principal,
                         visualDensity: VisualDensity.compact,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -318,7 +318,7 @@ class _ListaDePedidosState extends State<_ListaDePedidos> {
                   const Spacer(),
                   TextButton(
                     onPressed: () => _dispensar(deOng),
-                    style: _estiloDoTexto(Cores.principal),
+                    style: _estiloDoTexto(context.cores.principal),
                     child: const Text('Entendi'),
                   ),
                 ],
@@ -365,7 +365,7 @@ class _ListaDePedidosState extends State<_ListaDePedidos> {
               maxHeight: MediaQuery.sizeOf(context).height * 0.7,
             ),
             child: Material(
-              color: Cores.cartao,
+              color: context.cores.cartao,
               elevation: 8,
               shadowColor: const Color(0x33000000),
               borderRadius: BorderRadius.circular(18),
@@ -385,12 +385,15 @@ class _ListaDePedidosState extends State<_ListaDePedidos> {
                     ),
                   ),
                   if (notificacoes.isEmpty)
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.fromLTRB(18, 4, 18, 20),
                       child: Text(
                         'Nenhuma notificação. Quando alguém disser que faz '
                         'parte da sua ONG, o pedido aparece aqui.',
-                        style: TextStyle(fontSize: 14, color: Cores.textoFraco),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: context.cores.textoFraco,
+                        ),
                       ),
                     )
                   else
@@ -399,10 +402,10 @@ class _ListaDePedidosState extends State<_ListaDePedidos> {
                         shrinkWrap: true,
                         padding: const EdgeInsets.only(bottom: 8),
                         itemCount: notificacoes.length,
-                        separatorBuilder: (_, _) => const Divider(
+                        separatorBuilder: (_, _) => Divider(
                           height: 1,
                           indent: 70,
-                          color: Cores.borda,
+                          color: context.cores.borda,
                         ),
                         itemBuilder: (_, indice) => notificacoes[indice].$2,
                       ),
@@ -475,13 +478,13 @@ class _Notificacao extends StatelessWidget {
             avatar ??
                 CircleAvatar(
                   radius: 20,
-                  backgroundColor: Cores.principalClara,
+                  backgroundColor: context.cores.principalClara,
                   child: icone != null
-                      ? Icon(icone, color: Cores.principal, size: 20)
+                      ? Icon(icone, color: context.cores.principal, size: 20)
                       : Text(
                           iniciais ?? '',
-                          style: const TextStyle(
-                            color: Cores.principal,
+                          style: TextStyle(
+                            color: context.cores.principal,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -503,9 +506,9 @@ class _Notificacao extends StatelessWidget {
                       const SizedBox(width: 8),
                       Text(
                         haQuantoTempo(quando, agora),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: Cores.textoFraco,
+                          color: context.cores.textoFraco,
                         ),
                       ),
                     ],
@@ -514,9 +517,9 @@ class _Notificacao extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       detalhe!,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
-                        color: Cores.textoFraco,
+                        color: context.cores.textoFraco,
                         height: 1.35,
                       ),
                     ),
@@ -526,24 +529,24 @@ class _Notificacao extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Cores.destaque.withValues(alpha: 0.08),
+                        color: context.cores.destaque.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.info_outline,
                             size: 18,
-                            color: Cores.destaque,
+                            color: context.cores.destaque,
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               aviso!,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
-                                color: Cores.destaque,
+                                color: context.cores.destaque,
                                 height: 1.35,
                               ),
                             ),
@@ -632,23 +635,23 @@ class PerfilDeQuemPediu extends StatelessWidget {
             Center(
               child: Container(
                 padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Cores.principalClara,
+                  color: context.cores.principalClara,
                 ),
                 child: CircleAvatar(
                   radius: 40,
-                  backgroundColor: Cores.principalClara,
+                  backgroundColor: context.cores.principalClara,
                   child: iniciais.isEmpty
-                      ? const Icon(
+                      ? Icon(
                           Icons.person_outline,
-                          color: Cores.principal,
+                          color: context.cores.principal,
                           size: 40,
                         )
                       : Text(
                           iniciais,
-                          style: const TextStyle(
-                            color: Cores.principal,
+                          style: TextStyle(
+                            color: context.cores.principal,
                             fontSize: 28,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.5,
@@ -671,16 +674,16 @@ class PerfilDeQuemPediu extends StatelessWidget {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: Cores.principalClara,
+                  color: context.cores.principalClara,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   'Pediu para entrar em ${ong.nome}',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: Cores.principal,
+                    color: context.cores.principal,
                   ),
                 ),
               ),
@@ -692,8 +695,8 @@ class PerfilDeQuemPediu extends StatelessWidget {
                 icon: const Icon(Icons.chat_bubble_outline, size: 18),
                 label: const Text('Conversar no WhatsApp'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Cores.principal,
-                  side: const BorderSide(color: Cores.principal),
+                  foregroundColor: context.cores.principal,
+                  side: BorderSide(color: context.cores.principal),
                   minimumSize: const Size.fromHeight(46),
                   shape: forma,
                 ),
@@ -702,7 +705,7 @@ class PerfilDeQuemPediu extends StatelessWidget {
               Text(
                 formatarTelefone(pessoa.telefone),
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 13, color: Cores.textoFraco),
+                style: TextStyle(fontSize: 13, color: context.cores.textoFraco),
               ),
             ],
             // Os animais que a pessoa já publicou, em miniatura; sem nenhum,
@@ -744,7 +747,7 @@ class PerfilDeQuemPediu extends StatelessWidget {
                 'Já faz parte de ${outra.nome}. Cada conta pode ter só uma '
                 'ONG, então não dá para aprovar.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 13, color: Cores.destaque),
+                style: TextStyle(fontSize: 13, color: context.cores.destaque),
               ),
             ],
             const SizedBox(height: 20),
@@ -754,7 +757,7 @@ class PerfilDeQuemPediu extends StatelessWidget {
                   child: TextButton(
                     onPressed: () => aoResponder(false),
                     style: TextButton.styleFrom(
-                      foregroundColor: Cores.destaque,
+                      foregroundColor: context.cores.destaque,
                       minimumSize: const Size.fromHeight(48),
                       textStyle: const TextStyle(fontWeight: FontWeight.w600),
                     ),
@@ -767,7 +770,7 @@ class PerfilDeQuemPediu extends StatelessWidget {
                   child: FilledButton(
                     onPressed: outra != null ? null : () => aoResponder(true),
                     style: FilledButton.styleFrom(
-                      backgroundColor: Cores.principal,
+                      backgroundColor: context.cores.principal,
                       minimumSize: const Size.fromHeight(48),
                       shape: forma,
                       textStyle: const TextStyle(

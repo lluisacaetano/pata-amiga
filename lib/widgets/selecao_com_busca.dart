@@ -84,11 +84,11 @@ class _SelecaoComBuscaState extends State<SelecaoComBusca> {
               : widget.rotulo,
           style:
               widget.estiloDoRotulo ??
-              const TextStyle(
+              TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.5,
-                color: Cores.textoFraco,
+                color: context.cores.textoFraco,
               ),
         ),
         const SizedBox(height: 6),
@@ -134,21 +134,22 @@ class _SelecaoComBuscaState extends State<SelecaoComBusca> {
                     if (widget.limpavel) setState(() {});
                   },
                   decoration: _caixa(
+                    context,
                     widget.dica,
                     comErro: widget.comErro,
                     acao: widget.limpavel && controlador.text.isNotEmpty
                         ? IconButton(
                             onPressed: _limpar,
                             tooltip: 'Limpar ${widget.rotulo.toLowerCase()}',
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.close,
                               size: 18,
-                              color: Cores.textoFraco,
+                              color: context.cores.textoFraco,
                             ),
                           )
-                        : const Icon(
+                        : Icon(
                             Icons.keyboard_arrow_down,
-                            color: Cores.textoFraco,
+                            color: context.cores.textoFraco,
                           ),
                   ),
                 ),
@@ -162,7 +163,7 @@ class _SelecaoComBuscaState extends State<SelecaoComBusca> {
               return Align(
                 alignment: Alignment.topLeft,
                 child: Material(
-                  color: Cores.cartao,
+                  color: context.cores.cartao,
                   elevation: 3,
                   borderRadius: BorderRadius.circular(12),
                   child: ConstrainedBox(
@@ -193,7 +194,7 @@ class _SelecaoComBuscaState extends State<SelecaoComBusca> {
                         // Fica fixo no rodapé: quem não acha a opção não
                         // precisa rolar a lista inteira para descobrir a saída
                         if (widget.rodape.isNotEmpty)
-                          const Divider(height: 1, color: Cores.borda),
+                          Divider(height: 1, color: context.cores.borda),
                         for (final fixa in widget.rodape)
                           _Opcao(
                             texto: fixa.texto,
@@ -225,13 +226,13 @@ class _SelecaoComBuscaState extends State<SelecaoComBusca> {
                       label: Text(opcao),
                       onDeleted: () => widget.aoEscolher(opcao),
                       deleteButtonTooltipMessage: 'Tirar $opcao',
-                      backgroundColor: Cores.principalClara,
-                      labelStyle: const TextStyle(
+                      backgroundColor: context.cores.principalClara,
+                      labelStyle: TextStyle(
                         fontSize: 13,
-                        color: Cores.principal,
+                        color: context.cores.principal,
                         fontWeight: FontWeight.w600,
                       ),
-                      deleteIconColor: Cores.principal,
+                      deleteIconColor: context.cores.principal,
                       side: BorderSide.none,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
@@ -242,11 +243,11 @@ class _SelecaoComBuscaState extends State<SelecaoComBusca> {
             ),
           ),
         if (widget.comErro)
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(top: 5, left: 2),
             child: Text(
               'Campo obrigatório',
-              style: TextStyle(fontSize: 12, color: Cores.destaque),
+              style: TextStyle(fontSize: 12, color: context.cores.destaque),
             ),
           ),
       ],
@@ -255,32 +256,36 @@ class _SelecaoComBuscaState extends State<SelecaoComBusca> {
 }
 
 // A mesma caixa dos campos do cadastro
-InputDecoration _caixa(String dica, {bool comErro = false, Widget? acao}) =>
-    InputDecoration(
+InputDecoration _caixa(
+  BuildContext context,
+  String dica, {
+  bool comErro = false,
+  Widget? acao,
+}) => InputDecoration(
       isDense: true,
       filled: true,
-      fillColor: Cores.fundo,
+      fillColor: context.cores.fundo,
       hintText: dica,
       suffixIcon: acao,
-      hintStyle: const TextStyle(fontSize: 14, color: Cores.textoFraco),
+      hintStyle: TextStyle(fontSize: 14, color: context.cores.textoFraco),
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(
-          color: comErro ? Cores.destaque : Cores.borda,
+          color: comErro ? context.cores.destaque : context.cores.borda,
           width: comErro ? 1.5 : 1,
         ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(
-          color: comErro ? Cores.destaque : Cores.principal,
+          color: comErro ? context.cores.destaque : context.cores.principal,
           width: 1.5,
         ),
       ),
       disabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Cores.borda),
+        borderSide: BorderSide(color: context.cores.borda),
       ),
     );
 
@@ -310,7 +315,7 @@ class _Opcao extends StatelessWidget {
                 texto,
                 style: TextStyle(
                   fontSize: 15,
-                  color: destaque || marcada ? Cores.principal : Cores.texto,
+                  color: destaque || marcada ? context.cores.principal : context.cores.texto,
                   fontWeight: destaque || marcada
                       ? FontWeight.w600
                       : FontWeight.normal,
@@ -318,7 +323,7 @@ class _Opcao extends StatelessWidget {
               ),
             ),
             if (marcada)
-              const Icon(Icons.check, size: 18, color: Cores.principal),
+              Icon(Icons.check, size: 18, color: context.cores.principal),
           ],
         ),
       ),

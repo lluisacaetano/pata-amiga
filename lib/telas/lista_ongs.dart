@@ -76,21 +76,21 @@ class _ListaOngsState extends State<ListaOngs> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Cores.fundo,
+        backgroundColor: context.cores.fundo,
         automaticallyImplyLeading: false,
         centerTitle: true,
-        title: const Text(
+        title: Text(
           'ONGS E ABRIGOS',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.8,
-            color: Cores.principal,
+            color: context.cores.principal,
           ),
         ),
       ),
       body: RefreshIndicator(
-        color: Cores.principal,
+        color: context.cores.principal,
         onRefresh: _carregar,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -102,22 +102,22 @@ class _ListaOngsState extends State<ListaOngs> {
               decoration: InputDecoration(
                 isDense: true,
                 filled: true,
-                fillColor: Cores.cartao,
+                fillColor: context.cores.cartao,
                 hintText: 'Buscar pelo nome da ONG',
-                hintStyle: const TextStyle(
+                hintStyle: TextStyle(
                   fontSize: 14,
-                  color: Cores.textoFraco,
+                  color: context.cores.textoFraco,
                 ),
-                prefixIcon: const Icon(Icons.search, color: Cores.textoFraco),
+                prefixIcon: Icon(Icons.search, color: context.cores.textoFraco),
                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(30),
-                  borderSide: const BorderSide(color: Cores.borda),
+                  borderSide: BorderSide(color: context.cores.borda),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(30),
-                  borderSide: const BorderSide(
-                    color: Cores.principal,
+                  borderSide: BorderSide(
+                    color: context.cores.principal,
                     width: 1.5,
                   ),
                 ),
@@ -125,19 +125,24 @@ class _ListaOngsState extends State<ListaOngs> {
             ),
             const SizedBox(height: 16),
             if (_semConexao)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(bottom: 12),
                 child: Text(
                   'Sem conexão: a lista pode estar desatualizada. Puxe para '
                   'baixo para tentar de novo.',
-                  style: TextStyle(fontSize: 13, color: Cores.textoFraco),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: context.cores.textoFraco,
+                  ),
                 ),
               ),
             if (_carregando && estado.ongs.isEmpty)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(top: 40),
                 child: Center(
-                  child: CircularProgressIndicator(color: Cores.principal),
+                  child: CircularProgressIndicator(
+                    color: context.cores.principal,
+                  ),
                 ),
               )
             else if (ongs.isEmpty)
@@ -173,10 +178,10 @@ class _CartaoDaOng extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Material(
-        color: Cores.cartao,
+        color: context.cores.cartao,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: Cores.borda),
+          side: BorderSide(color: context.cores.borda),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -208,10 +213,10 @@ class _CartaoDaOng extends StatelessWidget {
                             const SizedBox(height: 4),
                             Row(
                               children: [
-                                const Icon(
+                                Icon(
                                   Icons.location_on_outlined,
                                   size: 15,
-                                  color: Cores.principal,
+                                  color: context.cores.principal,
                                 ),
                                 const SizedBox(width: 4),
                                 Flexible(
@@ -219,8 +224,8 @@ class _CartaoDaOng extends StatelessWidget {
                                     '${ong.bairro}, Formiga',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Cores.principal,
+                                    style: TextStyle(
+                                      color: context.cores.principal,
                                       fontSize: 13,
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -234,13 +239,13 @@ class _CartaoDaOng extends StatelessWidget {
                     ),
                   ],
                 ),
-                const Divider(height: 24, color: Cores.borda),
+                Divider(height: 24, color: context.cores.borda),
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.pets_outlined,
                       size: 18,
-                      color: Cores.textoFraco,
+                      color: context.cores.textoFraco,
                     ),
                     const SizedBox(width: 6),
                     Expanded(
@@ -250,9 +255,9 @@ class _CartaoDaOng extends StatelessWidget {
                           1 => '1 animal em aberto',
                           _ => '$quantos animais em aberto',
                         },
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
-                          color: Cores.textoFraco,
+                          color: context.cores.textoFraco,
                         ),
                       ),
                     ),
@@ -278,10 +283,10 @@ class _ListaVazia extends StatelessWidget {
       padding: const EdgeInsets.only(top: 32),
       child: Column(
         children: [
-          const Icon(
+          Icon(
             Icons.volunteer_activism_outlined,
             size: 44,
-            color: Cores.principal,
+            color: context.cores.principal,
           ),
           const SizedBox(height: 12),
           Text(
@@ -293,11 +298,11 @@ class _ListaVazia extends StatelessWidget {
           ),
           if (!buscando) ...[
             const SizedBox(height: 6),
-            const Text(
+            Text(
               'Representa uma ONG ou abrigo? Crie o perfil dela em Editar '
               'perfil.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: Cores.textoFraco),
+              style: TextStyle(fontSize: 14, color: context.cores.textoFraco),
             ),
           ],
         ],

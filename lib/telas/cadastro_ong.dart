@@ -273,25 +273,25 @@ class _CadastroOngState extends State<CadastroOng> {
       alterado: () => _assinatura != _inicial && !_salvando,
       child: Scaffold(
         appBar: AppBar(
-          backgroundColor: Cores.fundo,
+          backgroundColor: context.cores.fundo,
           leadingWidth: 64,
           leading: Padding(
             padding: const EdgeInsets.only(left: 12),
             child: IconButton(
               icon: const Icon(Icons.arrow_back),
               tooltip: 'Voltar',
-              color: Cores.principal,
+              color: context.cores.principal,
               onPressed: () => Navigator.maybePop(context),
             ),
           ),
           centerTitle: true,
           title: Text(
             editando ? 'EDITAR PERFIL DA ONG' : 'PERFIL DA ONG',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.bold,
               letterSpacing: 0.8,
-              color: Cores.principal,
+              color: context.cores.principal,
             ),
           ),
         ),
@@ -301,10 +301,10 @@ class _CadastroOngState extends State<CadastroOng> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.lock_outline,
                       size: 44,
-                      color: Cores.principal,
+                      color: context.cores.principal,
                     ),
                     const SizedBox(height: 12),
                     Text(
@@ -351,13 +351,13 @@ class _CadastroOngState extends State<CadastroOng> {
                               bottom: 0,
                               child: Container(
                                 padding: const EdgeInsets.all(2),
-                                decoration: const BoxDecoration(
+                                decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: Cores.fundo,
+                                  color: context.cores.fundo,
                                 ),
-                                child: const CircleAvatar(
+                                child: CircleAvatar(
                                   radius: 17,
-                                  backgroundColor: Cores.principal,
+                                  backgroundColor: context.cores.principal,
                                   child: Icon(
                                     Icons.photo_camera_outlined,
                                     size: 18,
@@ -376,7 +376,7 @@ class _CadastroOngState extends State<CadastroOng> {
                     child: TextButton(
                       onPressed: _escolherFoto,
                       style: TextButton.styleFrom(
-                        foregroundColor: Cores.principal,
+                        foregroundColor: context.cores.principal,
                       ),
                       child: Text(
                         _foto.isEmpty ? 'Escolher foto' : 'Trocar foto',
@@ -481,14 +481,14 @@ class _CadastroOngState extends State<CadastroOng> {
                         if (_tentou &&
                             (_local.rua.trim().isEmpty ||
                                 _local.bairro.trim().isEmpty))
-                          const Padding(
+                          Padding(
                             padding: EdgeInsets.only(top: 6, left: 2),
                             child: Text(
                               'Marque no mapa onde fica a ONG, com rua e '
                               'bairro.',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Cores.destaque,
+                                color: context.cores.destaque,
                               ),
                             ),
                           ),
@@ -499,7 +499,7 @@ class _CadastroOngState extends State<CadastroOng> {
                   FilledButton(
                     onPressed: _salvando ? null : _salvar,
                     style: FilledButton.styleFrom(
-                      backgroundColor: Cores.principal,
+                      backgroundColor: context.cores.principal,
                       minimumSize: const Size.fromHeight(52),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
@@ -542,21 +542,21 @@ class _Cartao extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Cores.cartao,
+        color: context.cores.cartao,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Cores.borda),
+        border: Border.all(color: context.cores.borda),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              Icon(icone, size: 18, color: Cores.principal),
+              Icon(icone, size: 18, color: context.cores.principal),
               const SizedBox(width: 8),
               Text(
                 titulo,
-                style: const TextStyle(
-                  color: Cores.principal,
+                style: TextStyle(
+                  color: context.cores.principal,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
@@ -605,11 +605,11 @@ class _Campo extends StatelessWidget {
       children: [
         Text(
           rotulo.toUpperCase(),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.5,
-            color: Cores.textoFraco,
+            color: context.cores.textoFraco,
           ),
         ),
         const SizedBox(height: 6),
@@ -627,9 +627,9 @@ class _Campo extends StatelessWidget {
           decoration: InputDecoration(
             isDense: true,
             filled: true,
-            fillColor: Cores.fundo,
+            fillColor: context.cores.fundo,
             hintText: exemplo,
-            hintStyle: const TextStyle(fontSize: 14, color: Cores.textoFraco),
+            hintStyle: TextStyle(fontSize: 14, color: context.cores.textoFraco),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 12,
               vertical: 12,
@@ -637,14 +637,16 @@ class _Campo extends StatelessWidget {
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(
-                color: comErro ? Cores.destaque : Cores.borda,
+                color: comErro ? context.cores.destaque : context.cores.borda,
                 width: comErro ? 1.5 : 1,
               ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(
-                color: comErro ? Cores.destaque : Cores.principal,
+                color: comErro
+                    ? context.cores.destaque
+                    : context.cores.principal,
                 width: 1.5,
               ),
             ),
@@ -657,7 +659,9 @@ class _Campo extends StatelessWidget {
               comErro ? erro ?? 'Campo obrigatório' : aviso!,
               style: TextStyle(
                 fontSize: 12,
-                color: comErro ? Cores.destaque : Cores.textoFraco,
+                color: comErro
+                    ? context.cores.destaque
+                    : context.cores.textoFraco,
               ),
             ),
           ),

@@ -28,25 +28,25 @@ class AvatarDaOng extends StatelessWidget {
     // O anel claro destaca a foto do fundo, como no perfil da pessoa
     return Container(
       padding: EdgeInsets.all(raio > 30 ? 3 : 2),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Cores.principalClara,
+        color: context.cores.principalClara,
       ),
       child: CircleAvatar(
         radius: raio,
-        backgroundColor: Cores.principalClara,
+        backgroundColor: context.cores.principalClara,
         backgroundImage: imagem,
         child: imagem == null && iniciaisDa(ong.nome).isEmpty
             ? Icon(
                 Icons.volunteer_activism_outlined,
                 size: raio,
-                color: Cores.principal,
+                color: context.cores.principal,
               )
             : imagem == null
             ? Text(
                 iniciaisDa(ong.nome),
                 style: TextStyle(
-                  color: Cores.principal,
+                  color: context.cores.principal,
                   fontSize: raio * 0.72,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.5,

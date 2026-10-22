@@ -25,7 +25,7 @@ class VinculoComOng extends StatelessWidget {
     final aguardando = ong == null;
     final alvo = (ong ?? pedida)!;
     return Material(
-      color: Cores.principalClara,
+      color: context.cores.principalClara,
       shape: const StadiumBorder(),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -37,9 +37,13 @@ class VinculoComOng extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (aguardando)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.all(4),
-                  child: Icon(Icons.schedule, size: 18, color: Cores.principal),
+                  child: Icon(
+                    Icons.schedule,
+                    size: 18,
+                    color: context.cores.principal,
+                  ),
                 )
               else
                 AvatarDaOng(ong: alvo, raio: 11),
@@ -49,14 +53,18 @@ class VinculoComOng extends StatelessWidget {
                   aguardando ? 'Aguardando ${alvo.nome}' : alvo.nome,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: Cores.principal,
+                    color: context.cores.principal,
                   ),
                 ),
               ),
-              const Icon(Icons.chevron_right, size: 18, color: Cores.principal),
+              Icon(
+                Icons.chevron_right,
+                size: 18,
+                color: context.cores.principal,
+              ),
             ],
           ),
         ),

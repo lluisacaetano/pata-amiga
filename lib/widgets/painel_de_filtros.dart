@@ -171,7 +171,7 @@ class _PainelDeFiltrosState extends State<PainelDeFiltros> {
                   TextButton(
                     onPressed: _filtros.vazio ? null : _limpar,
                     style: TextButton.styleFrom(
-                      foregroundColor: Cores.principal,
+                      foregroundColor: context.cores.principal,
                     ),
                     child: const Text('Limpar filtros'),
                   ),
@@ -273,10 +273,10 @@ class _PainelDeFiltrosState extends State<PainelDeFiltros> {
                         ),
                       ),
                     ),
-                    const Text(
+                    Text(
                       'Na saúde, aparecem só os animais com todos os '
                       'cuidados marcados.',
-                      style: TextStyle(fontSize: 12, color: Cores.textoFraco),
+                      style: TextStyle(fontSize: 12, color: context.cores.textoFraco),
                     ),
                   ],
                 ),
@@ -287,7 +287,7 @@ class _PainelDeFiltrosState extends State<PainelDeFiltros> {
               child: FilledButton(
                 onPressed: () => Navigator.pop(context, _filtros),
                 style: FilledButton.styleFrom(
-                  backgroundColor: Cores.principal,
+                  backgroundColor: context.cores.principal,
                   minimumSize: const Size.fromHeight(52),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
@@ -324,9 +324,9 @@ class _Cartao extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 4, 14, 14),
       decoration: BoxDecoration(
-        color: Cores.cartao,
+        color: context.cores.cartao,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Cores.borda),
+        border: Border.all(color: context.cores.borda),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -347,11 +347,11 @@ class _Rotulo extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
     texto.toUpperCase(),
-    style: const TextStyle(
+    style: TextStyle(
       fontSize: 11,
       fontWeight: FontWeight.w600,
       letterSpacing: 0.5,
-      color: Cores.textoFraco,
+      color: context.cores.textoFraco,
     ),
   );
 }
@@ -383,7 +383,7 @@ class _Abas extends StatelessWidget {
         emptySelectionAllowed: true,
         showSelectedIcon: false,
         onSelectionChanged: aoMudar,
-        style: estiloDasAbas(Cores.fundo),
+        style: estiloDasAbas(context, context.cores.fundo),
       ),
     );
   }

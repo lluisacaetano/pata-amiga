@@ -148,7 +148,7 @@ class _EditarPerfilState extends State<EditarPerfil> {
   Future<void> _passarESair(Ong ong) async {
     final escolhido = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: Cores.cartao,
+      backgroundColor: context.cores.cartao,
       showDragHandle: true,
       isScrollControlled: true,
       builder: (painel) => _EscolherNovaAdmin(ong: ong),
@@ -183,7 +183,7 @@ class _EditarPerfilState extends State<EditarPerfil> {
     final membro = ong.fazParte(email);
     final confirmou = await showModalBottomSheet<bool>(
       context: context,
-      backgroundColor: Cores.cartao,
+      backgroundColor: context.cores.cartao,
       showDragHandle: true,
       builder: (painel) => SafeArea(
         child: Padding(
@@ -209,9 +209,9 @@ class _EditarPerfilState extends State<EditarPerfil> {
                           'já publicou por ela continuam no perfil dela.'
                     : 'Quem administra a ONG não vai mais ver o seu pedido.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
-                  color: Cores.textoFraco,
+                  color: context.cores.textoFraco,
                   height: 1.4,
                 ),
               ),
@@ -219,7 +219,7 @@ class _EditarPerfilState extends State<EditarPerfil> {
               FilledButton(
                 onPressed: () => Navigator.pop(painel, false),
                 style: FilledButton.styleFrom(
-                  backgroundColor: Cores.principal,
+                  backgroundColor: context.cores.principal,
                   minimumSize: const Size.fromHeight(48),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
@@ -231,7 +231,7 @@ class _EditarPerfilState extends State<EditarPerfil> {
               TextButton(
                 onPressed: () => Navigator.pop(painel, true),
                 style: TextButton.styleFrom(
-                  foregroundColor: Cores.destaque,
+                  foregroundColor: context.cores.destaque,
                   textStyle: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 child: Text(membro ? 'Sair da ONG' : 'Cancelar pedido'),
@@ -281,10 +281,10 @@ class _EditarPerfilState extends State<EditarPerfil> {
               if (minha != null)
                 AvatarDaOng(ong: minha, raio: 22)
               else
-                const CircleAvatar(
+                CircleAvatar(
                   radius: 24,
-                  backgroundColor: Cores.principalClara,
-                  child: Icon(Icons.schedule, color: Cores.principal),
+                  backgroundColor: context.cores.principalClara,
+                  child: Icon(Icons.schedule, color: context.cores.principal),
                 ),
               const SizedBox(width: 12),
               Expanded(
@@ -305,9 +305,9 @@ class _EditarPerfilState extends State<EditarPerfil> {
                           : criou
                           ? 'Você administra'
                           : 'Você é membro',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
-                        color: Cores.textoFraco,
+                        color: context.cores.textoFraco,
                       ),
                     ),
                   ],
@@ -317,7 +317,7 @@ class _EditarPerfilState extends State<EditarPerfil> {
                 onPressed: () =>
                     criou ? _passarESair(minha!) : _sairDaOng(ong, email),
                 style: TextButton.styleFrom(
-                  foregroundColor: Cores.destaque,
+                  foregroundColor: context.cores.destaque,
                   textStyle: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 child: Text(minha != null ? 'Sair da ONG' : 'Cancelar pedido'),
@@ -336,13 +336,13 @@ class _EditarPerfilState extends State<EditarPerfil> {
           aoEscolher: (ong) => setState(() => _ong = ong),
         ),
         // Quem representa uma ONG que ainda não está no app cria o perfil
-        const Divider(height: 28, color: Cores.borda),
+        Divider(height: 28, color: context.cores.borda),
         TextButton.icon(
           onPressed: () => Navigator.pushNamed(context, AppRoutes.cadastroOng),
           icon: const Icon(Icons.add, size: 18),
           label: const Text('Criar o perfil de uma ONG'),
           style: TextButton.styleFrom(
-            foregroundColor: Cores.principal,
+            foregroundColor: context.cores.principal,
             textStyle: const TextStyle(fontWeight: FontWeight.w600),
           ),
         ),
@@ -360,25 +360,25 @@ class _EditarPerfilState extends State<EditarPerfil> {
       alterado: () => _houveMudanca && !_salvando,
       child: Scaffold(
       appBar: AppBar(
-        backgroundColor: Cores.fundo,
+        backgroundColor: context.cores.fundo,
         leadingWidth: 64,
         leading: Padding(
           padding: const EdgeInsets.only(left: 12),
           child: IconButton(
             icon: const Icon(Icons.arrow_back),
             tooltip: 'Voltar',
-            color: Cores.principal,
+            color: context.cores.principal,
             onPressed: () => Navigator.maybePop(context),
           ),
         ),
         centerTitle: true,
-        title: const Text(
+        title: Text(
           'EDITAR PERFIL',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.8,
-            color: Cores.principal,
+            color: context.cores.principal,
           ),
         ),
       ),
@@ -398,7 +398,7 @@ class _EditarPerfilState extends State<EditarPerfil> {
             Center(
               child: TextButton(
                 onPressed: _selecionandoFoto ? null : _selecionarFoto,
-                style: TextButton.styleFrom(foregroundColor: Cores.principal),
+                style: TextButton.styleFrom(foregroundColor: context.cores.principal),
                 child: Text(
                   imagem == null ? 'Escolher foto' : 'Trocar foto',
                   style: const TextStyle(fontWeight: FontWeight.w600),
@@ -464,9 +464,9 @@ class _EditarPerfilState extends State<EditarPerfil> {
         child: FilledButton(
           onPressed: _houveMudanca && !_salvando ? _salvar : null,
           style: FilledButton.styleFrom(
-            backgroundColor: Cores.principal,
-            disabledBackgroundColor: Cores.borda,
-            disabledForegroundColor: Cores.textoFraco,
+            backgroundColor: context.cores.principal,
+            disabledBackgroundColor: context.cores.borda,
+            disabledForegroundColor: context.cores.textoFraco,
             minimumSize: const Size.fromHeight(52),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
@@ -517,19 +517,19 @@ class _FotoEditavel extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Cores.principalClara,
+                color: context.cores.principalClara,
               ),
               child: CircleAvatar(
                 radius: 56,
-                backgroundColor: Cores.principalClara,
+                backgroundColor: context.cores.principalClara,
                 backgroundImage: imagem,
                 child: imagem == null
-                    ? const Icon(
+                    ? Icon(
                         Icons.person_outline,
                         size: 56,
-                        color: Cores.principal,
+                        color: context.cores.principal,
                       )
                     : null,
               ),
@@ -539,13 +539,13 @@ class _FotoEditavel extends StatelessWidget {
               bottom: 0,
               child: Container(
                 padding: const EdgeInsets.all(2),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Cores.fundo,
+                  color: context.cores.fundo,
                 ),
                 child: CircleAvatar(
                   radius: 17,
-                  backgroundColor: Cores.principal,
+                  backgroundColor: context.cores.principal,
                   child: carregando
                       ? const SizedBox(
                           width: 16,
@@ -580,9 +580,9 @@ class _Cartao extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Cores.cartao,
+        color: context.cores.cartao,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Cores.borda),
+        border: Border.all(color: context.cores.borda),
       ),
       child: child,
     );
@@ -599,11 +599,11 @@ class _Rotulo extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       texto.toUpperCase(),
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.5,
-        color: Cores.textoFraco,
+        color: context.cores.textoFraco,
       ),
     );
   }
@@ -650,23 +650,23 @@ class _Campo extends StatelessWidget {
           textCapitalization: capitalizacao,
           validator: validador,
           autovalidateMode: AutovalidateMode.onUserInteraction,
-          style: const TextStyle(fontSize: 15, color: Cores.texto),
+          style: TextStyle(fontSize: 15, color: context.cores.texto),
           decoration: InputDecoration(
             isDense: true,
             filled: true,
-            fillColor: Cores.fundo,
+            fillColor: context.cores.fundo,
             hintText: exemplo,
-            hintStyle: const TextStyle(fontSize: 14, color: Cores.textoFraco),
-            prefixIcon: Icon(icone, size: 20, color: Cores.principal),
+            hintStyle: TextStyle(fontSize: 14, color: context.cores.textoFraco),
+            prefixIcon: Icon(icone, size: 20, color: context.cores.principal),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 12,
               vertical: 14,
             ),
-            enabledBorder: borda(Cores.borda),
-            focusedBorder: borda(Cores.principal, 1.5),
-            errorBorder: borda(Cores.destaque),
-            focusedErrorBorder: borda(Cores.destaque, 1.5),
-            errorStyle: const TextStyle(color: Cores.destaque),
+            enabledBorder: borda(context.cores.borda),
+            focusedBorder: borda(context.cores.principal, 1.5),
+            errorBorder: borda(context.cores.destaque),
+            focusedErrorBorder: borda(context.cores.destaque, 1.5),
+            errorStyle: TextStyle(color: context.cores.destaque),
           ),
         ),
       ],
@@ -698,12 +698,12 @@ class _CampoFixo extends StatelessWidget {
         const SizedBox(height: 8),
         Row(
           children: [
-            Icon(icone, size: 20, color: Cores.textoFraco),
+            Icon(icone, size: 20, color: context.cores.textoFraco),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 valor,
-                style: const TextStyle(fontSize: 15, color: Cores.texto),
+                style: TextStyle(fontSize: 15, color: context.cores.texto),
               ),
             ),
           ],
@@ -713,7 +713,7 @@ class _CampoFixo extends StatelessWidget {
           padding: const EdgeInsets.only(left: 32),
           child: Text(
             explicacao,
-            style: const TextStyle(fontSize: 12, color: Cores.textoFraco),
+            style: TextStyle(fontSize: 12, color: context.cores.textoFraco),
           ),
         ),
       ],
@@ -729,19 +729,19 @@ class _AvisoDeSenha extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Cores.principalClara,
+        color: context.cores.principalClara,
         borderRadius: BorderRadius.circular(14),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.lock_outline, size: 20, color: Cores.principal),
+          Icon(Icons.lock_outline, size: 20, color: context.cores.principal),
           SizedBox(width: 10),
           Expanded(
             child: Text(
               'A troca de senha fica disponível quando o login estiver '
               'conectado ao serviço de autenticação.',
-              style: TextStyle(fontSize: 13, color: Cores.texto, height: 1.4),
+              style: TextStyle(fontSize: 13, color: context.cores.texto, height: 1.4),
             ),
           ),
         ],
@@ -789,9 +789,9 @@ class _EscolherNovaAdminState extends State<_EscolherNovaAdmin> {
                   : 'A pessoa escolhida passa a editar o perfil e a chave Pix '
                         'e a responder aos pedidos. Você sai da ONG.',
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
-                color: Cores.textoFraco,
+                color: context.cores.textoFraco,
                 height: 1.4,
               ),
             ),
@@ -801,14 +801,14 @@ class _EscolherNovaAdminState extends State<_EscolherNovaAdmin> {
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Material(
                   color: _escolhido == pessoa.email
-                      ? Cores.principalClara
-                      : Cores.fundo,
+                      ? context.cores.principalClara
+                      : context.cores.fundo,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                     side: BorderSide(
                       color: _escolhido == pessoa.email
-                          ? Cores.principal
-                          : Cores.borda,
+                          ? context.cores.principal
+                          : context.cores.borda,
                       width: _escolhido == pessoa.email ? 1.5 : 1,
                     ),
                   ),
@@ -821,11 +821,11 @@ class _EscolherNovaAdminState extends State<_EscolherNovaAdmin> {
                         children: [
                           CircleAvatar(
                             radius: 18,
-                            backgroundColor: Cores.principalClara,
+                            backgroundColor: context.cores.principalClara,
                             child: Text(
                               iniciaisDa(pessoa.nome),
-                              style: const TextStyle(
-                                color: Cores.principal,
+                              style: TextStyle(
+                                color: context.cores.principal,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -845,9 +845,9 @@ class _EscolherNovaAdminState extends State<_EscolherNovaAdmin> {
                                 if (pessoa.telefone.isNotEmpty)
                                   Text(
                                     formatarTelefone(pessoa.telefone),
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 13,
-                                      color: Cores.textoFraco,
+                                      color: context.cores.textoFraco,
                                     ),
                                   ),
                               ],
@@ -858,8 +858,8 @@ class _EscolherNovaAdminState extends State<_EscolherNovaAdmin> {
                                 ? Icons.check_circle
                                 : Icons.circle_outlined,
                             color: _escolhido == pessoa.email
-                                ? Cores.principal
-                                : Cores.borda,
+                                ? context.cores.principal
+                                : context.cores.borda,
                           ),
                         ],
                       ),
@@ -875,7 +875,7 @@ class _EscolherNovaAdminState extends State<_EscolherNovaAdmin> {
                   ? null
                   : () => Navigator.pop(context, _escolhido),
               style: FilledButton.styleFrom(
-                backgroundColor: Cores.principal,
+                backgroundColor: context.cores.principal,
                 minimumSize: const Size.fromHeight(48),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -890,7 +890,7 @@ class _EscolherNovaAdminState extends State<_EscolherNovaAdmin> {
               TextButton(
                 onPressed: () => Navigator.pop(context),
                 style: TextButton.styleFrom(
-                  foregroundColor: Cores.textoFraco,
+                  foregroundColor: context.cores.textoFraco,
                 ),
                 child: const Text('Continuar na ONG'),
               ),

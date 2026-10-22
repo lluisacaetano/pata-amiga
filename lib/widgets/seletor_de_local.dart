@@ -185,10 +185,10 @@ class _SeletorDeLocalState extends State<SeletorDeLocal> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
+        Text(
           'Escreva o endereço, toque na mira para usar sua localização ou '
           'destrave o mapa e arraste até o pino.',
-          style: TextStyle(fontSize: 13, color: Cores.textoFraco),
+          style: TextStyle(fontSize: 13, color: context.cores.textoFraco),
         ),
         const SizedBox(height: 10),
         TextField(
@@ -200,9 +200,9 @@ class _SeletorDeLocalState extends State<SeletorDeLocal> {
           decoration: InputDecoration(
             isDense: true,
             filled: true,
-            fillColor: Cores.fundo,
+            fillColor: context.cores.fundo,
             hintText: 'Buscar endereço (rua e número)',
-            hintStyle: const TextStyle(fontSize: 14, color: Cores.textoFraco),
+            hintStyle: TextStyle(fontSize: 14, color: context.cores.textoFraco),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 12,
               vertical: 12,
@@ -216,10 +216,10 @@ class _SeletorDeLocalState extends State<SeletorDeLocal> {
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Icons.search, color: Cores.principal),
+                  : Icon(Icons.search, color: context.cores.principal),
             ),
-            enabledBorder: borda(Cores.borda),
-            focusedBorder: borda(Cores.principal, 1.5),
+            enabledBorder: borda(context.cores.borda),
+            focusedBorder: borda(context.cores.principal, 1.5),
           ),
         ),
         if (_aviso != null)
@@ -227,7 +227,7 @@ class _SeletorDeLocalState extends State<SeletorDeLocal> {
             padding: const EdgeInsets.only(top: 5, left: 2),
             child: Text(
               _aviso!,
-              style: const TextStyle(fontSize: 12, color: Cores.destaque),
+              style: TextStyle(fontSize: 12, color: context.cores.destaque),
             ),
           ),
         const SizedBox(height: 10),
@@ -245,7 +245,7 @@ class _SeletorDeLocalState extends State<SeletorDeLocal> {
         const SizedBox(height: 10),
         Row(
           children: [
-            const Icon(Icons.place_outlined, size: 16, color: Cores.principal),
+            Icon(Icons.place_outlined, size: 16, color: context.cores.principal),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
@@ -257,8 +257,8 @@ class _SeletorDeLocalState extends State<SeletorDeLocal> {
                 style: TextStyle(
                   fontSize: 14,
                   color: lugar.isEmpty || _lendoEndereco
-                      ? Cores.textoFraco
-                      : Cores.principal,
+                      ? context.cores.textoFraco
+                      : context.cores.principal,
                   fontWeight: lugar.isEmpty || _lendoEndereco
                       ? FontWeight.normal
                       : FontWeight.w600,
