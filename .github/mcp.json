@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "dart": {
+      "type": "local",
+      "command": "dart",
+      "args": [
+        "mcp-server",
+        "--enable",
+        "run_tests"
+      ],
+      "tools": [
+        "analyze_files",
+        "run_tests"
+      ]
+    }
+  }
+}
