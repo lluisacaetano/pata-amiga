@@ -84,6 +84,7 @@ flutter:
     - assets/animais/
     - assets/desenhos/
     - assets/marca/
+    - assets/ongs/abrigo-focinhos.jpg
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -13,25 +13,25 @@
 - `lib/main.dart`: inicialização do app, configuração de provedores, tema, escopo do estado compartilhado (`PataAmigaScope`) e `MaterialApp`.
 - `lib/main_cadastro.dart`: entrada alternativa existente para iniciar o fluxo de cadastro.
 - `lib/auth/`: roteamento e telas de boas-vindas, login, cadastro e recuperação de senha.
-- `lib/telas/`: telas do aplicativo, como feed, cadastro e edição de animal, detalhes, perfil, mapa, registro de avistamento, cadastro de ponto de alimentação, registro de abastecimento, onboarding e home.
-- `lib/widgets/`: widgets compartilhados de interface, formulários e cartões. Reutilize os existentes antes de criar outro: `SelecaoComBusca` (select com busca, usado para bairro e raça), `SeletorDeLocal` e `MapaDeLocal` (marcar um lugar no mapa), `PainelDeFiltros` (filtros do feed) e `acoes_do_registro.dart` (mudar status, editar e publicar para adoção).
+- `lib/telas/`: telas do aplicativo, como feed, cadastro e edição de animal, detalhes, perfil, mapa, registro de avistamento, cadastro de ponto de alimentação, registro de abastecimento, ONGs (lista, perfil público e cadastro), onboarding e home.
+- `lib/widgets/`: widgets compartilhados de interface, formulários e cartões. Reutilize os existentes antes de criar outro: `SelecaoComBusca` (select com busca, usado para bairro e raça), `SeletorDeLocal` e `MapaDeLocal` (marcar um lugar no mapa), `PainelDeFiltros` (filtros do feed), `acoes_do_registro.dart` (mudar status, editar, publicar para adoção e transferir para a ONG), `ProtegerAlteracoes` (pergunta antes de sair de um formulário com algo não salvo), `AvatarDaOng` e `sino_de_notificacoes.dart` (o sino de notificações das ONGs).
 - `lib/routes/`: nomes e configuração centralizada de rotas.
-- `lib/modelos/`: modelos de domínio, incluindo `Animal`, `Dono`, `Usuario`, `Avistamento`, `PontoDeAlimentacao`, `Abastecimento`, as regras das camadas do mapa (`camadas_do_mapa.dart`) e dos filtros do feed (`filtros_do_feed.dart`).
-- `lib/services/`: acesso à API (`AnimalService`, `AvistamentoService`, `AlimentacaoService`), cache local (`CacheService`), localização do aparelho (`LocalizacaoService`), bairro pelo CEP ou pela rua via ViaCEP (`BairroService`) e o endereço da API (`endereco_da_api.dart`).
+- `lib/modelos/`: modelos de domínio, incluindo `Animal`, `Dono`, `Usuario`, `Avistamento`, `PontoDeAlimentacao`, `Abastecimento`, `Ong`, as regras das camadas do mapa (`camadas_do_mapa.dart`) e dos filtros do feed (`filtros_do_feed.dart`).
+- `lib/services/`: acesso à API (`AnimalService`, `AvistamentoService`, `AlimentacaoService`, `OngService`), cache local (`CacheService`), localização do aparelho (`LocalizacaoService`), bairro pelo CEP ou pela rua via ViaCEP (`BairroService`) e o endereço da API (`endereco_da_api.dart`).
 - `lib/estado/`: estado compartilhado do app (`EstadoPataAmiga`).
 - `lib/provider/`: `UsuarioProvider`, usado para o estado do perfil.
 - `lib/dados/`: dados mockados existentes, que não são a fonte do feed atual (o feed lê da API), além das listas de referência: os bairros de Formiga (`bairros_formiga.dart`) e as raças de cachorro e de gato (`racas.dart`, com as fontes no próprio arquivo). Use essas listas em vez de texto livre.
 - `lib/tema/`: cores e configuração visual.
 - `assets/`: imagens, ilustrações, marca e fontes.
 - `test/`: testes automatizados. O arquivo versionado é `test/routes/animal_navigation_test.dart`, que usa versões falsas da API, do GPS e do serviço de endereços; siga esse padrão.
-- `api/db.json`: banco da API local usada pelo app, servido pelo `json-server` na porta 3000 (coleções `animais`, `avistamentos`, `pontosAlimentacao` e `abastecimentos`). Os animais de exemplo têm endereços reais de Formiga e dados conferidos com as fotos; ao mudar esse arquivo, mantenha os dois.
+- `api/db.json`: banco da API local usada pelo app, servido pelo `json-server` na porta 3000 (coleções `animais`, `avistamentos`, `pontosAlimentacao`, `abastecimentos` e `ongs`). Os animais de exemplo têm endereços reais de Formiga e dados conferidos com as fotos; ao mudar esse arquivo, mantenha os dois. A ONG de exemplo é fictícia ("Abrigo Focinhos (exemplo)", e-mail e chave Pix em `example.org`); não use nome, telefone ou Pix de organização real.
 - `documentacao/`: documentação e wireframes; confirme discrepâncias com o código atual.
 
 ## Estado e navegação
 
 - O estado não é centralizado em um único gerenciador:
 	- `UsuarioProvider` usa `ChangeNotifier` e o pacote `provider` para disponibilizar o usuário logado e o perfil.
-	- `EstadoPataAmiga` usa `ChangeNotifier`, exposto por `PataAmigaScope` (`InheritedNotifier`), para os animais do feed, as curtidas, os cadastros do usuário, os avistamentos e os pontos de alimentação. Não é um `Provider`: leia com `PataAmigaScope.of(context)`, ou `PataAmigaScope.talvez(context)` quando ele puder não existir, e nunca com `context.read`.
+	- `EstadoPataAmiga` usa `ChangeNotifier`, exposto por `PataAmigaScope` (`InheritedNotifier`), para os animais do feed, as curtidas, os cadastros do usuário, os avistamentos, os pontos de alimentação e as ONGs. Não é um `Provider`: leia com `PataAmigaScope.of(context)`, ou `PataAmigaScope.talvez(context)` quando ele puder não existir, e nunca com `context.read`.
 	- Telas `StatefulWidget` mantêm estado local quando apropriado, como busca, seleção e carregamento do feed.
 - Preserve os mecanismos existentes e evite migrar o app inteiro para outra arquitetura de estado sem requisito explícito.
 - Centralize nomes e builders de rotas em `lib/routes/`.
@@ -40,7 +40,7 @@
 
 ## Serviços e persistência
 
-- `AnimalService`, `AvistamentoService` e `AlimentacaoService` fazem chamadas HTTP para a API local, no endereço de `lib/services/endereco_da_api.dart` (`10.0.2.2:3000`, o computador visto pelo emulador Android). Ele é de desenvolvimento e não seleciona o host por plataforma.
+- `AnimalService`, `AvistamentoService`, `AlimentacaoService` e `OngService` fazem chamadas HTTP para a API local, no endereço de `lib/services/endereco_da_api.dart` (`10.0.2.2:3000`, o computador visto pelo emulador Android). Ele é de desenvolvimento e não seleciona o host por plataforma.
 - Chamadas HTTP devem permanecer na camada de serviços (`lib/services/`). Não implemente novas requisições diretamente em widgets ou telas; faça a tela consumir o serviço existente ou proponha a menor extensão necessária à camada de serviços.
 - `CacheService` serializa animais no `SharedPreferences`; preserve a leitura, gravação e tratamento de cache inválido.
 - O feed diferencia carregamento, cache, atualização e erro. Não remova esses estados nem mude o comportamento offline para simplificar testes.
@@ -54,6 +54,8 @@
 - Preserve os modelos existentes em `lib/modelos/`.
 - `Animal` tem conversão JSON usada pela API e pelo cache. Ao mudar campos, confira `fromJson`, `toJson` e os testes relevantes. Campos acrescentados na Sprint 4: `id` da API, `rua`, `latitude` e `longitude`, e `responsavelEmail` (quem cadastrou, que é quem pode editar e mudar o status).
 - `StatusAnimal` tem `disponivel` e um desfecho por tipo: adoção vira `adotado`, perdido vira `encontrado` e resgate vira `resgatado`. Animal com desfecho sai do feed e do mapa.
+- `Animal.ongId` diz em nome de qual ONG o animal foi publicado (null quando foi em nome da própria pessoa). O perfil da ONG e o filtro por ONG usam o `ongId`, nunca o e-mail; "Meus registros" mostra só os animais sem `ongId`. Qualquer pessoa da ONG muda o status e edita os animais dela.
+- `Ong` tem uma admin (`responsavelEmail`), os membros e os pedidos para entrar (`PessoaDaOng`). Cada conta faz parte de no máximo uma ONG; só a admin edita o perfil e a chave Pix, responde aos pedidos e remove membros. O nome da ONG é único, sem diferenciar maiúsculas e acentos. Pedidos e respostas partem da versão da API (`OngService.buscarOng`), não da cópia do app. A chave Pix só é exibida: o app não processa doações.
 - A raça é escolhida da lista de `lib/dados/racas.dart`; `racaPadrao` (em `filtros_do_feed.dart`) traz para o nome da lista as raças antigas escritas à mão.
 - `TipoRegistro` atualmente contempla adoção, perdido e resgate; não adicione valores ou comportamentos sem requisito.
 - `Dono` contém dados de contato. Trate telefone e demais dados pessoais com cuidado.

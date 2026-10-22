@@ -43,6 +43,15 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
   Future<void> _cadastrar() async {
     setState(() => _tentou = true);
     if (_tipo == null || _salvando) return;
+    // O endereço é obrigatório: é por ele que os outros acham o ponto
+    if (_local.rua.trim().isEmpty || _local.bairro.trim().isEmpty) {
+      setState(
+        () => _recusa =
+            'Marque no mapa onde fica o ponto, com rua e bairro, antes de '
+            'cadastrar.',
+      );
+      return;
+    }
     setState(() {
       _salvando = true;
       _recusa = null;

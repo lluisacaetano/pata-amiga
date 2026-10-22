@@ -11,6 +11,9 @@ abstract final class AppRoutes {
   static const perfilUsuario = '/perfil-usuario';
   static const editarPerfil = '/editar-perfil';
   static const mapa = '/mapa';
+  static const ongs = '/ongs';
+  static const perfilOng = '/perfil-ong';
+  static const cadastroOng = '/cadastro-ong';
   static const registrarAvistamento = '/registrar-avistamento';
   static const cadastrarPonto = '/cadastrar-ponto';
   static const registrarAbastecimento = '/registrar-abastecimento';

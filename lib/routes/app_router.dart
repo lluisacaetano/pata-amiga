@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 
 import '../modelos/animal.dart';
+import '../modelos/ong.dart';
 import '../modelos/ponto_de_alimentacao.dart';
 import '../auth/auth_router.dart';
 import '../auth/screens/cadastro_screen.dart';
@@ -12,6 +13,9 @@ import '../telas/feed_adocao.dart';
 import '../telas/detalhes_animal.dart';
 import '../telas/cadastrar_ponto.dart';
 import '../telas/cadastro_animal.dart';
+import '../telas/cadastro_ong.dart';
+import '../telas/lista_ongs.dart';
+import '../telas/perfil_ong.dart';
 import '../widgets/acoes_do_registro.dart';
 import '../telas/onboarding_screen.dart';
 import '../telas/editar_perfil.dart';
@@ -73,6 +77,22 @@ class AppRoutesConfig {
     },
 
     AppRoutes.cadastrarPonto: (_) => const CadastrarPonto(),
+
+    AppRoutes.ongs: (_) => const ListaOngs(),
+
+    AppRoutes.perfilOng: (context) {
+      final ong = ModalRoute.of(context)?.settings.arguments;
+      if (ong is! Ong) {
+        throw ArgumentError('O perfil precisa saber de qual ONG é.');
+      }
+      return PerfilOng(ong: ong);
+    },
+
+    // Sem argumento, cria a ONG; com uma, edita
+    AppRoutes.cadastroOng: (context) {
+      final ong = ModalRoute.of(context)?.settings.arguments;
+      return CadastroOng(editando: ong is Ong ? ong : null);
+    },
 
     AppRoutes.registrarAbastecimento: (context) {
       final ponto = ModalRoute.of(context)?.settings.arguments;

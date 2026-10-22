@@ -13,7 +13,7 @@ import 'mapa_de_local.dart';
 typedef LocalEscolhido = ({LatLng ponto, String rua, String bairro});
 
 // Marcar um lugar de três formas: escrevendo o endereço, tocando na mira para
-// usar a localização ou arrastando o mapa. Mexer no mapa preenche a busca com
+// usar a localização ou destravando e arrastando o mapa. Mexer no mapa preenche a busca com
 // o endereço do ponto. Avisa a tela a cada mudança
 class SeletorDeLocal extends StatefulWidget {
   final LatLng inicio;
@@ -119,7 +119,7 @@ class _SeletorDeLocalState extends State<SeletorDeLocal> {
       if (achados.isEmpty) {
         aviso =
             'Não encontrei esse endereço em Formiga. Confira o nome ou '
-            'arraste o mapa.';
+            'destrave o mapa e arraste.';
       } else if (mounted) {
         _moverPara(LatLng(achados.first.latitude, achados.first.longitude));
       }
@@ -187,7 +187,7 @@ class _SeletorDeLocalState extends State<SeletorDeLocal> {
       children: [
         const Text(
           'Escreva o endereço, toque na mira para usar sua localização ou '
-          'arraste o mapa até o pino.',
+          'destrave o mapa e arraste até o pino.',
           style: TextStyle(fontSize: 13, color: Cores.textoFraco),
         ),
         const SizedBox(height: 10),

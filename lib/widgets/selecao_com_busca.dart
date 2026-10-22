@@ -28,6 +28,10 @@ class SelecaoComBusca extends StatefulWidget {
   // Sem elas, o campo guarda uma escolha só, como no cadastro
   final Set<String>? marcadas;
   final ValueChanged<String?> aoEscolher;
+  // Telas com outro padrão de rótulo, como o "Criar conta": o rótulo sai
+  // como está escrito, com este estilo, e o texto do campo também
+  final TextStyle? estiloDoRotulo;
+  final TextStyle? estiloDoTexto;
 
   const SelecaoComBusca({
     super.key,
@@ -42,6 +46,8 @@ class SelecaoComBusca extends StatefulWidget {
     this.comErro = false,
     this.marcadas,
     required this.aoEscolher,
+    this.estiloDoRotulo,
+    this.estiloDoTexto,
   });
 
   @override
@@ -73,13 +79,17 @@ class _SelecaoComBuscaState extends State<SelecaoComBusca> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          widget.rotulo.toUpperCase(),
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.5,
-            color: Cores.textoFraco,
-          ),
+          widget.estiloDoRotulo == null
+              ? widget.rotulo.toUpperCase()
+              : widget.rotulo,
+          style:
+              widget.estiloDoRotulo ??
+              const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+                color: Cores.textoFraco,
+              ),
         ),
         const SizedBox(height: 6),
         LayoutBuilder(
@@ -116,7 +126,7 @@ class _SelecaoComBuscaState extends State<SelecaoComBusca> {
                   controller: controlador,
                   focusNode: foco,
                   enabled: widget.habilitada,
-                  style: const TextStyle(fontSize: 15),
+                  style: widget.estiloDoTexto ?? const TextStyle(fontSize: 15),
                   textCapitalization: TextCapitalization.words,
                   // Só conta como escolhido o que bate com a lista
                   onChanged: (texto) {

@@ -8,6 +8,7 @@ import '../modelos/animal.dart';
 import '../modelos/avistamento.dart';
 import '../modelos/camadas_do_mapa.dart';
 import '../modelos/dono.dart';
+import '../modelos/ong.dart';
 import '../provider/usuario_provider.dart';
 import '../routes/route_names.dart';
 import '../services/animal_service.dart';
@@ -95,6 +96,7 @@ class DetalhesAnimal extends StatelessWidget {
     final animal = estado.atual(this.animal);
     final email = context.read<UsuarioProvider?>()?.usuario.email ?? '';
     final ehResponsavel = estado.podeMudarStatus(animal, email);
+    final minhaOng = estado.ongDe(email);
     final estaCurtido = estado.estaCurtido(animal.nome);
     final perdido = animal.tipo == TipoRegistro.perdido;
 
@@ -147,6 +149,11 @@ class DetalhesAnimal extends StatelessWidget {
                 aoMudar: () => mudarStatus(context, animal, api: api),
                 aoEditar: () => editarRegistro(context, animal, api: api),
                 aoPublicar: () => publicarParaAdocao(context, animal, api: api),
+                // Quem faz parte de uma ONG leva o próprio cadastro para ela
+                ongParaTransferir: animal.ongId == null ? minhaOng : null,
+                aoTransferir: minhaOng == null
+                    ? null
+                    : () => enviarParaOng(context, animal, minhaOng, api: api),
               ),
             ],
             if (perdido) ...[
@@ -342,6 +349,30 @@ class _Ficha extends StatelessWidget {
               ('Telefone', formatarTelefone(animal.dono.telefone)),
             ],
           ),
+          // Publicado em nome de uma ONG: o atalho leva ao perfil dela
+          if (PataAmigaScope.of(context).ongs
+                  .where((ong) => ong.id != null && ong.id == animal.ongId)
+                  .firstOrNull
+              case final ong?) ...[
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.pushNamed(
+                context,
+                AppRoutes.perfilOng,
+                arguments: ong,
+              ),
+              icon: const Icon(Icons.volunteer_activism_outlined, size: 18),
+              label: const Text('Ver perfil da ONG'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Cores.principal,
+                side: const BorderSide(color: Cores.principal),
+                minimumSize: const Size.fromHeight(44),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -791,12 +822,16 @@ class _ControleDoStatus extends StatelessWidget {
     required this.aoMudar,
     required this.aoEditar,
     required this.aoPublicar,
+    this.ongParaTransferir,
+    this.aoTransferir,
   });
 
   final Animal animal;
   final VoidCallback aoMudar;
   final VoidCallback aoEditar;
   final VoidCallback aoPublicar;
+  final Ong? ongParaTransferir;
+  final VoidCallback? aoTransferir;
 
   @override
   Widget build(BuildContext context) {
@@ -815,17 +850,20 @@ class _ControleDoStatus extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.verified_user_outlined,
                 size: 18,
                 color: Cores.principal,
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Text(
-                'Você cadastrou este animal',
-                style: TextStyle(
+                // Na ONG, quem cuida pode não ser quem cadastrou
+                animal.ongId != null
+                    ? 'Animal da sua ONG'
+                    : 'Você cadastrou este animal',
+                style: const TextStyle(
                   color: Cores.principal,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
@@ -865,6 +903,21 @@ class _ControleDoStatus extends StatelessWidget {
               minimumSize: const Size.fromHeight(44),
             ),
           ),
+          if (ongParaTransferir case final ong?) ...[
+            TextButton.icon(
+              onPressed: aoTransferir,
+              icon: const Icon(Icons.volunteer_activism_outlined, size: 18),
+              label: Text(
+                'Transferir para ${ong.nome}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              style: TextButton.styleFrom(
+                foregroundColor: Cores.principal,
+                minimumSize: const Size.fromHeight(44),
+              ),
+            ),
+          ],
           if (animal.status == StatusAnimal.resgatado) ...[
             const SizedBox(height: 4),
             FilledButton.icon(
