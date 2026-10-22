@@ -152,7 +152,7 @@ class _MapaDeLocalState extends State<MapaDeLocal> {
                           Icon(
                             _travado ? Icons.lock_outline : Icons.lock_open,
                             size: 16,
-                            color: _travado ? context.cores.principal : Colors.white,
+                            color: _travado ? context.cores.principal : context.sobrePrincipal,
                           ),
                           const SizedBox(width: 6),
                           Text(
@@ -160,7 +160,7 @@ class _MapaDeLocalState extends State<MapaDeLocal> {
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: _travado ? context.cores.principal : Colors.white,
+                              color: _travado ? context.cores.principal : context.sobrePrincipal,
                             ),
                           ),
                         ],

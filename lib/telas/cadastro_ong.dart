@@ -361,7 +361,7 @@ class _CadastroOngState extends State<CadastroOng> {
                                   child: Icon(
                                     Icons.photo_camera_outlined,
                                     size: 18,
-                                    color: Colors.white,
+                                    color: context.sobrePrincipal,
                                   ),
                                 ),
                               ),

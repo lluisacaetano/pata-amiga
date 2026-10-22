@@ -477,12 +477,12 @@ class _EditarPerfilState extends State<EditarPerfil> {
             ),
           ),
           child: _salvando
-              ? const SizedBox(
+              ? SizedBox(
                   width: 20,
                   height: 20,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Colors.white,
+                    color: context.sobrePrincipal,
                   ),
                 )
               : const Text('Salvar alterações'),
@@ -547,18 +547,18 @@ class _FotoEditavel extends StatelessWidget {
                   radius: 17,
                   backgroundColor: context.cores.principal,
                   child: carregando
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: context.sobrePrincipal,
                           ),
                         )
-                      : const Icon(
+                      : Icon(
                           Icons.photo_camera_outlined,
                           size: 18,
-                          color: Colors.white,
+                          color: context.sobrePrincipal,
                         ),
                 ),
               ),

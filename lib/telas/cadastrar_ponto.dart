@@ -277,12 +277,12 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
           FilledButton.icon(
             onPressed: _salvando ? null : _cadastrar,
             icon: _salvando
-                ? const SizedBox(
+                ? SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Colors.white,
+                      color: context.sobrePrincipal,
                     ),
                   )
                 : const Icon(Icons.add_location_alt_outlined, size: 18),

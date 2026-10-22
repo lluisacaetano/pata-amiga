@@ -692,7 +692,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
       floatingActionButton: FloatingActionButton(
         onPressed: _abrirCadastroAnimal,
         backgroundColor: context.cores.principal,
-        foregroundColor: Colors.white,
+        foregroundColor: context.sobrePrincipal,
         tooltip: 'Cadastrar animal',
         child: const Icon(Icons.add),
       ),

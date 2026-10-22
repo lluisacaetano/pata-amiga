@@ -1039,12 +1039,12 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
             FilledButton.icon(
               onPressed: _salvando || _gravando ? null : _cadastrar,
               icon: _salvando || _gravando
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 18,
                       height: 18,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.white,
+                        color: context.sobrePrincipal,
                       ),
                     )
                   : Icon(

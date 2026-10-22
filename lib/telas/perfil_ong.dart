@@ -200,7 +200,7 @@ class PerfilOng extends StatelessWidget {
               label: const Text('Conversar no WhatsApp'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: context.cores.principal,
-                foregroundColor: Colors.white,
+                foregroundColor: context.sobrePrincipal,
                 textStyle: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,

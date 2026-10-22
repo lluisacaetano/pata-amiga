@@ -465,12 +465,12 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
           FilledButton.icon(
             onPressed: _salvando ? null : _registrar,
             icon: _salvando
-                ? const SizedBox(
+                ? SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Colors.white,
+                      color: context.sobrePrincipal,
                     ),
                   )
                 : const Icon(Icons.visibility_outlined, size: 18),

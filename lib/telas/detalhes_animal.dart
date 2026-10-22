@@ -203,7 +203,7 @@ class DetalhesAnimal extends StatelessWidget {
                       label: const Text('Conversar no WhatsApp'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: context.cores.principal,
-                        foregroundColor: Colors.white,
+                        foregroundColor: context.sobrePrincipal,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),

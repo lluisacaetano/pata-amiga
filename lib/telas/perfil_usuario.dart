@@ -22,6 +22,8 @@ import '../widgets/sino_de_notificacoes.dart';
 
 enum _SecaoPerfil { curtidos, meusCadastros }
 
+enum _OpcaoDoMenu { aparencia, acessibilidade, sair }
+
 // Os grupos de "Meus registros", na ordem em que aparecem: primeiro o que
 // ainda precisa de alguém, depois cada desfecho
 const _gruposDeRegistro = [
@@ -139,6 +141,22 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
     await enviarParaOng(context, animal, ong, api: widget.api);
   }
 
+  PopupMenuItem<_OpcaoDoMenu> _itemDoMenu(
+    _OpcaoDoMenu opcao,
+    IconData icone,
+    String texto, {
+    Color? cor,
+  }) => PopupMenuItem(
+    value: opcao,
+    child: Row(
+      children: [
+        Icon(icone, size: 20, color: cor ?? context.cores.principal),
+        const SizedBox(width: 12),
+        Text(texto, style: TextStyle(color: cor ?? context.cores.texto)),
+      ],
+    ),
+  );
+
   Future<void> _sair() async {
     await context.read<UsuarioProvider>().encerrarSessao();
     if (!mounted) return;
@@ -179,12 +197,47 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
         actions: [
           // Quem administra uma ONG recebe aqui os pedidos para entrar nela
           SinoDeNotificacoes(email: usuario.email),
-          IconButton(
-            tooltip: 'Sair da conta',
-            icon: Icon(Icons.logout, color: context.cores.principal),
-            onPressed: _sair,
+          // Aparência, acessibilidade e sair ficam num menu só, no canto,
+          // em vez de ocupar o meio do perfil
+          PopupMenuButton<_OpcaoDoMenu>(
+            tooltip: 'Mais opções',
+            icon: Icon(Icons.more_vert, color: context.cores.principal),
+            color: context.cores.cartao,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            onSelected: (opcao) => switch (opcao) {
+              _OpcaoDoMenu.aparencia => Navigator.pushNamed(
+                context,
+                AppRoutes.configuracoesAparencia,
+              ),
+              _OpcaoDoMenu.acessibilidade => Navigator.pushNamed(
+                context,
+                AppRoutes.configuracoesAcessibilidade,
+              ),
+              _OpcaoDoMenu.sair => _sair(),
+            },
+            itemBuilder: (_) => [
+              _itemDoMenu(
+                _OpcaoDoMenu.aparencia,
+                Icons.palette_outlined,
+                'Aparência',
+              ),
+              _itemDoMenu(
+                _OpcaoDoMenu.acessibilidade,
+                Icons.accessibility_new,
+                'Acessibilidade',
+              ),
+              const PopupMenuDivider(),
+              _itemDoMenu(
+                _OpcaoDoMenu.sair,
+                Icons.logout,
+                'Sair da conta',
+                cor: context.cores.destaque,
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
         ],
       ),
       body: ListView(
@@ -197,26 +250,6 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
             vinculo: VinculoComOng(
               ong: estado.ongDe(usuario.email),
               pedida: estado.ongPedidaPor(usuario.email),
-            ),
-          ),
-          const SizedBox(height: 20),
-          _OpcaoConfiguracao(
-            icone: Icons.palette_outlined,
-            titulo: 'Aparência',
-            descricao: 'Tema claro, escuro ou do sistema',
-            aoAbrir: () => Navigator.pushNamed(
-              context,
-              AppRoutes.configuracoesAparencia,
-            ),
-          ),
-          const SizedBox(height: 10),
-          _OpcaoConfiguracao(
-            icone: Icons.accessibility_new,
-            titulo: 'Acessibilidade',
-            descricao: 'Texto, contraste e animações',
-            aoAbrir: () => Navigator.pushNamed(
-              context,
-              AppRoutes.configuracoesAcessibilidade,
             ),
           ),
           const SizedBox(height: 24),
@@ -277,36 +310,6 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
   }
 }
 
-class _OpcaoConfiguracao extends StatelessWidget {
-  const _OpcaoConfiguracao({
-    required this.icone,
-    required this.titulo,
-    required this.descricao,
-    required this.aoAbrir,
-  });
-
-  final IconData icone;
-  final String titulo;
-  final String descricao;
-  final VoidCallback aoAbrir;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
-      child: ListTile(
-        leading: Icon(icone, color: context.cores.principal),
-        title: Text(titulo, style: const TextStyle(fontWeight: FontWeight.w700)),
-        subtitle: Text(descricao),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: aoAbrir,
-      ),
-    );
-  }
-}
-
-// Foto, nome e contato abertos no fundo da tela, sem cartão em volta: é a
-// pessoa, não um bloco de dados
 class _Cabecalho extends StatelessWidget {
   const _Cabecalho({
     required this.usuario,

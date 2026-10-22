@@ -88,7 +88,7 @@ void main() {
     );
 
     expect(
-      Theme.of(tester.element(find.text('Aparência'))).brightness,
+      Theme.of(tester.element(find.text('APARÊNCIA'))).brightness,
       Brightness.light,
     );
 
@@ -97,7 +97,7 @@ void main() {
 
     expect(preferencias.tema, PreferenciaTema.escuro);
     expect(
-      Theme.of(tester.element(find.text('Aparência'))).brightness,
+      Theme.of(tester.element(find.text('APARÊNCIA'))).brightness,
       Brightness.dark,
     );
   });
@@ -146,11 +146,16 @@ void main() {
       ),
     );
 
+    // As opções ficam no menu de três pontinhos, no canto
+    await tester.tap(find.byTooltip('Mais opções'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Aparência'));
     await tester.pumpAndSettle();
     expect(find.text('Seguir sistema'), findsOneWidget);
 
-    await tester.pageBack();
+    await tester.tap(find.byTooltip('Voltar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Mais opções'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Acessibilidade'));
     await tester.pumpAndSettle();
