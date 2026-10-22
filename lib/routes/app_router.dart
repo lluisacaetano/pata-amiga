@@ -5,6 +5,7 @@ import '../modelos/animal.dart';
 import '../modelos/ponto_de_alimentacao.dart';
 import '../auth/auth_router.dart';
 import '../auth/screens/cadastro_screen.dart';
+import '../auth/screens/documento_legal_screen.dart';
 import '../auth/screens/login_screen.dart';
 import '../auth/screens/recuperar_senha.dart';
 import '../telas/home_screen.dart';
@@ -34,6 +35,12 @@ class AppRoutesConfig {
 
     AppRoutes.register: (_) => const RegisterScreen(),
 
+    AppRoutes.terms: (_) =>
+        const DocumentoLegalScreen(tipo: TipoDocumentoLegal.termos),
+
+    AppRoutes.privacy: (_) =>
+        const DocumentoLegalScreen(tipo: TipoDocumentoLegal.privacidade),
+
     AppRoutes.recoverPassword: (_) => const RecoverPasswordScreen(),
 
     AppRoutes.home: (_) => const SuaTelaHome(),
@@ -49,9 +56,7 @@ class AppRoutesConfig {
       final animal = ModalRoute.of(context)?.settings.arguments;
 
       if (animal is! Animal) {
-        throw ArgumentError(
-          'A rota de detalhes precisa receber um Animal.',
-        );
+        throw ArgumentError('A rota de detalhes precisa receber um Animal.');
       }
 
       return DetalhesAnimal(animal: animal);

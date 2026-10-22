@@ -31,7 +31,10 @@ class ConfiguracoesAcessibilidade extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('Tamanho do texto', style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            'Tamanho do texto',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           const SizedBox(height: 4),
           Text(
             'Ajuste a leitura em todo o aplicativo.',
@@ -65,42 +68,6 @@ class ConfiguracoesAcessibilidade extends StatelessWidget {
                     ),
                 ],
               ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Card(
-            child: Column(
-              children: [
-                SwitchListTile(
-                  value: preferencias.altoContraste,
-                  onChanged: (valor) => _salvar(
-                    context,
-                    () => context
-                        .read<PreferenciasAplicativoProvider>()
-                        .definirAltoContraste(valor),
-                  ),
-                  title: const Text('Alto contraste'),
-                  subtitle: const Text(
-                    'Aumenta a distinção entre textos, fundos e controles.',
-                  ),
-                  secondary: const Icon(Icons.contrast),
-                ),
-                const Divider(height: 1),
-                SwitchListTile(
-                  value: preferencias.reduzirAnimacoes,
-                  onChanged: (valor) => _salvar(
-                    context,
-                    () => context
-                        .read<PreferenciasAplicativoProvider>()
-                        .definirReducaoAnimacoes(valor),
-                  ),
-                  title: const Text('Reduzir animações'),
-                  subtitle: const Text(
-                    'Diminui movimentos e transições não essenciais.',
-                  ),
-                  secondary: const Icon(Icons.motion_photos_off_outlined),
-                ),
-              ],
             ),
           ),
         ],
