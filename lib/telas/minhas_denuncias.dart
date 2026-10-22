@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../modelos/denuncia.dart';
+import '../routes/route_names.dart';
 import '../services/denuncia_service.dart';
 import '../tema/cores.dart';
+import '../widgets/foto_animal.dart';
 
 // As denúncias feitas neste aparelho, inclusive as anônimas, com o protocolo
 // e a situação atual: recebida, em apuração ou encerrada
@@ -19,6 +21,23 @@ class _MinhasDenunciasState extends State<MinhasDenuncias> {
   late final _servico = widget.servico ?? DenunciaService();
   List<Denuncia>? _denuncias;
   bool _semConexao = false;
+  final _pesquisa = TextEditingController();
+  String _busca = '';
+
+  @override
+  void dispose() {
+    _pesquisa.dispose();
+    super.dispose();
+  }
+
+  // O protocolo sem hífen nem espaço: "pa 2026" acha "PA-20261022-9204"
+  static String _comparavel(String texto) =>
+      texto.toUpperCase().replaceAll(RegExp('[^A-Z0-9]'), '');
+
+  bool _combina(Denuncia denuncia) {
+    final busca = _comparavel(_busca);
+    return busca.isEmpty || _comparavel(denuncia.protocolo).contains(busca);
+  }
 
   @override
   void initState() {
@@ -45,7 +64,9 @@ class _MinhasDenunciasState extends State<MinhasDenuncias> {
 
   @override
   Widget build(BuildContext context) {
-    final denuncias = _denuncias;
+    final todas = _denuncias;
+    final denuncias = todas?.where(_combina).toList();
+    final buscando = _busca.trim().isNotEmpty;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: context.cores.fundo,
@@ -76,6 +97,40 @@ class _MinhasDenunciasState extends State<MinhasDenuncias> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           children: [
+            if (todas != null && todas.isNotEmpty) ...[
+              TextField(
+                controller: _pesquisa,
+                onChanged: (texto) => setState(() => _busca = texto),
+                style: const TextStyle(fontSize: 15),
+                decoration: InputDecoration(
+                  isDense: true,
+                  filled: true,
+                  fillColor: context.cores.cartao,
+                  hintText: 'Buscar pelo protocolo',
+                  hintStyle: TextStyle(
+                    fontSize: 14,
+                    color: context.cores.textoFraco,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    color: context.cores.textoFraco,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide(color: context.cores.borda),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide(
+                      color: context.cores.principal,
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
             if (_semConexao)
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
@@ -94,6 +149,18 @@ class _MinhasDenunciasState extends State<MinhasDenuncias> {
                 child: Center(
                   child: CircularProgressIndicator(
                     color: context.cores.principal,
+                  ),
+                ),
+              )
+            else if (denuncias.isEmpty && buscando)
+              Padding(
+                padding: const EdgeInsets.only(top: 24),
+                child: Text(
+                  'Nenhuma denúncia com esse protocolo.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: context.cores.textoFraco,
                   ),
                 ),
               )
@@ -146,74 +213,102 @@ class _CartaoDaDenuncia extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    String dois(int n) => n.toString().padLeft(2, '0');
-    final data = denuncia.registradaEm;
     final situacao = denuncia.situacao;
     // A cor da situação: clara enquanto espera, cheia quando encerrada
     final encerrada = situacao == SituacaoDaDenuncia.encerrada;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
         color: context.cores.cartao,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.cores.borda),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  denuncia.tipo.rotulo,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: encerrada
-                      ? context.cores.principal
-                      : context.cores.principalClara,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  situacao.rotulo,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: encerrada
-                        ? context.sobrePrincipal
-                        : context.cores.principal,
-                  ),
-                ),
-              ),
-            ],
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: context.cores.borda),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => Navigator.pushNamed(
+            context,
+            AppRoutes.detalhesDenuncia,
+            arguments: denuncia,
           ),
-          const SizedBox(height: 6),
-          Text(
-            'Protocolo ${denuncia.protocolo}',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: context.cores.texto,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                // A primeira foto da denúncia; sem foto, a patinha
+                SizedBox(
+                  width: 72,
+                  child: FotoAnimal(
+                    caminho: denuncia.fotos.firstOrNull ?? '',
+                    altura: 72,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              denuncia.tipo.rotulo,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: encerrada
+                                  ? context.cores.principal
+                                  : context.cores.principalClara,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              situacao.rotulo,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: encerrada
+                                    ? context.sobrePrincipal
+                                    : context.cores.principal,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Protocolo ${denuncia.protocolo}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: context.cores.texto,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Registrada ${quandoFoi(denuncia.registradaEm, DateTime.now())}'
+                        '${denuncia.bairro.isEmpty ? '' : ', ${denuncia.bairro}'}'
+                        '${denuncia.anonima ? ', anônima' : ''}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: context.cores.textoFraco,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Registrada em ${dois(data.day)}/${dois(data.month)}/${data.year}'
-            '${denuncia.bairro.isEmpty ? '' : ', ${denuncia.bairro}'}'
-            '${denuncia.anonima ? ', anônima' : ''}',
-            style: TextStyle(fontSize: 13, color: context.cores.textoFraco),
-          ),
-        ],
+        ),
       ),
     );
   }

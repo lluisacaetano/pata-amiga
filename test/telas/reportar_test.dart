@@ -185,4 +185,76 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.bySemanticsLabel('Remover foto'), findsOneWidget);
   });
+
+  test('a data do registro sai como se fala', () {
+    final agora = DateTime(2026, 10, 22, 18);
+    expect(quandoFoi(DateTime(2026, 10, 22, 14, 19), agora), 'hoje às 14:19');
+    expect(quandoFoi(DateTime(2026, 10, 21, 9, 5), agora), 'ontem às 09:05');
+    expect(
+      quandoFoi(DateTime(2026, 10, 2, 8, 0), agora),
+      '02/10/2026 às 08:00',
+    );
+  });
+
+  testWidgets('a busca acha a denúncia pelo protocolo, sem hífen', (
+    tester,
+  ) async {
+    final servico = _DenunciasFalsas();
+    for (final (protocolo, tipo) in [
+      ('PA-20261022-0042', TipoDeDenuncia.mausTratos),
+      ('PA-20261022-7777', TipoDeDenuncia.abandono),
+    ]) {
+      await servico.registrar(
+        Denuncia(
+          protocolo: protocolo,
+          tipo: tipo,
+          descricao: 'Relato.',
+          rua: 'Rua Pará de Minas',
+          bairro: 'Centro',
+          registradaEm: DateTime(2026, 10, 22),
+        ),
+      );
+    }
+    await _abrir(tester, MinhasDenuncias(servico: servico));
+
+    await tester.enterText(find.byType(TextField), '7777');
+    await tester.pumpAndSettle();
+    expect(find.text('Protocolo PA-20261022-7777'), findsOneWidget);
+    expect(find.text('Protocolo PA-20261022-0042'), findsNothing);
+
+    await tester.enterText(find.byType(TextField), 'pa 20261022 0042');
+    await tester.pumpAndSettle();
+    expect(find.text('Protocolo PA-20261022-0042'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), '9999');
+    await tester.pumpAndSettle();
+    expect(find.text('Nenhuma denúncia com esse protocolo.'), findsOneWidget);
+  });
+
+  testWidgets('tocar na denúncia abre os detalhes', (tester) async {
+    final servico = _DenunciasFalsas();
+    await servico.registrar(
+      Denuncia(
+        protocolo: 'PA-20261022-0042',
+        tipo: TipoDeDenuncia.negligencia,
+        descricao: 'Cachorro sem água no quintal.',
+        rua: 'Rua Pará de Minas',
+        bairro: 'Centro',
+        anonima: true,
+        registradaEm: DateTime(2026, 10, 22),
+      ),
+    );
+    await _abrir(tester, MinhasDenuncias(servico: servico));
+    await tester.tap(find.text('Protocolo PA-20261022-0042'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('DETALHES'), findsOneWidget);
+    expect(find.text('NEGLIGÊNCIA'), findsOneWidget);
+    expect(find.text('Cachorro sem água no quintal.'), findsOneWidget);
+    expect(find.text('Rua Pará de Minas'), findsOneWidget);
+    expect(
+      find.text('Denúncia anônima: seu nome e seu contato não foram enviados.'),
+      findsOneWidget,
+    );
+  });
 }

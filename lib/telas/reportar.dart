@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../dados/canais_de_denuncia.dart';
 import '../modelos/denuncia.dart';
@@ -515,30 +515,23 @@ class _OQueDizALei extends StatelessWidget {
   }
 }
 
+// O compartilhar do celular leva o texto e as fotos juntos, como o
+// compartilhar do feed; a pessoa escolhe o WhatsApp e a conversa da APAF
+Future<void> encaminharDenuncia(Denuncia denuncia) async {
+  await SharePlus.instance.share(
+    ShareParams(
+      text: denuncia.mensagemParaOCanal,
+      files: [for (final foto in denuncia.fotos) XFile(foto)],
+    ),
+  );
+}
+
 // Depois de registrar: o protocolo em destaque, para copiar, e o
-// encaminhamento à APAF pelo WhatsApp com a denúncia já escrita
+// encaminhamento à APAF, com a denúncia já escrita e as fotos
 class _DenunciaRegistrada extends StatelessWidget {
   const _DenunciaRegistrada({required this.denuncia});
 
   final Denuncia denuncia;
-
-  Future<void> _encaminhar(BuildContext context) async {
-    final mensageiro = ScaffoldMessenger.of(context);
-    final texto = Uri.encodeComponent(denuncia.mensagemParaOCanal);
-    final abriu = await launchUrl(
-      Uri.parse('https://wa.me/$whatsAppDoCanalDeDenuncia?text=$texto'),
-      mode: LaunchMode.externalApplication,
-    );
-    if (!abriu) {
-      mensageiro
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(
-            content: Text('Não foi possível abrir o WhatsApp neste aparelho.'),
-          ),
-        );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -624,8 +617,9 @@ class _DenunciaRegistrada extends StatelessWidget {
             const SizedBox(height: 14),
             Text(
               'Enquanto não há um canal oficial no aplicativo, envie a '
-              'denúncia à $nomeDoCanalDeDenuncia, a Associação Protetora dos '
-              'Animais de Formiga.',
+              'denúncia com as fotos à $nomeDoCanalDeDenuncia, a Associação '
+              'Protetora dos Animais de Formiga: escolha o WhatsApp e a '
+              'conversa do número $telefoneDoCanalDeDenuncia.',
               style: TextStyle(
                 fontSize: 13,
                 height: 1.4,
@@ -636,9 +630,9 @@ class _DenunciaRegistrada extends StatelessWidget {
             SizedBox(
               height: 50,
               child: ElevatedButton.icon(
-                onPressed: () => _encaminhar(context),
-                icon: const Icon(Icons.chat_bubble_outline),
-                label: Text('Enviar à $nomeDoCanalDeDenuncia pelo WhatsApp'),
+                onPressed: () => encaminharDenuncia(denuncia),
+                icon: const Icon(Icons.share_outlined),
+                label: Text('Enviar à $nomeDoCanalDeDenuncia com as fotos'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: context.cores.principal,
                   foregroundColor: context.sobrePrincipal,

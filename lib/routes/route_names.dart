@@ -23,4 +23,5 @@ abstract final class AppRoutes {
   static const registrarAbastecimento = '/registrar-abastecimento';
   static const reportar = '/reportar';
   static const minhasDenuncias = '/minhas-denuncias';
+  static const detalhesDenuncia = '/detalhes-denuncia';
 }

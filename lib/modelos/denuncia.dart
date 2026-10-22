@@ -122,8 +122,8 @@ class Denuncia {
     'registradaEm': registradaEm.toIso8601String(),
   };
 
-  // O texto que vai para a APAF pelo WhatsApp. As fotos não cabem no link:
-  // ficam registradas no app, com o protocolo
+  // O texto que vai para a APAF junto com as fotos, pelo compartilhar do
+  // celular
   String get mensagemParaOCanal {
     String dois(int n) => n.toString().padLeft(2, '0');
     final quando = ocorridaEm == null
@@ -137,10 +137,23 @@ class Denuncia {
       'Local: $rua, $bairro, Formiga',
       if (quando != null) 'Quando: $quando',
       'O que aconteceu: $descricao',
-      if (fotos.isNotEmpty) 'Fotos: ${fotos.length}, registradas no app',
+      if (fotos.isNotEmpty) 'Fotos: ${fotos.length}, em anexo',
       anonima
           ? 'Denúncia anônima'
           : 'Denunciante: $denuncianteNome, $denuncianteTelefone',
     ].join('\n');
   }
+}
+
+// Quando a denúncia foi registrada, do jeito que se fala: "hoje às 14:19",
+// "ontem às 09:05" e, antes disso, a data
+String quandoFoi(DateTime momento, DateTime agora) {
+  String dois(int n) => n.toString().padLeft(2, '0');
+  final hora = '${dois(momento.hour)}:${dois(momento.minute)}';
+  final dia = DateTime(momento.year, momento.month, momento.day);
+  final hoje = DateTime(agora.year, agora.month, agora.day);
+  final dias = hoje.difference(dia).inDays;
+  if (dias == 0) return 'hoje às $hora';
+  if (dias == 1) return 'ontem às $hora';
+  return '${dois(momento.day)}/${dois(momento.month)}/${momento.year} às $hora';
 }

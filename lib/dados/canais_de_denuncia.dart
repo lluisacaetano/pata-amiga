@@ -3,4 +3,4 @@
 // a encaminha pelo WhatsApp da APAF (Associação Protetora dos Animais de
 // Formiga). Fica num lugar só para trocar quando houver um canal oficial.
 const nomeDoCanalDeDenuncia = 'APAF';
-const whatsAppDoCanalDeDenuncia = '5537991263306';
+const telefoneDoCanalDeDenuncia = '(37) 99126-3306';

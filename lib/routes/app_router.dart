@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 
 import '../modelos/animal.dart';
+import '../modelos/denuncia.dart';
 import '../modelos/ong.dart';
 import '../modelos/ponto_de_alimentacao.dart';
 import '../auth/auth_router.dart';
@@ -28,6 +29,7 @@ import '../telas/registrar_avistamento.dart';
 import '../telas/tela_mapa.dart'; // NOVO
 import '../telas/reportar.dart';
 import '../telas/minhas_denuncias.dart';
+import '../telas/detalhes_denuncia.dart';
 import 'route_names.dart';
 
 export 'route_names.dart';
@@ -125,5 +127,13 @@ class AppRoutesConfig {
     AppRoutes.reportar: (_) => const ReportarScreen(),
 
     AppRoutes.minhasDenuncias: (_) => const MinhasDenuncias(),
+
+    AppRoutes.detalhesDenuncia: (context) {
+      final denuncia = ModalRoute.of(context)?.settings.arguments;
+      if (denuncia is! Denuncia) {
+        throw ArgumentError('Os detalhes precisam saber de qual denúncia são.');
+      }
+      return DetalhesDenuncia(denuncia: denuncia);
+    },
   };
 }
