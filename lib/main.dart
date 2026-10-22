@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'provider/usuario_provider.dart';
+import 'provider/preferencias_aplicativo_provider.dart';
 
 import 'package:provider/provider.dart';
 
@@ -14,11 +15,16 @@ import 'tema/cores.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final usuarioProvider = UsuarioProvider();
+  final preferencias = PreferenciasAplicativoProvider();
   await usuarioProvider.restaurarSessao();
+  await preferencias.carregar();
   runApp(
     ChangeNotifierProvider.value(
       value: usuarioProvider,
-      child: const AplicativoPataAmiga(),
+      child: ChangeNotifierProvider.value(
+        value: preferencias,
+        child: const AplicativoPataAmiga(),
+      ),
     ),
   );
 }
@@ -48,24 +54,41 @@ class _AplicativoPataAmigaState extends State<AplicativoPataAmiga> {
 
   @override
   Widget build(BuildContext context) {
+    final preferencias = context.watch<PreferenciasAplicativoProvider>();
     return PataAmigaScope(
       notifier: _estado,
       child: MaterialApp(
         title: 'Pata Amiga',
         debugShowCheckedModeBanner: false,
         theme: temaPataAmiga(),
+        darkTheme: temaPataAmiga(brilho: Brightness.dark),
+        themeMode: switch (preferencias.tema) {
+          PreferenciaTema.claro => ThemeMode.light,
+          PreferenciaTema.escuro => ThemeMode.dark,
+          PreferenciaTema.sistema => ThemeMode.system,
+        },
         // Os textos prontos do Flutter (calendário, botões de diálogo) em
         // português, como o resto do app
         locale: const Locale('pt', 'BR'),
         supportedLocales: const [Locale('pt', 'BR')],
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
         initialRoute: AppRoutes.welcome,
-        builder: (context, child) => Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: child,
-          ),
-        ),
+        builder: (context, child) {
+          final media = MediaQuery.of(context);
+          return MediaQuery(
+            data: media.copyWith(
+              textScaler: TextScaler.linear(
+                media.textScaler.scale(1) * preferencias.escalaTexto,
+              ),
+            ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: child,
+              ),
+            ),
+          );
+        },
         routes: AppRoutesConfig.routes,
       ),
     );

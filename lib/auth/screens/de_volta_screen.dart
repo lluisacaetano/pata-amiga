@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../provider/usuario_provider.dart';
+import '../../tema/cores.dart';
 import 'auth_components.dart';
 
 // Recepção rápida de quem reabre o app com a sessão salva. Fica poucos
@@ -94,12 +95,12 @@ class _DeVoltaScreenState extends State<DeVoltaScreen>
                 child: Text(
                   saudacao,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Nunito',
                     fontSize: 30,
                     fontWeight: FontWeight.w900,
                     height: 1.15,
-                    color: Color(0xFF24543A),
+                    color: context.cores.principal,
                   ),
                 ),
               ),

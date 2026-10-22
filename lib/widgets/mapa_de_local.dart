@@ -16,9 +16,12 @@ final bool _emTeste =
 const centroDeFormiga = LatLng(-20.4647, -45.4264);
 
 // Um mapa pequeno com o pino parado no meio: quem se move é o mapa, e o
-// ponto escolhido é sempre o centro. Usado no cadastro de animal e no
-// registro de avistamento
-class MapaDeLocal extends StatelessWidget {
+// ponto escolhido é sempre o centro. Usado em todo lugar em que se marca um
+// local: cadastro de animal, ONG, ponto de alimentação e avistamento.
+// Começa travado, porque rolar a tela por cima dele mudava o local sem
+// querer; a pessoa destrava para mover o pino. A mira funciona travada,
+// porque tocar nela é de propósito
+class MapaDeLocal extends StatefulWidget {
   final MapController controlador;
   final LatLng inicio;
   // Chamado quando a pessoa termina de arrastar o mapa, com o novo centro
@@ -37,6 +40,13 @@ class MapaDeLocal extends StatelessWidget {
     this.altura = 240,
   });
 
+  @override
+  State<MapaDeLocal> createState() => _MapaDeLocalState();
+}
+
+class _MapaDeLocalState extends State<MapaDeLocal> {
+  bool _travado = true;
+
   void _aoMover(MapEvent evento) {
     // Só o fim de um gesto da pessoa conta; o mapa movido pelo app (a busca
     // ou a mira) já avisa por conta própria
@@ -45,7 +55,7 @@ class MapaDeLocal extends StatelessWidget {
         evento is MapEventFlingAnimationEnd ||
         evento is MapEventDoubleTapZoomEnd;
     if (fimDeGesto && evento.source != MapEventSource.mapController) {
-      aoArrastar(evento.camera.center);
+      widget.aoArrastar(evento.camera.center);
     }
   }
 
@@ -54,39 +64,44 @@ class MapaDeLocal extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: SizedBox(
-        height: altura,
+        height: widget.altura,
         child: Stack(
           children: [
-            FlutterMap(
-              mapController: controlador,
-              options: MapOptions(
-                initialCenter: inicio,
-                initialZoom: 16,
-                onMapEvent: _aoMover,
+            // Travado, o mapa ignora o toque: o dedo que rola a tela passa
+            // por cima sem mexer no pino
+            IgnorePointer(
+              ignoring: _travado,
+              child: FlutterMap(
+                mapController: widget.controlador,
+                options: MapOptions(
+                  initialCenter: widget.inicio,
+                  initialZoom: 16,
+                  onMapEvent: _aoMover,
+                ),
+                children: [
+                  if (!_emTeste)
+                    TileLayer(
+                      urlTemplate:
+                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'br.edu.ifmg.pata_amiga',
+                    ),
+                  if (!_emTeste)
+                    const RichAttributionWidget(
+                      alignment: AttributionAlignment.bottomLeft,
+                      showFlutterMapAttribution: false,
+                      attributions: [
+                        TextSourceAttribution('OpenStreetMap contributors'),
+                      ],
+                    ),
+                ],
               ),
-              children: [
-                if (!_emTeste)
-                  TileLayer(
-                    urlTemplate:
-                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'br.edu.ifmg.pata_amiga',
-                  ),
-                if (!_emTeste)
-                  const RichAttributionWidget(
-                    alignment: AttributionAlignment.bottomLeft,
-                    showFlutterMapAttribution: false,
-                    attributions: [
-                      TextSourceAttribution('OpenStreetMap contributors'),
-                    ],
-                  ),
-              ],
             ),
             // A ponta do pino marca o centro do mapa
-            const IgnorePointer(
+            IgnorePointer(
               child: Center(
                 child: Padding(
                   padding: EdgeInsets.only(bottom: 48),
-                  child: PinoDaPatinha(cor: Cores.destaque),
+                  child: PinoDaPatinha(cor: context.cores.destaque),
                 ),
               ),
             ),
@@ -94,19 +109,64 @@ class MapaDeLocal extends StatelessWidget {
               right: 10,
               bottom: 10,
               child: Material(
-                color: Cores.cartao,
+                color: context.cores.cartao,
                 shape: const CircleBorder(),
                 elevation: 2,
                 child: IconButton(
                   tooltip: 'Usar minha localização',
-                  onPressed: buscandoPosicao ? null : aoUsarMinhaLocalizacao,
-                  icon: buscandoPosicao
+                  onPressed: widget.buscandoPosicao
+                      ? null
+                      : widget.aoUsarMinhaLocalizacao,
+                  icon: widget.buscandoPosicao
                       ? const SizedBox(
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Icons.my_location, color: Cores.principal),
+                      : Icon(Icons.my_location, color: context.cores.principal),
+                ),
+              ),
+            ),
+            // Um botão só, no alto e longe do pino: branco enquanto travado,
+            // verde cheio enquanto o mapa pode ser mexido
+            Positioned(
+              top: 10,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Material(
+                  color: _travado ? context.cores.cartao : context.cores.principal,
+                  elevation: 2,
+                  shape: const StadiumBorder(),
+                  child: InkWell(
+                    customBorder: const StadiumBorder(),
+                    onTap: () => setState(() => _travado = !_travado),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _travado ? Icons.lock_outline : Icons.lock_open,
+                            size: 16,
+                            color: _travado ? context.cores.principal : context.sobrePrincipal,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _travado ? 'Destravar o mapa' : 'Travar o mapa',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: _travado ? context.cores.principal : context.sobrePrincipal,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -185,19 +245,19 @@ class PreviaDoMapa extends StatelessWidget {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: Cores.cartao,
+                      color: context.cores.cartao,
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: const [
                         BoxShadow(color: Color(0x22000000), blurRadius: 4),
                       ],
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
                           Icons.map_outlined,
                           size: 16,
-                          color: Cores.principal,
+                          color: context.cores.principal,
                         ),
                         SizedBox(width: 6),
                         Text(
@@ -205,7 +265,7 @@ class PreviaDoMapa extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: Cores.principal,
+                            color: context.cores.principal,
                           ),
                         ),
                       ],
@@ -214,12 +274,12 @@ class PreviaDoMapa extends StatelessWidget {
                 ),
                 // O crédito do OpenStreetMap, obrigatório também na prévia
                 if (!_emTeste)
-                  const Positioned(
+                  Positioned(
                     left: 8,
                     bottom: 6,
                     child: Text(
                       '© OpenStreetMap',
-                      style: TextStyle(fontSize: 9, color: Cores.textoFraco),
+                      style: TextStyle(fontSize: 9, color: context.cores.textoFraco),
                     ),
                   ),
               ],

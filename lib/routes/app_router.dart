@@ -2,9 +2,12 @@
 import 'package:flutter/material.dart';
 
 import '../modelos/animal.dart';
+import '../modelos/denuncia.dart';
+import '../modelos/ong.dart';
 import '../modelos/ponto_de_alimentacao.dart';
 import '../auth/auth_router.dart';
 import '../auth/screens/cadastro_screen.dart';
+import '../auth/screens/documento_legal_screen.dart';
 import '../auth/screens/login_screen.dart';
 import '../auth/screens/recuperar_senha.dart';
 import '../telas/home_screen.dart';
@@ -12,13 +15,21 @@ import '../telas/feed_adocao.dart';
 import '../telas/detalhes_animal.dart';
 import '../telas/cadastrar_ponto.dart';
 import '../telas/cadastro_animal.dart';
+import '../telas/cadastro_ong.dart';
+import '../telas/lista_ongs.dart';
+import '../telas/perfil_ong.dart';
 import '../widgets/acoes_do_registro.dart';
 import '../telas/onboarding_screen.dart';
 import '../telas/editar_perfil.dart';
 import '../telas/perfil_usuario.dart';
+import '../telas/configuracoes_aparencia.dart';
+import '../telas/configuracoes_acessibilidade.dart';
 import '../telas/registrar_abastecimento.dart';
 import '../telas/registrar_avistamento.dart';
 import '../telas/tela_mapa.dart'; // NOVO
+import '../telas/reportar.dart';
+import '../telas/minhas_denuncias.dart';
+import '../telas/detalhes_denuncia.dart';
 import 'route_names.dart';
 
 export 'route_names.dart';
@@ -30,6 +41,12 @@ class AppRoutesConfig {
     AppRoutes.login: (_) => const LoginScreen(),
 
     AppRoutes.register: (_) => const RegisterScreen(),
+
+    AppRoutes.terms: (_) =>
+        const DocumentoLegalScreen(tipo: TipoDocumentoLegal.termos),
+
+    AppRoutes.privacy: (_) =>
+        const DocumentoLegalScreen(tipo: TipoDocumentoLegal.privacidade),
 
     AppRoutes.recoverPassword: (_) => const RecoverPasswordScreen(),
 
@@ -46,9 +63,7 @@ class AppRoutesConfig {
       final animal = ModalRoute.of(context)?.settings.arguments;
 
       if (animal is! Animal) {
-        throw ArgumentError(
-          'A rota de detalhes precisa receber um Animal.',
-        );
+        throw ArgumentError('A rota de detalhes precisa receber um Animal.');
       }
 
       return DetalhesAnimal(animal: animal);
@@ -65,6 +80,9 @@ class AppRoutesConfig {
     },
     AppRoutes.perfilUsuario: (_) => const PerfilUsuario(),
     AppRoutes.editarPerfil: (_) => const EditarPerfil(),
+    AppRoutes.configuracoesAparencia: (_) => const ConfiguracoesAparencia(),
+    AppRoutes.configuracoesAcessibilidade: (_) =>
+        const ConfiguracoesAcessibilidade(),
 
     AppRoutes.mapa: (context) {
       // Vindo da ficha, o mapa recebe o animal para abrir com zoom nele
@@ -73,6 +91,22 @@ class AppRoutesConfig {
     },
 
     AppRoutes.cadastrarPonto: (_) => const CadastrarPonto(),
+
+    AppRoutes.ongs: (_) => const ListaOngs(),
+
+    AppRoutes.perfilOng: (context) {
+      final ong = ModalRoute.of(context)?.settings.arguments;
+      if (ong is! Ong) {
+        throw ArgumentError('O perfil precisa saber de qual ONG é.');
+      }
+      return PerfilOng(ong: ong);
+    },
+
+    // Sem argumento, cria a ONG; com uma, edita
+    AppRoutes.cadastroOng: (context) {
+      final ong = ModalRoute.of(context)?.settings.arguments;
+      return CadastroOng(editando: ong is Ong ? ong : null);
+    },
 
     AppRoutes.registrarAbastecimento: (context) {
       final ponto = ModalRoute.of(context)?.settings.arguments;
@@ -88,6 +122,18 @@ class AppRoutesConfig {
         throw ArgumentError('O avistamento precisa saber de qual animal é.');
       }
       return RegistrarAvistamento(animal: animal);
+    },
+
+    AppRoutes.reportar: (_) => const ReportarScreen(),
+
+    AppRoutes.minhasDenuncias: (_) => const MinhasDenuncias(),
+
+    AppRoutes.detalhesDenuncia: (context) {
+      final denuncia = ModalRoute.of(context)?.settings.arguments;
+      if (denuncia is! Denuncia) {
+        throw ArgumentError('Os detalhes precisam saber de qual denúncia são.');
+      }
+      return DetalhesDenuncia(denuncia: denuncia);
     },
   };
 }

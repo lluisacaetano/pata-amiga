@@ -2,12 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'auth_components.dart';
+import '../../routes/route_names.dart';
 import '../../telas/onboarding_screen.dart';
+import '../../tema/cores.dart';
 import '../../widgets/mascaras.dart';
 import '../../provider/usuario_provider.dart';
+import '../../estado/estado_pata_amiga.dart';
+import '../../modelos/ong.dart';
+import '../../services/ong_service.dart';
+import '../../widgets/escolha_de_ong.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+  // Os testes passam um serviço de ONGs falso; o app usa o de verdade
+  final OngService? ongs;
+
+  const RegisterScreen({super.key, this.ongs});
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -25,6 +34,41 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _mostrarErroTermos = false;
   bool _mostrarSenha = false;
   bool _mostrarConfirmacao = false;
+  // A ONG de que a pessoa diz fazer parte: vira um pedido para entrar
+  Ong? _ong;
+
+  // O pedido vai para quem administra a ONG aprovar. Se a API não responder, a
+  // conta é criada mesmo assim, e o pedido pode ser refeito no Editar perfil
+  Future<void> _pedirEntrada(Ong ong) async {
+    final mensageiro = ScaffoldMessenger.of(context);
+    final estado = PataAmigaScope.talvez(context);
+    String aviso;
+    try {
+      // O estado já sabe do pedido: a etiqueta "Aguardando" aparece logo
+      estado?.salvarOng(
+        await (widget.ongs ?? OngService()).pedirEntrada(
+          ong,
+          PessoaDaOng(
+            email: _emailController.text.trim(),
+            nome: _nomeController.text.trim(),
+            telefone: _telefoneController.text.trim(),
+          ),
+        ),
+      );
+      aviso =
+          'Pedido enviado para ${ong.nome}. Você terá acesso quando '
+          'ele for aprovado.';
+    } on JaFazParteDeOutra catch (erro) {
+      aviso = 'Sua conta já está ligada a ${erro.ong}.';
+    } on Exception {
+      aviso =
+          'Não foi possível enviar o pedido para ${ong.nome}. Tente '
+          'de novo pelo Editar perfil.';
+    }
+    mensageiro
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(aviso)));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,14 +82,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
             children: [
               const AuthBrandMark(size: 58),
               const SizedBox(height: 10),
-              const Text(
+              Text(
                 'Criar conta',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: 'Roboto',
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF24543A),
+                  color: context.cores.principal,
                 ),
               ),
               const SizedBox(height: 18),
@@ -134,6 +178,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 onSuffixPressed: () =>
                     setState(() => _mostrarConfirmacao = !_mostrarConfirmacao),
               ),
+              const SizedBox(height: 16),
+              // A mesma fonte Roboto dos outros campos desta tela
+              Theme(
+                data: Theme.of(context).copyWith(
+                  textTheme: Theme.of(
+                    context,
+                  ).textTheme.apply(fontFamily: 'Roboto'),
+                ),
+                child: DefaultTextStyle.merge(
+                  style: const TextStyle(fontFamily: 'Roboto'),
+                  child: EscolhaDeOng(
+                    servico: widget.ongs,
+                    escolhida: _ong,
+                    aoEscolher: (ong) => setState(() => _ong = ong),
+                    estiloDaPergunta: TextStyle(
+                      fontFamily: 'Roboto',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: context.cores.texto,
+                    ),
+                  ),
+                ),
+              ),
               const SizedBox(height: 12),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,12 +221,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Expanded(
+                  Expanded(
                     child: Padding(
-                      padding: EdgeInsets.only(top: 7),
-                      child: Text(
-                        'Li e aceito os Termos de Uso e a Política de Privacidade',
-                        style: TextStyle(fontFamily: 'Roboto', fontSize: 14),
+                      padding: const EdgeInsets.only(top: 7),
+                      child: Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          const Text('Li e aceito '),
+                          _linkDocumento(
+                            context,
+                            'Termos de Uso',
+                            AppRoutes.terms,
+                          ),
+                          const Text(' e a '),
+                          _linkDocumento(
+                            context,
+                            'Política de Privacidade',
+                            AppRoutes.privacy,
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -185,6 +265,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     email: _emailController.text,
                     telefone: _telefoneController.text,
                   );
+                  final ong = _ong;
+                  if (ong != null) await _pedirEntrada(ong);
                   if (!context.mounted) return;
                   await navegarAposAutenticacao(context);
                 },
@@ -201,6 +283,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _linkDocumento(BuildContext context, String texto, String rota) {
+    return InkWell(
+      onTap: () => Navigator.of(context).pushNamed(rota),
+      child: Text(
+        texto,
+        style: TextStyle(
+          fontFamily: 'Roboto',
+          fontSize: 14,
+          color: context.cores.principal,
+          decoration: TextDecoration.underline,
         ),
       ),
     );

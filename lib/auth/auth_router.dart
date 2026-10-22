@@ -9,7 +9,7 @@ import '../telas/onboarding_screen.dart';
 
 // Nome da classe traduzido: AuthRouter -> RoteadorAutenticacao
 class RoteadorAutenticacao extends StatefulWidget {
-  const RoteadorAutenticacao({Key? key}) : super(key: key);
+  const RoteadorAutenticacao({super.key});
 
   @override
   State<RoteadorAutenticacao> createState() => _EstadoRoteadorAutenticacao();
@@ -64,7 +64,9 @@ class _EstadoRoteadorAutenticacao extends State<RoteadorAutenticacao> {
       // Com a sessão salva, uma recepção rápida e depois o feed, como logo
       // depois do login. A saída da conta fica no perfil
       return AnimatedSwitcher(
-        duration: const Duration(milliseconds: 400),
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : const Duration(milliseconds: 400),
         child: _mostrarDeVolta
             ? DeVoltaScreen(
                 aoTerminar: () {

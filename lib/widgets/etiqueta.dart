@@ -16,13 +16,13 @@ class Etiqueta extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: cheia ? Cores.principal : Cores.principalClara,
+        color: cheia ? context.cores.principal : context.cores.principalClara,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
         comMaiuscula(texto),
         style: TextStyle(
-          color: cheia ? Colors.white : Cores.principal,
+          color: cheia ? context.sobrePrincipal : context.cores.principal,
           fontSize: 12,
           fontWeight: FontWeight.w600,
         ),

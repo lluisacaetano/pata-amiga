@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'auth_components.dart';
+import '../../tema/cores.dart';
 import '../../widgets/mascaras.dart';
 
 class RecoverPasswordScreen extends StatefulWidget {
@@ -22,25 +23,25 @@ class _RecoverPasswordScreenState extends State<RecoverPasswordScreen> {
           children: [
             const AuthBrandMark(size: 64),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Recuperar senha',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: 'Roboto',
                 fontSize: 24,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF24543A),
+                color: context.cores.principal,
               ),
             ),
             const SizedBox(height: 10),
-            const Text(
+            Text(
               'Informe o e-mail cadastrado para receber as instruções de redefinição.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: 'Roboto',
                 fontSize: 15,
                 height: 1.4,
-                color: Color(0xFF454B47),
+                color: context.cores.textoFraco,
               ),
             ),
             const SizedBox(height: 24),

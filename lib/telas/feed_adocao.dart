@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -9,6 +10,7 @@ import '../estado/estado_pata_amiga.dart';
 import '../modelos/animal.dart';
 import '../modelos/dono.dart';
 import '../modelos/filtros_do_feed.dart';
+import '../modelos/ong.dart';
 import '../routes/route_names.dart';
 import '../tema/cores.dart';
 import '../widgets/barra_inferior.dart';
@@ -21,6 +23,9 @@ import '../services/alimentacao_service.dart';
 import '../services/animal_service.dart';
 import '../services/avistamento_service.dart';
 import '../services/cache_service.dart';
+import '../services/ong_service.dart';
+import '../provider/usuario_provider.dart';
+import '../widgets/sino_de_notificacoes.dart';
 
 enum EstadoFeed { carregando, cache, atualizado, erro }
 
@@ -31,6 +36,7 @@ class FeedAdocao extends StatefulWidget {
   final CacheService? cache;
   final AvistamentoService? avistamentos;
   final AlimentacaoService? alimentacao;
+  final OngService? ongs;
 
   const FeedAdocao({
     super.key,
@@ -38,6 +44,7 @@ class FeedAdocao extends StatefulWidget {
     this.cache,
     this.avistamentos,
     this.alimentacao,
+    this.ongs,
   });
 
   @override
@@ -62,6 +69,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
   late final _cache = widget.cache ?? CacheService();
   late final _avistamentos = widget.avistamentos ?? AvistamentoService();
   late final _alimentacao = widget.alimentacao ?? AlimentacaoService();
+  late final _ongs = widget.ongs ?? OngService();
 
   // [SPRINT 3 - NOVO] Animais que vieram da API ou do cache.
   // Substitui a lista fixa animaisMock.
@@ -81,6 +89,8 @@ class _FeedAdocaoState extends State<FeedAdocao> {
 
   @override
   void dispose() {
+    _pararDeVigiar();
+    _ciclo?.dispose();
     _pesquisa.dispose();
     super.dispose();
   }
@@ -117,6 +127,42 @@ class _FeedAdocaoState extends State<FeedAdocao> {
     }
   }
 
+  // As ONGs também: sem elas, só a lista do menu e o atalho da ficha somem.
+  // Com o app aberto, elas são conferidas de novo a cada 30 segundos: se
+  // chegou um pedido para a ONG que a pessoa administra, o celular vibra e
+  // o contador do sino sobe
+  Timer? _vigia;
+  Set<String>? _pedidosConhecidos;
+  // Em segundo plano a conferência para: ninguém está vendo o app
+  AppLifecycleListener? _ciclo;
+
+  void _vigiar() => _vigia ??= Timer.periodic(
+    const Duration(seconds: 30),
+    (_) => _carregarOngs(),
+  );
+
+  void _pararDeVigiar() {
+    _vigia?.cancel();
+    _vigia = null;
+  }
+
+  Future<void> _carregarOngs() async {
+    try {
+      final ongs = await _ongs.buscarOngs();
+      if (!mounted) return;
+      PataAmigaScope.of(context).atualizarOngs(ongs);
+      final email = context.read<UsuarioProvider?>()?.usuario.email ?? '';
+      final pedidos = notificacoesPara(ongs, email);
+      final conhecidos = _pedidosConhecidos;
+      _pedidosConhecidos = pedidos;
+      if (conhecidos != null && !conhecidos.containsAll(pedidos)) {
+        await avisarNovaNotificacao();
+      }
+    } on Exception {
+      // sem as ONGs desta vez
+    }
+  }
+
   Future<void> _carregar() async {
     final salvos = await _cache.lerAnimais();
     final dataSalva = await _cache.dataDoCache();
@@ -139,6 +185,15 @@ class _FeedAdocaoState extends State<FeedAdocao> {
 
     unawaited(_carregarAvistamentos());
     unawaited(_carregarAlimentacao());
+    unawaited(_carregarOngs());
+    _vigiar();
+    _ciclo ??= AppLifecycleListener(
+      onPause: _pararDeVigiar,
+      onResume: () {
+        _carregarOngs();
+        _vigiar();
+      },
+    );
     try {
       final novos = await _api.buscarAnimais();
       await _cache.salvarAnimais(novos); // o cache nunca fica congelado
@@ -291,7 +346,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      backgroundColor: Cores.fundo,
+      backgroundColor: context.cores.fundo,
       builder: (_) => PainelDeFiltros(
         inicial: _filtros,
         animais: [
@@ -299,6 +354,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
             if (!animal.finalizado) animal,
         ],
         contar: (filtros) => _visiveis(filtros).length,
+        ongs: PataAmigaScope.of(context).ongs,
       ),
     );
     if (escolhidos == null || !mounted) return;
@@ -410,7 +466,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
           Icon(icone, size: 20, color: cor),
           const SizedBox(width: 8),
           Expanded(child: Text(texto, style: const TextStyle(fontSize: 13))),
-          if (acao != null) acao,
+          ?acao,
         ],
       ),
     );
@@ -464,14 +520,14 @@ class _FeedAdocaoState extends State<FeedAdocao> {
               Icon(
                 Icons.wifi_off,
                 size: 56,
-                color: Cores.principal.withValues(alpha: 0.25),
+                color: context.cores.principal.withValues(alpha: 0.25),
               ),
               const SizedBox(height: 14),
-              const Text(
+              Text(
                 'Sem conexão e sem dados salvos.\n'
                 'Conecte-se à internet para carregar os animais.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Cores.textoFraco),
+                style: TextStyle(color: context.cores.textoFraco),
               ),
               const SizedBox(height: 14),
               ElevatedButton(
@@ -495,20 +551,20 @@ class _FeedAdocaoState extends State<FeedAdocao> {
               Icon(
                 Icons.pets,
                 size: 56,
-                color: Cores.principal.withValues(alpha: 0.25),
+                color: context.cores.principal.withValues(alpha: 0.25),
               ),
               const SizedBox(height: 14),
               Text(
                 _filtros.vazio
                     ? 'Nenhum animal encontrado.'
                     : 'Nenhum animal com esses filtros.',
-                style: const TextStyle(color: Cores.textoFraco),
+                style: TextStyle(color: context.cores.textoFraco),
               ),
               if (!_filtros.vazio)
                 TextButton(
                   onPressed: _limparFiltros,
                   style: TextButton.styleFrom(
-                    foregroundColor: Cores.principal,
+                    foregroundColor: context.cores.principal,
                   ),
                   child: const Text('Limpar filtros'),
                 ),
@@ -537,7 +593,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Cores.fundo,
+        backgroundColor: context.cores.fundo,
         titleSpacing: 16,
         title: Row(
           children: [
@@ -545,13 +601,13 @@ class _FeedAdocaoState extends State<FeedAdocao> {
               children: [
                 Image.asset('assets/marca/pata.png', width: 26),
                 const SizedBox(width: 6),
-                const Text(
+                Text(
                   'PATA\nAMIGA',
                   style: TextStyle(
                     fontSize: 12,
                     height: 1.1,
                     fontWeight: FontWeight.bold,
-                    color: Cores.principal,
+                    color: context.cores.principal,
                   ),
                 ),
               ],
@@ -578,14 +634,14 @@ class _FeedAdocaoState extends State<FeedAdocao> {
                           ),
                     contentPadding: EdgeInsets.zero,
                     filled: true,
-                    fillColor: Cores.cartao,
+                    fillColor: context.cores.cartao,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(20),
-                      borderSide: const BorderSide(color: Cores.borda),
+                      borderSide: BorderSide(color: context.cores.borda),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(20),
-                      borderSide: const BorderSide(color: Cores.borda),
+                      borderSide: BorderSide(color: context.cores.borda),
                     ),
                   ),
                 ),
@@ -595,11 +651,11 @@ class _FeedAdocaoState extends State<FeedAdocao> {
             IconButton(
               onPressed: _abrirFiltros,
               tooltip: 'Filtros',
-              color: Cores.principal,
+              color: context.cores.principal,
               icon: Badge(
                 isLabelVisible: !_filtros.vazio,
                 label: Text('${_filtros.quantos}'),
-                backgroundColor: Cores.principal,
+                backgroundColor: context.cores.principal,
                 child: const Icon(Icons.tune),
               ),
             ),
@@ -615,12 +671,13 @@ class _FeedAdocaoState extends State<FeedAdocao> {
               escolhido: _abaAtual,
               aoEscolher: (escolha) => setState(() => _abaAtual = escolha),
               rotulo: rotuloPlural,
-              fundoDaOpcao: Cores.cartao,
+              fundoDaOpcao: context.cores.cartao,
             ),
           ),
           if (!_filtros.vazio)
             _FiltrosAplicados(
               filtros: _filtros,
+              ongs: PataAmigaScope.of(context).ongs,
               aoTirar: (grupo, opcao) => setState(
                 () => _filtros = _filtros.alternar(grupo, opcao),
               ),
@@ -634,8 +691,8 @@ class _FeedAdocaoState extends State<FeedAdocao> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _abrirCadastroAnimal,
-        backgroundColor: Cores.principal,
-        foregroundColor: Colors.white,
+        backgroundColor: context.cores.principal,
+        foregroundColor: context.sobrePrincipal,
         tooltip: 'Cadastrar animal',
         child: const Icon(Icons.add),
       ),
@@ -651,9 +708,12 @@ class _FiltrosAplicados extends StatelessWidget {
     required this.filtros,
     required this.aoTirar,
     required this.aoLimpar,
+    this.ongs = const [],
   });
 
   final FiltrosDoFeed filtros;
+  // Para a etiqueta da ONG mostrar o nome, e não o id que o filtro guarda
+  final List<Ong> ongs;
   final void Function(GrupoDeFiltro grupo, String opcao) aoTirar;
   final VoidCallback aoLimpar;
 
@@ -670,16 +730,24 @@ class _FiltrosAplicados extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: InputChip(
-                  label: Text(rotuloDaOpcao(opcao)),
+                  label: Text(
+                    grupo == GrupoDeFiltro.ong
+                        ? ongs
+                                  .where((ong) => '${ong.id}' == opcao)
+                                  .firstOrNull
+                                  ?.nome ??
+                              'ONG'
+                        : rotuloDaOpcao(opcao),
+                  ),
                   onDeleted: () => aoTirar(grupo, opcao),
                   deleteButtonTooltipMessage: 'Tirar o filtro',
-                  backgroundColor: Cores.principalClara,
-                  labelStyle: const TextStyle(
+                  backgroundColor: context.cores.principalClara,
+                  labelStyle: TextStyle(
                     fontSize: 13,
-                    color: Cores.principal,
+                    color: context.cores.principal,
                     fontWeight: FontWeight.w600,
                   ),
-                  deleteIconColor: Cores.principal,
+                  deleteIconColor: context.cores.principal,
                   side: BorderSide.none,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
@@ -688,7 +756,7 @@ class _FiltrosAplicados extends StatelessWidget {
               ),
           TextButton(
             onPressed: aoLimpar,
-            style: TextButton.styleFrom(foregroundColor: Cores.principal),
+            style: TextButton.styleFrom(foregroundColor: context.cores.principal),
             child: const Text('Limpar filtros'),
           ),
         ],

@@ -5,6 +5,7 @@ import '../tema/cores.dart';
 import '../dados/bairros_formiga.dart';
 import '../dados/racas.dart';
 import '../modelos/animal.dart';
+import '../modelos/ong.dart';
 import 'escolha_de_tipo.dart';
 import 'selecao_com_busca.dart';
 
@@ -14,6 +15,9 @@ import 'selecao_com_busca.dart';
 // em "Mostrar", e o botão já diz quantos vão aparecer
 // A opção do rodapé da raça que desliga o filtro de raça
 const todasAsRacas = 'Todas as raças';
+// As opções do rodapé da ONG: marcar todas ou nenhuma de uma vez
+const _todasAsOngs = 'Selecionar todas';
+const _nenhumaOng = 'Desmarcar todas';
 
 class PainelDeFiltros extends StatefulWidget {
   final FiltrosDoFeed inicial;
@@ -21,12 +25,15 @@ class PainelDeFiltros extends StatefulWidget {
   // oferecer uma opção que não devolve ninguém
   final List<Animal> animais;
   final int Function(FiltrosDoFeed) contar;
+  // As ONGs, para o select mostrar o nome de cada uma
+  final List<Ong> ongs;
 
   const PainelDeFiltros({
     super.key,
     required this.inicial,
     required this.animais,
     required this.contar,
+    this.ongs = const [],
   });
 
   @override
@@ -38,11 +45,13 @@ class _PainelDeFiltrosState extends State<PainelDeFiltros> {
   // Os campos de busca de raça e bairro; as escolhidas ficam nas etiquetas
   final _raca = TextEditingController();
   final _bairro = TextEditingController();
+  final _ong = TextEditingController();
 
   @override
   void dispose() {
     _raca.dispose();
     _bairro.dispose();
+    _ong.dispose();
     super.dispose();
   }
 
@@ -72,6 +81,36 @@ class _PainelDeFiltrosState extends State<PainelDeFiltros> {
     setState(() => _filtros = _filtros.alternar(GrupoDeFiltro.bairro, bairro));
   }
 
+  // Só as ONGs que têm animais no feed, em ordem alfabética: escolher uma
+  // que não traz ninguém seria uma falsa esperança, como nas raças
+  List<Ong> get _ongsDisponiveis {
+    final comAnimais = opcoesDe(GrupoDeFiltro.ong, widget.animais).toSet();
+    return widget.ongs.where((ong) => comAnimais.contains('${ong.id}')).toList()
+      ..sort(
+        (a, b) =>
+            Ong.nomeComparavel(a.nome).compareTo(Ong.nomeComparavel(b.nome)),
+      );
+  }
+
+  // O select mostra o nome; o filtro guarda o id
+  void _alternarOng(String? escolha) {
+    if (escolha == null) return;
+    final disponiveis = _ongsDisponiveis;
+    setState(() {
+      if (escolha == _todasAsOngs) {
+        _filtros = _filtros.comGrupo(GrupoDeFiltro.ong, {
+          for (final ong in disponiveis) '${ong.id}',
+        });
+      } else if (escolha == _nenhumaOng) {
+        _filtros = _filtros.comGrupo(GrupoDeFiltro.ong, const {});
+      } else {
+        final ong = disponiveis.where((ong) => ong.nome == escolha);
+        if (ong.isEmpty) return;
+        _filtros = _filtros.alternar(GrupoDeFiltro.ong, '${ong.first.id}');
+      }
+    });
+  }
+
   // Trocar a espécie apaga as raças que não são dela, como no cadastro
   void _mudarAba(GrupoDeFiltro grupo, Set<String> opcoes) {
     setState(() {
@@ -88,6 +127,7 @@ class _PainelDeFiltrosState extends State<PainelDeFiltros> {
   void _limpar() {
     _raca.clear();
     _bairro.clear();
+    _ong.clear();
     setState(() => _filtros = const FiltrosDoFeed());
   }
 
@@ -131,7 +171,7 @@ class _PainelDeFiltrosState extends State<PainelDeFiltros> {
                   TextButton(
                     onPressed: _filtros.vazio ? null : _limpar,
                     style: TextButton.styleFrom(
-                      foregroundColor: Cores.principal,
+                      foregroundColor: context.cores.principal,
                     ),
                     child: const Text('Limpar filtros'),
                   ),
@@ -193,6 +233,35 @@ class _PainelDeFiltrosState extends State<PainelDeFiltros> {
                       marcadas: _filtros.de(GrupoDeFiltro.bairro),
                       aoEscolher: _alternarBairro,
                     ),
+                    if (_ongsDisponiveis case final ongs when ongs.isNotEmpty)
+                      SelecaoComBusca(
+                        rotulo: 'ONG',
+                        dica: 'Digite para buscar a ONG',
+                        controlador: _ong,
+                        opcoes: (digitado) => buscarNaLista([
+                          for (final ong in ongs) ong.nome,
+                        ], digitado),
+                        daLista: (texto) => [for (final ong in ongs) ong.nome]
+                            .where(
+                              (nome) =>
+                                  Ong.nomeComparavel(nome) ==
+                                  Ong.nomeComparavel(texto),
+                            )
+                            .firstOrNull,
+                        rodape: const [
+                          (valor: _todasAsOngs, texto: _todasAsOngs),
+                          (valor: _nenhumaOng, texto: _nenhumaOng),
+                        ],
+                        limpavel: true,
+                        marcadas: {
+                          for (final ong in ongs)
+                            if (_filtros
+                                .de(GrupoDeFiltro.ong)
+                                .contains('${ong.id}'))
+                              ong.nome,
+                        },
+                        aoEscolher: _alternarOng,
+                      ),
                     const _Rotulo('Saúde'),
                     _Abas(
                       opcoes: opcoesDe(GrupoDeFiltro.saude, const []),
@@ -204,10 +273,10 @@ class _PainelDeFiltrosState extends State<PainelDeFiltros> {
                         ),
                       ),
                     ),
-                    const Text(
+                    Text(
                       'Na saúde, aparecem só os animais com todos os '
                       'cuidados marcados.',
-                      style: TextStyle(fontSize: 12, color: Cores.textoFraco),
+                      style: TextStyle(fontSize: 12, color: context.cores.textoFraco),
                     ),
                   ],
                 ),
@@ -218,7 +287,7 @@ class _PainelDeFiltrosState extends State<PainelDeFiltros> {
               child: FilledButton(
                 onPressed: () => Navigator.pop(context, _filtros),
                 style: FilledButton.styleFrom(
-                  backgroundColor: Cores.principal,
+                  backgroundColor: context.cores.principal,
                   minimumSize: const Size.fromHeight(52),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
@@ -255,9 +324,9 @@ class _Cartao extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 4, 14, 14),
       decoration: BoxDecoration(
-        color: Cores.cartao,
+        color: context.cores.cartao,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Cores.borda),
+        border: Border.all(color: context.cores.borda),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -278,11 +347,11 @@ class _Rotulo extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
     texto.toUpperCase(),
-    style: const TextStyle(
+    style: TextStyle(
       fontSize: 11,
       fontWeight: FontWeight.w600,
       letterSpacing: 0.5,
-      color: Cores.textoFraco,
+      color: context.cores.textoFraco,
     ),
   );
 }
@@ -314,7 +383,7 @@ class _Abas extends StatelessWidget {
         emptySelectionAllowed: true,
         showSelectedIcon: false,
         onSelectionChanged: aoMudar,
-        style: estiloDasAbas(Cores.fundo),
+        style: estiloDasAbas(context, context.cores.fundo),
       ),
     );
   }

@@ -2,11 +2,13 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geocoding_platform_interface/geocoding_platform_interface.dart'
     as pi;
 import 'package:geolocator/geolocator.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 import 'package:provider/provider.dart';
@@ -19,6 +21,7 @@ import 'package:pata_amiga/dados/racas.dart';
 import 'package:pata_amiga/modelos/avistamento.dart';
 import 'package:pata_amiga/modelos/camadas_do_mapa.dart';
 import 'package:pata_amiga/modelos/filtros_do_feed.dart';
+import 'package:pata_amiga/modelos/ong.dart';
 import 'package:pata_amiga/modelos/ponto_de_alimentacao.dart';
 import 'package:pata_amiga/estado/estado_pata_amiga.dart';
 import 'package:pata_amiga/modelos/animal.dart';
@@ -29,18 +32,42 @@ import 'package:pata_amiga/services/animal_service.dart';
 import 'package:pata_amiga/services/avistamento_service.dart';
 import 'package:pata_amiga/services/bairro_service.dart';
 import 'package:pata_amiga/services/localizacao_service.dart';
+import 'package:pata_amiga/services/ong_service.dart';
 import 'package:pata_amiga/telas/cadastrar_ponto.dart';
 import 'package:pata_amiga/telas/cadastro_animal.dart';
+import 'package:pata_amiga/telas/cadastro_ong.dart';
+import 'package:pata_amiga/telas/lista_ongs.dart';
+import 'package:pata_amiga/telas/perfil_ong.dart';
 import 'package:pata_amiga/telas/detalhes_animal.dart';
 import 'package:pata_amiga/telas/tela_mapa.dart';
 import 'package:pata_amiga/telas/feed_adocao.dart';
+import 'package:pata_amiga/telas/editar_perfil.dart';
 import 'package:pata_amiga/telas/perfil_usuario.dart';
 import 'package:pata_amiga/telas/registrar_abastecimento.dart';
 import 'package:pata_amiga/telas/registrar_avistamento.dart';
 import 'package:pata_amiga/widgets/acoes_do_registro.dart';
+import 'package:pata_amiga/widgets/avatar_da_ong.dart';
 import 'package:pata_amiga/widgets/barra_inferior.dart';
 import 'package:pata_amiga/widgets/foto_animal.dart';
+import 'package:pata_amiga/widgets/mapa_de_local.dart';
 import 'package:pata_amiga/widgets/mascaras.dart';
+import 'package:pata_amiga/widgets/painel_de_filtros.dart';
+import 'package:pata_amiga/widgets/sino_de_notificacoes.dart';
+
+// Galeria que devolve uma foto, para o cadastro de animal, em que a foto é
+// obrigatória
+class _GaleriaComUmaFoto extends ImagePickerPlatform {
+  @override
+  Future<List<XFile>> getMultiImageWithOptions({
+    MultiImagePickerOptions options = const MultiImagePickerOptions(),
+  }) async => [XFile('/tmp/animal-de-teste.jpg')];
+
+  @override
+  Future<XFile?> getImageFromSource({
+    required ImageSource source,
+    ImagePickerOptions options = const ImagePickerOptions(),
+  }) async => XFile('/tmp/animal-de-teste.jpg');
+}
 
 class _GaleriaVazia extends ImagePickerPlatform {
   @override
@@ -130,6 +157,33 @@ class _AlimentacaoFalsa extends AlimentacaoService {
     });
     abastecimentos.add(comId);
     return comId;
+  }
+}
+
+// Serviço de ONGs falso: guarda na memória e dá o id na criação
+class _OngsFalsas extends OngService {
+  _OngsFalsas([List<Ong> ongs = const []]) : ongs = [...ongs];
+
+  final List<Ong> ongs;
+  final salvas = <Ong>[];
+
+  @override
+  Future<List<Ong>> buscarOngs() async => [...ongs];
+
+  @override
+  Future<Ong> buscarOng(int id) async => ongs.firstWhere((ong) => ong.id == id);
+
+  @override
+  Future<Ong> salvarOng(Ong ong) async {
+    final salva = Ong.fromJson({
+      ...ong.toJson(),
+      'id': ong.id ?? ongs.length + 1,
+    });
+    salvas.add(salva);
+    ongs
+      ..removeWhere((item) => item.id == salva.id)
+      ..add(salva);
+    return salva;
   }
 }
 
@@ -392,7 +446,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(animal.nome.toUpperCase()), findsOneWidget);
-    expect(find.textContaining('· há 2 dias'), findsOneWidget);
+    expect(find.text('Publicado há 2 dias'), findsOneWidget);
   });
 
   testWidgets('editar perfil só salva com mudança e volta ao perfil', (
@@ -723,13 +777,22 @@ void main() {
     await tester.tap(find.text('abrir'));
     await tester.pumpAndSettle();
 
+    // A foto é obrigatória: escolhe uma na galeria falsa
+    ImagePickerPlatform.instance = _GaleriaComUmaFoto();
+    await tester.tap(find.byType(FotoAnimal).first);
+    await tester.pumpAndSettle();
+
     await tester.tap(find.text('Perdido'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Escolher').first);
+    await tester.tap(
+      find.widgetWithText(DropdownButtonFormField<String>, 'Escolher').first,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Cachorro').last);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Escolher').first);
+    await tester.tap(
+      find.widgetWithText(DropdownButtonFormField<String>, 'Escolher').first,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Pequeno').last);
     await tester.pumpAndSettle();
@@ -2761,6 +2824,1517 @@ void main() {
       await tester.tap(find.text('Limpar filtros').last);
       await tester.pumpAndSettle();
       expect(find.text('THOR'), findsOneWidget);
+    });
+  });
+
+  group('perfil de ONG (US 13)', () {
+    const emailDaOng = 'ong@example.org';
+
+    Ong ongDeExemplo({int? id = 1, String email = emailDaOng}) => Ong(
+      id: id,
+      nome: 'Abrigo Focinhos (exemplo)',
+      descricao: 'Resgata cães e gatos.',
+      politicaDeAdocao: 'Visita e termo de adoção.',
+      telefone: '13999997777',
+      chavePix: 'doacoes@example.org',
+      rua: 'Praça São Vicente Férrer',
+      bairro: 'Centro',
+      latitude: -20.4647,
+      longitude: -45.4264,
+      responsavelEmail: email,
+      criadaEm: DateTime(2026, 10, 1),
+    );
+
+    Animal daOng(
+      String nome,
+      DateTime publicado, {
+      String status = 'disponivel',
+    }) => Animal.fromJson({
+      ...animaisMock.first.toJson(),
+      'nome': nome,
+      'status': status,
+      'responsavelEmail': emailDaOng,
+      'ongId': 1,
+      'publicadoEm': publicado.toIso8601String(),
+    });
+
+    Future<void> montar(
+      WidgetTester tester, {
+      required EstadoPataAmiga estado,
+      required Widget tela,
+      String email = 'luisa@pata.com',
+    }) async {
+      tester.view.physicalSize = const Size(1200, 3000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final usuario = UsuarioProvider();
+      await usuario.registrarUsuario(
+        nome: 'Luisa',
+        email: email,
+        telefone: '37999990000',
+      );
+      await tester.pumpWidget(
+        ChangeNotifierProvider.value(
+          value: usuario,
+          child: PataAmigaScope(
+            notifier: estado,
+            child: MaterialApp(
+              home: tela,
+              routes: {...AppRoutesConfig.routes}..remove(AppRoutes.welcome),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    test('a ONG vai e volta da API sem perder nada', () {
+      final ong = ongDeExemplo();
+      final volta = Ong.fromJson(ong.toJson());
+      expect(volta.toJson(), ong.toJson());
+      // Antes de existir na API, a ONG vai sem id
+      expect(ongDeExemplo(id: null).toJson().containsKey('id'), isFalse);
+    });
+
+    test('as iniciais pulam as ligações e o que está entre parênteses', () {
+      expect(iniciaisDa('Abrigo Focinhos (exemplo)'), 'AF');
+      expect(iniciaisDa('Associação dos Amigos dos Animais'), 'AA');
+      expect(iniciaisDa(''), isEmpty);
+    });
+
+    test('a ONG é achada pelo e-mail de quem a criou, sem ligar para '
+        'maiúsculas', () {
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      estado.atualizarOngs([ongDeExemplo()]);
+      expect(estado.ongDe(' ONG@Example.org ')?.nome, contains('Focinhos'));
+      expect(estado.ongDe('luisa@pata.com'), isNull);
+      expect(estado.ongDe(''), isNull);
+    });
+
+    test('editar troca a ONG em vez de criar outra', () {
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      estado.atualizarOngs([ongDeExemplo()]);
+      estado.salvarOng(
+        Ong.fromJson({...ongDeExemplo().toJson(), 'nome': 'Novo nome'}),
+      );
+      expect(estado.ongs.single.nome, 'Novo nome');
+    });
+
+    test('o animal cadastrado por último é o primeiro da ONG', () {
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      estado.atualizarAnimais([
+        daOng('Antigo', DateTime(2026, 10, 1)),
+        animaisMock.first,
+        daOng('Do meio', DateTime(2026, 10, 5)),
+      ]);
+      estado.atualizarAnimais([
+        ...estado.animais,
+        daOng('Novo', DateTime(2026, 10, 22)),
+      ]);
+      expect(estado.animaisDa(ongDeExemplo()).map((animal) => animal.nome), [
+        'Novo',
+        'Do meio',
+        'Antigo',
+      ]);
+    });
+
+    testWidgets('a lista do menu abre o perfil, com os animais e o Pix', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      estado.atualizarAnimais([
+        daOng('Thor', DateTime(2026, 10, 10)),
+        daOng('Amora', DateTime(2026, 10, 13)),
+        daOng('Mel', DateTime(2026, 10, 2), status: 'adotado'),
+        Animal.fromJson({
+          ...daOng('Fred', DateTime(2026, 10, 12)).toJson(),
+          'tipo': 'resgate',
+        }),
+      ]);
+      String? copiado;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (chamada) async {
+          if (chamada.method == 'Clipboard.setData') {
+            copiado = (chamada.arguments as Map)['text'] as String;
+          }
+          return null;
+        },
+      );
+      await montar(
+        tester,
+        estado: estado,
+        tela: ListaOngs(
+          servico: _OngsFalsas([
+            ongDeExemplo(),
+            Ong.fromJson({
+              ...ongDeExemplo(id: 2).toJson(),
+              'nome': 'Órfãos de Patas',
+            }),
+            Ong.fromJson({...ongDeExemplo(id: 3).toJson(), 'nome': 'Zoo Lar'}),
+          ]),
+        ),
+      );
+
+      expect(find.text('Abrigo Focinhos (exemplo)'), findsOneWidget);
+      expect(find.text('3 animais em aberto'), findsOneWidget);
+
+      // Em ordem alfabética, com o "Ó" junto do "O", antes do "Z"
+      double topo(String nome) => tester.getTopLeft(find.text(nome)).dy;
+      expect(
+        topo('Abrigo Focinhos (exemplo)'),
+        lessThan(topo('Órfãos de Patas')),
+      );
+      expect(topo('Órfãos de Patas'), lessThan(topo('Zoo Lar')));
+
+      // A busca é pelo nome, sem ligar para acentos; o bairro não conta
+      await tester.enterText(find.byType(TextField), 'orfaos');
+      await tester.pumpAndSettle();
+      expect(find.text('Órfãos de Patas'), findsOneWidget);
+      expect(find.text('Abrigo Focinhos (exemplo)'), findsNothing);
+      await tester.enterText(find.byType(TextField), 'centro');
+      await tester.pumpAndSettle();
+      expect(find.text('Nenhuma ONG com esse nome.'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'focinhos');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Abrigo Focinhos (exemplo)'));
+      await tester.pumpAndSettle();
+      expect(find.text('Para adoção'), findsOneWidget);
+      expect(find.text('Resgates'), findsOneWidget);
+      expect(find.text('Perdidos'), findsNothing);
+      expect(find.text('AMORA'), findsOneWidget);
+      expect(find.text('THOR'), findsOneWidget);
+      expect(find.text('Já encontraram um desfecho'), findsOneWidget);
+      // Quem não criou a ONG não vê o editar
+      expect(find.byTooltip('Editar perfil da ONG'), findsNothing);
+
+      await tester.tap(find.text('Copiar'));
+      await tester.pumpAndSettle();
+      expect(copiado, 'doacoes@example.org');
+      expect(
+        find.text(
+          'Chave Pix copiada. Cole no aplicativo do seu banco para doar.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('só quem criou a ONG vê o editar no perfil dela', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      pi.GeocodingPlatformFactory.instance = _FabricaFalsa();
+      final ong = ongDeExemplo();
+      estado.atualizarOngs([ong]);
+      await montar(
+        tester,
+        estado: estado,
+        tela: PerfilOng(ong: ong),
+        email: emailDaOng,
+      );
+      expect(find.byTooltip('Editar perfil da ONG'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Editar perfil da ONG'));
+      await tester.pumpAndSettle();
+      expect(find.text('EDITAR PERFIL DA ONG'), findsOneWidget);
+      expect(find.text('Abrigo Focinhos (exemplo)'), findsWidgets);
+    });
+
+    testWidgets('criar a ONG pede os obrigatórios e a liga a quem criou', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      pi.GeocodingPlatformFactory.instance = _FabricaFalsa();
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      final servico = _OngsFalsas();
+      await montar(
+        tester,
+        estado: estado,
+        tela: CadastroOng(servico: servico),
+      );
+      // O telefone já vem de quem está logado
+      final telefone = find.byWidgetPredicate(
+        (widget) =>
+            widget is EditableText &&
+            widget.controller.text == '(37) 99999-0000',
+      );
+      expect(telefone, findsOneWidget);
+      await tester.enterText(telefone, '');
+      await tester.ensureVisible(find.text('Criar perfil da ONG'));
+      await tester.tap(find.text('Criar perfil da ONG'));
+      await tester.pumpAndSettle();
+      // Nome, descrição, política, telefone e Pix: só a foto é opcional
+      expect(find.text('Campo obrigatório'), findsNWidgets(5));
+      expect(find.byType(SnackBar), findsNothing);
+      expect(servico.salvas, isEmpty);
+
+      final campos = find.byType(TextField);
+      await tester.enterText(campos.at(0), 'Lar dos Bichos');
+      await tester.enterText(campos.at(1), 'Abrigo de cães idosos.');
+      await tester.enterText(campos.at(2), 'Visita e termo de adoção.');
+      await tester.enterText(campos.at(3), '37988887777');
+      await tester.enterText(campos.at(4), 'pix@example.org');
+      await tester.ensureVisible(find.text('Criar perfil da ONG'));
+      await tester.tap(find.text('Criar perfil da ONG'));
+      await tester.pumpAndSettle();
+
+      final salva = servico.salvas.single;
+      expect(salva.nome, 'Lar dos Bichos');
+      expect(salva.telefone, '37988887777');
+      expect(salva.chavePix, 'pix@example.org');
+      expect(salva.responsavelEmail, 'luisa@pata.com');
+      expect(estado.ongDe('luisa@pata.com')?.id, salva.id);
+    });
+
+    testWidgets('quem já tem ONG abre o cadastro editando a que existe', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      pi.GeocodingPlatformFactory.instance = _FabricaFalsa();
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      estado.atualizarOngs([ongDeExemplo(email: 'luisa@pata.com')]);
+      final servico = _OngsFalsas([ongDeExemplo(email: 'luisa@pata.com')]);
+      await montar(
+        tester,
+        estado: estado,
+        tela: CadastroOng(servico: servico),
+      );
+      expect(find.text('EDITAR PERFIL DA ONG'), findsOneWidget);
+      await tester.ensureVisible(find.text('Salvar alterações'));
+      await tester.tap(find.text('Salvar alterações'));
+      await tester.pumpAndSettle();
+      // Gravou por cima da mesma ONG, sem criar outra
+      expect(servico.salvas.single.id, 1);
+      expect(servico.ongs, hasLength(1));
+    });
+
+    testWidgets('a ONG criada em outro aparelho impede criar a segunda', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      pi.GeocodingPlatformFactory.instance = _FabricaFalsa();
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      // O app ainda não sabe da ONG; só a API sabe
+      final servico = _OngsFalsas([ongDeExemplo(email: 'luisa@pata.com')]);
+      await montar(
+        tester,
+        estado: estado,
+        tela: CadastroOng(servico: servico),
+      );
+      expect(find.text('PERFIL DA ONG'), findsOneWidget);
+      final campos = find.byType(TextField);
+      await tester.enterText(campos.at(0), 'Segunda ONG');
+      await tester.enterText(campos.at(1), 'Outra descrição.');
+      await tester.enterText(campos.at(2), 'Visita e termo de adoção.');
+      await tester.enterText(campos.at(4), 'pix@example.org');
+      await tester.ensureVisible(find.text('Criar perfil da ONG'));
+      await tester.tap(find.text('Criar perfil da ONG'));
+      await tester.pumpAndSettle();
+
+      expect(servico.salvas, isEmpty);
+      expect(
+        find.textContaining('Sua conta já faz parte da ONG Abrigo Focinhos'),
+        findsOneWidget,
+      );
+      // O formulário passa a editar a que existe, com os dados dela
+      expect(find.text('EDITAR PERFIL DA ONG'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is EditableText &&
+              widget.controller.text == 'Abrigo Focinhos (exemplo)',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    test('pedir, aprovar e recusar mudam quem faz parte', () {
+      const maria = PessoaDaOng(
+        email: 'maria@pata.com',
+        nome: 'Maria',
+        telefone: '37988880000',
+      );
+      const joao = PessoaDaOng(
+        email: 'joao@pata.com',
+        nome: 'João',
+        telefone: '37988880000',
+      );
+      final ong = ongDeExemplo().comPedidoDe(maria).comPedidoDe(joao);
+      expect(ong.pediuEntrada('MARIA@pata.com'), isTrue);
+      expect(ong.fazParte('maria@pata.com'), isFalse);
+      // Pedir de novo não repete o pedido
+      expect(ong.comPedidoDe(maria).pedidos, hasLength(2));
+
+      final depois = ong
+          .respondendo('maria@pata.com', aprovar: true)
+          .respondendo('joao@pata.com', aprovar: false);
+      expect(depois.fazParte('maria@pata.com'), isTrue);
+      expect(depois.fazParte('joao@pata.com'), isFalse);
+      expect(depois.pedidos, isEmpty);
+      // Os membros vão e voltam da API
+      expect(Ong.fromJson(depois.toJson()).membros.single.nome, 'Maria');
+    });
+
+    test('nomes iguais sem ligar para maiúsculas, acentos e espaços', () {
+      final ong = ongDeExemplo();
+      expect(ong.temNome('  abrigo focinhos   (EXEMPLO) '), isTrue);
+      expect(
+        Ong.fromJson({...ong.toJson(), 'nome': 'Abrigo São Francisco'})
+            .temNome('abrigo sao francisco'),
+        isTrue,
+      );
+      expect(ong.temNome('Abrigo Focinhos de Formiga'), isFalse);
+    });
+
+    testWidgets('quem criou a ONG vê o pedido no sino e aprova', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      final comPedido = ongDeExemplo(email: 'luisa@pata.com').comPedidoDe(
+        PessoaDaOng(
+          email: 'maria@pata.com',
+          nome: 'Maria',
+          telefone: '37988880000',
+        ),
+      );
+      final servico = _OngsFalsas([comPedido]);
+      await montar(
+        tester,
+        estado: estado,
+        tela: Scaffold(
+          appBar: AppBar(
+            actions: [
+              SinoDeNotificacoes(email: 'luisa@pata.com', servico: servico),
+            ],
+          ),
+        ),
+      );
+      expect(find.byTooltip('1 notificação'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('1 notificação'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          ' quer fazer parte de Abrigo Focinhos (exemplo).',
+          findRichText: true,
+        ),
+        findsNothing,
+      );
+      expect(
+        find.textContaining('quer fazer parte de', findRichText: true),
+        findsOneWidget,
+      );
+      // O e-mail não aparece; o "Ver perfil" mostra quem é a pessoa
+      expect(find.text('maria@pata.com'), findsNothing);
+      await tester.tap(find.text('Toque para ver o perfil.'));
+      await tester.pumpAndSettle();
+      expect(find.text('M'), findsWidgets);
+      expect(find.text('(37) 98888-0000'), findsOneWidget);
+      expect(find.text('Conversar no WhatsApp'), findsOneWidget);
+      // Sem animais publicados, a seção nem aparece
+      expect(find.textContaining('publicado'), findsNothing);
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Aprovar'));
+      await tester.pumpAndSettle();
+
+      expect(servico.salvas.single.fazParte('maria@pata.com'), isTrue);
+      expect(estado.ongDe('maria@pata.com')?.id, 1);
+      expect(
+        find.text('Maria agora faz parte de Abrigo Focinhos (exemplo).'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('quem não criou a ONG não vê o sino', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      final servico = _OngsFalsas([
+        ongDeExemplo().comPedidoDe(
+          PessoaDaOng(
+            email: 'maria@pata.com',
+            nome: 'Maria',
+            telefone: '37988880000',
+          ),
+        ),
+      ]);
+      await montar(
+        tester,
+        estado: estado,
+        tela: Scaffold(
+          appBar: AppBar(
+            actions: [
+              SinoDeNotificacoes(email: 'luisa@pata.com', servico: servico),
+            ],
+          ),
+        ),
+      );
+      expect(find.byType(IconButton), findsNothing);
+    });
+
+    testWidgets('no editar perfil, quem faz parte escolhe a ONG e pede', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      final servico = _OngsFalsas([
+        Ong.fromJson({...ongDeExemplo().toJson(), 'nome': 'Lar dos Bichos'}),
+        Ong.fromJson({...ongDeExemplo(id: 2).toJson(), 'nome': 'Abrigo Amigo'}),
+      ]);
+      await montar(
+        tester,
+        estado: estado,
+        tela: EditarPerfil(ongs: servico),
+      );
+      await tester.ensureVisible(find.text('Sim'));
+      await tester.tap(find.text('Sim'));
+      await tester.pumpAndSettle();
+      // O select com busca, como o do bairro
+      final campo = find.widgetWithText(TextField, 'Digite para buscar a ONG');
+      await tester.ensureVisible(campo);
+      await tester.tap(campo);
+      await tester.pumpAndSettle();
+
+      // Em ordem alfabética
+      final amigo = tester.getTopLeft(find.text('Abrigo Amigo')).dy;
+      final lar = tester.getTopLeft(find.text('Lar dos Bichos')).dy;
+      expect(amigo, lessThan(lar));
+
+      await tester.tap(find.text('Lar dos Bichos'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Salvar alterações'));
+      await tester.pumpAndSettle();
+
+      final pedida = servico.salvas.single;
+      expect(pedida.nome, 'Lar dos Bichos');
+      expect(pedida.pediuEntrada('luisa@pata.com'), isTrue);
+      // Pedir não dá acesso: só a aprovação
+      expect(estado.ongDe('luisa@pata.com'), isNull);
+      expect(estado.ongPedidaPor('luisa@pata.com')?.nome, 'Lar dos Bichos');
+    });
+
+    testWidgets('quem entrou por aprovação não edita a ONG', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      final ong = ongDeExemplo()
+          .comPedidoDe(
+            PessoaDaOng(
+              email: 'luisa@pata.com',
+              nome: 'Luisa',
+              telefone: '37988880000',
+            ),
+          )
+          .respondendo('luisa@pata.com', aprovar: true);
+      estado.atualizarOngs([ong]);
+      await montar(tester, estado: estado, tela: const PerfilUsuario());
+      // A ONG aparece no cabeçalho, como vínculo da pessoa
+      await tester.tap(find.text('Abrigo Focinhos (exemplo)'));
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Editar perfil da ONG'), findsNothing);
+    });
+
+    testWidgets('não cria ONG com o nome de outra', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      pi.GeocodingPlatformFactory.instance = _FabricaFalsa();
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      final servico = _OngsFalsas([ongDeExemplo()]);
+      await montar(
+        tester,
+        estado: estado,
+        tela: CadastroOng(servico: servico),
+      );
+      final campos = find.byType(TextField);
+      await tester.enterText(campos.at(0), 'abrigo focinhos (EXEMPLO)');
+      await tester.enterText(campos.at(1), 'Outra descrição.');
+      await tester.enterText(campos.at(2), 'Visita e termo de adoção.');
+      await tester.enterText(campos.at(4), 'pix@example.org');
+      await tester.ensureVisible(find.text('Criar perfil da ONG'));
+      await tester.tap(find.text('Criar perfil da ONG'));
+      await tester.pumpAndSettle();
+      expect(find.text('Já existe uma ONG com esse nome.'), findsOneWidget);
+      expect(servico.salvas, isEmpty);
+
+      // Mudar o nome tira o aviso e deixa criar
+      await tester.enterText(campos.at(0), 'Abrigo Focinhos de Formiga');
+      await tester.pumpAndSettle();
+      expect(find.text('Já existe uma ONG com esse nome.'), findsNothing);
+      await tester.ensureVisible(find.text('Criar perfil da ONG'));
+      await tester.tap(find.text('Criar perfil da ONG'));
+      await tester.pumpAndSettle();
+      expect(servico.salvas.single.nome, 'Abrigo Focinhos de Formiga');
+    });
+
+    testWidgets('voltar com algo preenchido pergunta antes de sair', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      pi.GeocodingPlatformFactory.instance = _FabricaFalsa();
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      await montar(
+        tester,
+        estado: estado,
+        tela: Builder(
+          builder: (context) => TextButton(
+            onPressed: () =>
+                Navigator.pushNamed(context, AppRoutes.cadastroOng),
+            child: const Text('Abrir'),
+          ),
+        ),
+      );
+      // Sem mudança, volta direto
+      await tester.tap(find.text('Abrir'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Voltar'));
+      await tester.pumpAndSettle();
+      expect(find.text('Abrir'), findsOneWidget);
+      expect(find.text('Sair sem salvar?'), findsNothing);
+
+      // Com o nome escrito, pergunta; continuar editando fica na tela
+      await tester.tap(find.text('Abrir'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, 'Lar dos Bichos');
+      await tester.tap(find.byTooltip('Voltar'));
+      await tester.pumpAndSettle();
+      expect(find.text('Sair sem salvar?'), findsOneWidget);
+      await tester.tap(find.text('Continuar editando'));
+      await tester.pumpAndSettle();
+      expect(find.text('PERFIL DA ONG'), findsOneWidget);
+      expect(find.text('Lar dos Bichos'), findsOneWidget);
+
+      // Sair sem salvar volta e perde o que foi escrito
+      await tester.tap(find.byTooltip('Voltar'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Sair sem salvar'));
+      await tester.pumpAndSettle();
+      expect(find.text('Abrir'), findsOneWidget);
+    });
+
+    for (final (nome, rota, campo) in [
+      ('editar perfil', AppRoutes.editarPerfil, 'Luisa Araujo'),
+      ('cadastro de animal', AppRoutes.registerAnimal, 'Thor'),
+    ]) {
+      testWidgets('$nome também pergunta antes de sair sem salvar', (
+        tester,
+      ) async {
+        SharedPreferences.setMockInitialValues({});
+        final estado = EstadoPataAmiga();
+        addTearDown(estado.dispose);
+        await montar(
+          tester,
+          estado: estado,
+          tela: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => Navigator.pushNamed(context, rota),
+              child: const Text('Abrir'),
+            ),
+          ),
+        );
+        await tester.tap(find.text('Abrir'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip('Voltar'));
+        await tester.pumpAndSettle();
+        expect(find.text('Abrir'), findsOneWidget);
+
+        await tester.tap(find.text('Abrir'));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField).first, campo);
+        await tester.tap(find.byTooltip('Voltar'));
+        await tester.pumpAndSettle();
+        expect(find.text('Sair sem salvar?'), findsOneWidget);
+        await tester.tap(find.text('Sair sem salvar'));
+        await tester.pumpAndSettle();
+        expect(find.text('Abrir'), findsOneWidget);
+      });
+    }
+
+    testWidgets('quem entrou na ONG transfere o próprio animal para ela', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      final ong = ongDeExemplo()
+          .comPedidoDe(
+            PessoaDaOng(
+              email: 'luisa@pata.com',
+              nome: 'Luisa',
+              telefone: '37988880000',
+            ),
+          )
+          .respondendo('luisa@pata.com', aprovar: true);
+      estado.atualizarOngs([ong]);
+      final meu = Animal.fromJson({
+        ...animaisMock.first.toJson(),
+        'id': 9,
+        'nome': 'Pipoca',
+        // Já com desfecho: transferir vale para qualquer cadastro
+        'status': 'encontrado',
+        'responsavelEmail': 'luisa@pata.com',
+      });
+      estado.atualizarAnimais([meu]);
+      final api = _ApiFalsa(const []);
+      await montar(
+        tester,
+        estado: estado,
+        tela: PerfilUsuario(api: api),
+      );
+      await tester.tap(find.text('Meus registros'));
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('transferir o cadastro para a ONG'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byTooltip('Opções de Pipoca'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Transferir para Abrigo Focinhos (exemplo)'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Transferir Pipoca para Abrigo Focinhos (exemplo)?'),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Confirmar'));
+      await tester.pumpAndSettle();
+
+      final enviado = api.editados.single;
+      expect(enviado.ongId, 1);
+      expect(enviado.dono.nome, 'Abrigo Focinhos (exemplo)');
+      expect(enviado.responsavelEmail, 'luisa@pata.com');
+      // Sai de Meus registros e passa a ser da ONG
+      expect(estado.cadastrosDe('luisa@pata.com'), isEmpty);
+      expect(estado.animaisDa(ong).single.nome, 'Pipoca');
+    });
+
+    testWidgets('mexer só no pino do mapa também pergunta antes de sair', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      GeolocatorPlatform.instance = _GpsFalso();
+      pi.GeocodingPlatformFactory.instance = _FabricaFalsa();
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      await montar(
+        tester,
+        estado: estado,
+        tela: Builder(
+          builder: (context) => TextButton(
+            onPressed: () =>
+                Navigator.pushNamed(context, AppRoutes.cadastroOng),
+            child: const Text('Abrir'),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Abrir'));
+      await tester.pumpAndSettle();
+      // A mira leva o pino para onde a pessoa está
+      await tester.ensureVisible(find.byTooltip('Usar minha localização'));
+      await tester.tap(find.byTooltip('Usar minha localização'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Voltar'));
+      await tester.pumpAndSettle();
+      expect(find.text('Sair sem salvar?'), findsOneWidget);
+    });
+
+    testWidgets('o mapa de marcar o local começa travado', (tester) async {
+      var arrastou = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MapaDeLocal(
+              controlador: MapController(),
+              inicio: centroDeFormiga,
+              aoArrastar: (_) => arrastou = true,
+              aoUsarMinhaLocalizacao: () {},
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Destravar o mapa'), findsOneWidget);
+      await tester.drag(find.byType(FlutterMap), const Offset(80, 0));
+      await tester.pumpAndSettle();
+      expect(arrastou, isFalse);
+
+      await tester.tap(find.text('Destravar o mapa'));
+      await tester.pump();
+      expect(find.text('Travar o mapa'), findsOneWidget);
+      await tester.drag(find.byType(FlutterMap), const Offset(80, 0));
+      await tester.pumpAndSettle();
+      expect(arrastou, isTrue);
+    });
+
+    test('o filtro de ONG traz só os animais das ONGs marcadas', () {
+      final daUm = daOng('Thor', DateTime(2026, 10, 10));
+      final daDois = Animal.fromJson({
+        ...daOng('Amora', DateTime(2026, 10, 11)).toJson(),
+        'ongId': 2,
+      });
+      final pessoal = animaisMock.first;
+      final filtros = const FiltrosDoFeed().alternar(GrupoDeFiltro.ong, '1');
+      expect(filtros.combina(daUm), isTrue);
+      expect(filtros.combina(daDois), isFalse);
+      expect(filtros.combina(pessoal), isFalse);
+      expect(filtros.alternar(GrupoDeFiltro.ong, '2').combina(daDois), isTrue);
+    });
+
+    testWidgets('o painel filtra por ONG, marca todas e desmarca todas', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1200, 3000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final ongs = [
+        Ong.fromJson({...ongDeExemplo(id: 2).toJson(), 'nome': 'Zoo Lar'}),
+        ongDeExemplo(),
+        // Sem animais no feed, não aparece no select
+        Ong.fromJson({...ongDeExemplo(id: 3).toJson(), 'nome': 'Vazia'}),
+      ];
+      final animais = [
+        daOng('Thor', DateTime(2026, 10, 10)),
+        Animal.fromJson({
+          ...daOng('Amora', DateTime(2026, 10, 11)).toJson(),
+          'ongId': 2,
+        }),
+      ];
+      FiltrosDoFeed? aplicados;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () async =>
+                    aplicados = await showModalBottomSheet<FiltrosDoFeed>(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (_) => PainelDeFiltros(
+                        inicial: const FiltrosDoFeed(),
+                        animais: animais,
+                        contar: (filtros) =>
+                            animais.where(filtros.combina).length,
+                        ongs: ongs,
+                      ),
+                    ),
+                child: const Text('Filtros'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Filtros'));
+      await tester.pumpAndSettle();
+
+      final campo = find.widgetWithText(TextField, 'Digite para buscar a ONG');
+      await tester.ensureVisible(campo);
+      await tester.tap(campo);
+      await tester.pumpAndSettle();
+      // Em ordem alfabética, só as que têm animais
+      expect(find.text('Vazia'), findsNothing);
+      expect(
+        tester.getTopLeft(find.text('Abrigo Focinhos (exemplo)')).dy,
+        lessThan(tester.getTopLeft(find.text('Zoo Lar')).dy),
+      );
+
+      await tester.tap(find.text('Selecionar todas'));
+      await tester.pumpAndSettle();
+      expect(find.text('Mostrar 2 animais'), findsOneWidget);
+
+      await tester.tap(campo);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Desmarcar todas'));
+      await tester.pumpAndSettle();
+      await tester.tap(campo);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Zoo Lar').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Mostrar 1 animal'), findsOneWidget);
+
+      await tester.tap(find.text('Mostrar 1 animal'));
+      await tester.pumpAndSettle();
+      expect(aplicados?.de(GrupoDeFiltro.ong), {'2'});
+    });
+
+    test('não aprova quem já faz parte de outra ONG', () async {
+      const bia = PessoaDaOng(email: 'bia@pata.com', nome: 'Bia', telefone: '');
+      final outra = Ong.fromJson({
+        ...ongDeExemplo(id: 2).toJson(),
+        'nome': 'Outra',
+        'responsavelEmail': 'bia@pata.com',
+      });
+      final servico = _OngsFalsas([ongDeExemplo().comPedidoDe(bia), outra]);
+      await expectLater(
+        servico.responderPedido(ongDeExemplo(), bia.email, aprovar: true),
+        throwsA(isA<JaFazParteDeOutra>()),
+      );
+      // Recusar continua possível
+      final recusada = await servico.responderPedido(
+        ongDeExemplo(),
+        bia.email,
+        aprovar: false,
+      );
+      expect(recusada.pedidos, isEmpty);
+    });
+
+    testWidgets('quem espera resposta de uma ONG não cria outra', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      pi.GeocodingPlatformFactory.instance = _FabricaFalsa();
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      final servico = _OngsFalsas([
+        ongDeExemplo().comPedidoDe(
+          PessoaDaOng(email: 'luisa@pata.com', nome: 'Luisa', telefone: ''),
+        ),
+      ]);
+      await montar(
+        tester,
+        estado: estado,
+        tela: CadastroOng(servico: servico),
+      );
+      final campos = find.byType(TextField);
+      await tester.enterText(campos.at(0), 'Lar dos Bichos');
+      await tester.enterText(campos.at(1), 'Abrigo de cães idosos.');
+      await tester.enterText(campos.at(2), 'Visita e termo de adoção.');
+      await tester.enterText(campos.at(4), 'pix@example.org');
+      await tester.ensureVisible(find.text('Criar perfil da ONG'));
+      await tester.tap(find.text('Criar perfil da ONG'));
+      await tester.pumpAndSettle();
+      expect(servico.salvas, isEmpty);
+      expect(
+        find.textContaining('Você pediu para entrar em Abrigo Focinhos'),
+        findsOneWidget,
+      );
+    });
+
+    Future<void> abrirSino(
+      WidgetTester tester,
+      EstadoPataAmiga estado,
+      _OngsFalsas servico,
+      String email,
+    ) async {
+      await montar(
+        tester,
+        estado: estado,
+        email: email,
+        tela: Scaffold(
+          appBar: AppBar(
+            actions: [SinoDeNotificacoes(email: email, servico: servico)],
+          ),
+        ),
+      );
+      await tester.tap(find.byType(IconButton));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('o pedido de quem já está em outra ONG avisa e não aprova', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      const bia = PessoaDaOng(email: 'bia@pata.com', nome: 'Bia', telefone: '');
+      final servico = _OngsFalsas([
+        ongDeExemplo(email: 'luisa@pata.com').comPedidoDe(bia),
+        Ong.fromJson({
+          ...ongDeExemplo(id: 2).toJson(),
+          'nome': 'Outra ONG',
+          'responsavelEmail': 'bia@pata.com',
+        }),
+      ]);
+      await abrirSino(tester, estado, servico, 'luisa@pata.com');
+      expect(find.text('Notificações'), findsOneWidget);
+      expect(find.textContaining('Já faz parte de Outra ONG'), findsOneWidget);
+      final aprovar = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Aprovar'),
+      );
+      expect(aprovar.onPressed, isNull);
+    });
+
+    testWidgets('quem pediu para entrar vê no sino que o pedido aguarda', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      final servico = _OngsFalsas([
+        ongDeExemplo().comPedidoDe(
+          PessoaDaOng(email: 'luisa@pata.com', nome: 'Luisa', telefone: ''),
+        ),
+      ]);
+      await abrirSino(tester, estado, servico, 'luisa@pata.com');
+      expect(
+        find.text(
+          'Seu pedido para entrar em Abrigo Focinhos (exemplo) aguarda '
+          'aprovação.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('não dá para criar outra ONG'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('o membro sai da ONG pelo editar perfil; quem criou não', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      final ong = ongDeExemplo()
+          .comPedidoDe(
+            PessoaDaOng(email: 'luisa@pata.com', nome: 'Luisa', telefone: ''),
+          )
+          .respondendo('luisa@pata.com', aprovar: true);
+      final servico = _OngsFalsas([ong]);
+      estado.atualizarOngs([ong]);
+      await montar(
+        tester,
+        estado: estado,
+        tela: EditarPerfil(ongs: servico),
+      );
+      await tester.ensureVisible(find.text('Sair da ONG'));
+      await tester.tap(find.text('Sair da ONG'));
+      await tester.pumpAndSettle();
+      expect(find.text('Sair de Abrigo Focinhos (exemplo)?'), findsOneWidget);
+      await tester.tap(find.text('Sair da ONG').last);
+      await tester.pumpAndSettle();
+      expect(servico.salvas.single.fazParte('luisa@pata.com'), isFalse);
+      expect(estado.ongDe('luisa@pata.com'), isNull);
+      // Sem ONG, volta a pergunta
+      expect(
+        find.text('Você faz parte de alguma ONG ou abrigo?'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('quem criou a ONG não tem a opção de sair', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      estado.atualizarOngs([ongDeExemplo(email: 'luisa@pata.com')]);
+      await montar(tester, estado: estado, tela: const EditarPerfil());
+      expect(find.text('Você administra'), findsOneWidget);
+      // A admin sai, mas só passando a ONG para um membro; sem membros,
+      // o painel explica que é preciso aprovar alguém antes
+      await tester.ensureVisible(find.text('Sair da ONG'));
+      await tester.tap(find.text('Sair da ONG'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Ninguém para administrar Abrigo Focinhos (exemplo)'),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Entendi'));
+      await tester.pumpAndSettle();
+      expect(estado.ongDe('luisa@pata.com'), isNotNull);
+    });
+
+    testWidgets('a admin passa a ONG para um membro e sai', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      final ong = ongDeExemplo(email: 'luisa@pata.com')
+          .comPedidoDe(
+            const PessoaDaOng(email: 'bia@pata.com', nome: 'Bia Souza'),
+          )
+          .respondendo('bia@pata.com', aprovar: true);
+      final servico = _OngsFalsas([ong]);
+      estado.atualizarOngs([ong]);
+      await montar(
+        tester,
+        estado: estado,
+        tela: EditarPerfil(ongs: servico),
+      );
+      await tester.ensureVisible(find.text('Sair da ONG'));
+      await tester.tap(find.text('Sair da ONG'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Quem vai administrar Abrigo Focinhos (exemplo)?'),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Bia Souza'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Passar a ONG e sair'));
+      await tester.pumpAndSettle();
+
+      final depois = servico.salvas.single;
+      expect(depois.eDoResponsavel('bia@pata.com'), isTrue);
+      expect(depois.fazParte('luisa@pata.com'), isFalse);
+      expect(depois.membros, isEmpty);
+      expect(estado.ongDe('luisa@pata.com'), isNull);
+    });
+
+    testWidgets('quem criou vê as pessoas da ONG e remove uma', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      final ong = ongDeExemplo(email: 'luisa@pata.com')
+          .comPedidoDe(
+            PessoaDaOng(
+              email: 'bia@pata.com',
+              nome: 'Bia Souza',
+              telefone: '37988887777',
+            ),
+          )
+          .respondendo('bia@pata.com', aprovar: true);
+      final servico = _OngsFalsas([ong]);
+      estado.atualizarOngs([ong]);
+      await montar(
+        tester,
+        estado: estado,
+        tela: PerfilOng(ong: ong, servico: servico),
+      );
+      await tester.ensureVisible(find.text('Membros'));
+      expect(find.text('Administra a ONG'), findsOneWidget);
+      expect(find.text('Bia Souza'), findsOneWidget);
+      expect(find.text('(37) 98888-7777'), findsOneWidget);
+
+      await tester.ensureVisible(find.text('Remover'));
+      await tester.tap(find.text('Remover'));
+      await tester.pumpAndSettle();
+      expect(find.text('Remover Bia Souza da ONG?'), findsOneWidget);
+      await tester.tap(find.text('Remover').last);
+      await tester.pumpAndSettle();
+      expect(servico.salvas.single.fazParte('bia@pata.com'), isFalse);
+      expect(estado.ongDe('bia@pata.com'), isNull);
+    });
+
+    testWidgets('quem não criou a ONG não vê as pessoas dela', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      final ong = ongDeExemplo();
+      estado.atualizarOngs([ong]);
+      await montar(
+        tester,
+        estado: estado,
+        tela: PerfilOng(ong: ong),
+      );
+      expect(find.text('Membros'), findsNothing);
+    });
+
+    test('qualquer pessoa da ONG cuida dos animais da ONG', () {
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      final ong = ongDeExemplo()
+          .comPedidoDe(const PessoaDaOng(email: 'bia@pata.com', nome: 'Bia'))
+          .respondendo('bia@pata.com', aprovar: true);
+      estado.atualizarOngs([ong]);
+      // Cadastrado pela admin, em nome da ONG
+      final thor = daOng('Thor', DateTime(2026, 10, 10));
+      expect(estado.podeMudarStatus(thor, emailDaOng), isTrue);
+      expect(estado.podeMudarStatus(thor, 'bia@pata.com'), isTrue);
+      // Quem não faz parte não mexe
+      expect(estado.podeMudarStatus(thor, 'joao@pata.com'), isFalse);
+    });
+
+    test('só os pedidos das ONGs que a pessoa administra contam', () {
+      final minha = ongDeExemplo(email: 'luisa@pata.com')
+          .comPedidoDe(const PessoaDaOng(email: 'bia@pata.com', nome: 'Bia'));
+      final deOutra = ongDeExemplo(id: 2)
+          .comPedidoDe(const PessoaDaOng(email: 'caio@pata.com', nome: 'Caio'));
+      expect(notificacoesPara([minha, deOutra], 'luisa@pata.com'), {
+        'pedido:1:bia@pata.com',
+      });
+    });
+
+    testWidgets('com o app aberto, pedido novo faz o celular vibrar', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      var vibrou = 0;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (chamada) async {
+          if (chamada.method == 'HapticFeedback.vibrate') vibrou++;
+          return null;
+        },
+      );
+      final servico = _OngsFalsas([ongDeExemplo(email: 'luisa@pata.com')]);
+      await montar(
+        tester,
+        estado: estado,
+        tela: FeedAdocao(api: _ApiFalsa(animaisMock), ongs: servico),
+      );
+      // Sem pedido novo, nada
+      await tester.pump(const Duration(seconds: 31));
+      await tester.pumpAndSettle();
+      expect(vibrou, 0);
+
+      // Chegou um pedido: na próxima conferência, vibra e o sino conta
+      servico.ongs[0] = servico.ongs[0].comPedidoDe(
+        const PessoaDaOng(email: 'bia@pata.com', nome: 'Bia'),
+      );
+      await tester.pump(const Duration(seconds: 31));
+      await tester.pumpAndSettle();
+      expect(vibrou, 1);
+      expect(estado.ongs.single.pedidos.single.nome, 'Bia');
+    });
+
+    test('quem saiu da ONG deixa de cuidar dos animais dela', () {
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      // A Bia cadastrou o Thor em nome da ONG e depois foi removida
+      final thor = Animal.fromJson({
+        ...daOng('Thor', DateTime(2026, 10, 10)).toJson(),
+        'responsavelEmail': 'bia@pata.com',
+      });
+      estado.atualizarOngs([ongDeExemplo()]);
+      expect(estado.podeMudarStatus(thor, 'bia@pata.com'), isFalse);
+      expect(estado.podeMudarStatus(thor, emailDaOng), isTrue);
+    });
+
+    testWidgets('o animal pessoal de quem faz parte da ONG não leva à ONG', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      estado.atualizarOngs([ongDeExemplo()]);
+      final pessoal = Animal.fromJson({
+        ...daOng('Pipoca', DateTime(2026, 10, 12)).toJson()..remove('ongId'),
+      });
+      await montar(
+        tester,
+        estado: estado,
+        tela: DetalhesAnimal(animal: pessoal),
+      );
+      expect(find.text('Ver perfil da ONG'), findsNothing);
+    });
+
+    test('o horário do pedido vai e volta da API', () {
+      final quando = DateTime(2026, 10, 22, 9, 30);
+      final ong = ongDeExemplo().comPedidoDe(
+        PessoaDaOng(email: 'bia@pata.com', nome: 'Bia', em: quando),
+      );
+      expect(Ong.fromJson(ong.toJson()).pedidos.single.em, quando);
+      // Sem horário informado, o pedido ganha o de agora
+      final agora = ongDeExemplo()
+          .comPedidoDe(const PessoaDaOng(email: 'caio@pata.com', nome: 'Caio'))
+          .pedidos
+          .single
+          .em;
+      expect(agora, isNotNull);
+    });
+
+    test(
+      'responder a um pedido que não existe mais avisa em vez de fingir',
+      () {
+        final servico = _OngsFalsas([ongDeExemplo()]);
+        expect(
+          servico.responderPedido(
+            ongDeExemplo(),
+            'bia@pata.com',
+            aprovar: true,
+          ),
+          throwsA(isA<PedidoNaoExiste>()),
+        );
+        expect(
+          servico.passarAdministracao(ongDeExemplo(), 'bia@pata.com'),
+          throwsA(isA<NaoEMembro>()),
+        );
+      },
+    );
+
+    test('quem já pediu para entrar numa ONG não pede em outra', () {
+      const bia = PessoaDaOng(email: 'bia@pata.com', nome: 'Bia');
+      final servico = _OngsFalsas([
+        ongDeExemplo().comPedidoDe(bia),
+        Ong.fromJson({...ongDeExemplo(id: 2).toJson(), 'nome': 'Outra'}),
+      ]);
+      expect(
+        servico.pedirEntrada(servico.ongs[1], bia),
+        throwsA(isA<JaFazParteDeOutra>()),
+      );
+    });
+
+    testWidgets('editar um animal da ONG não o tira da ONG', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      estado.atualizarOngs([ongDeExemplo(email: 'luisa@pata.com')]);
+      final thor = Animal.fromJson({
+        ...daOng('Thor', DateTime(2026, 10, 10)).toJson(),
+        'id': 1,
+        'rua': 'Praça Olegário Maciel, 155',
+        'bairro': 'Centro',
+        'latitude': -20.4642,
+        'longitude': -45.4267,
+      });
+      final api = _ApiFalsa(const []);
+      await montar(
+        tester,
+        estado: estado,
+        tela: CadastroAnimal(editando: thor, api: api),
+      );
+      expect(find.text('PUBLICAR COMO'), findsNothing);
+      await tester.ensureVisible(find.text('Salvar alterações'));
+      await tester.tap(find.text('Salvar alterações'));
+      await tester.pumpAndSettle();
+      expect(api.editados.single.ongId, 1);
+    });
+
+    testWidgets('o Início também pergunta antes de largar um formulário', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      pi.GeocodingPlatformFactory.instance = _FabricaFalsa();
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      await montar(
+        tester,
+        estado: estado,
+        tela: Builder(
+          builder: (context) => TextButton(
+            onPressed: () =>
+                Navigator.pushNamed(context, AppRoutes.registerAnimal),
+            child: const Text('Abrir'),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Abrir'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, 'Thor');
+      await tester.tap(find.text('Início'));
+      await tester.pumpAndSettle();
+      expect(find.text('Sair sem salvar?'), findsOneWidget);
+      await tester.tap(find.text('Continuar editando'));
+      await tester.pumpAndSettle();
+      expect(find.text('CADASTRAR ANIMAL'), findsOneWidget);
+    });
+
+    testWidgets('quem pediu recebe no sino se foi aprovado ou recusado', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      const luisa = PessoaDaOng(email: 'luisa@pata.com', nome: 'Luisa');
+      final aprovada = ongDeExemplo()
+          .comPedidoDe(luisa)
+          .respondendo(luisa.email, aprovar: true);
+      final recusada = Ong.fromJson({
+        ...ongDeExemplo(id: 2).toJson(),
+        'nome': 'Outra ONG',
+      }).comPedidoDe(luisa).respondendo(luisa.email, aprovar: false);
+      expect(aprovada.avisoPara(luisa.email)?.tipo, TipoDeAviso.aprovado);
+      expect(recusada.avisoPara(luisa.email)?.tipo, TipoDeAviso.recusado);
+      // O aviso vai e volta da API
+      expect(
+        Ong.fromJson(aprovada.toJson()).avisoPara(luisa.email)?.tipo,
+        TipoDeAviso.aprovado,
+      );
+
+      final servico = _OngsFalsas([aprovada, recusada]);
+      await abrirSino(tester, estado, servico, luisa.email);
+      expect(
+        find.text(
+          'Seu pedido foi aprovado: você agora faz parte de Abrigo Focinhos '
+          '(exemplo).',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Seu pedido para entrar em Outra ONG não foi aprovado.'),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Entendi').last);
+      await tester.pumpAndSettle();
+      expect(servico.salvas, hasLength(1));
+    });
+
+    testWidgets('quem é removido recebe o aviso no sino e dispensa', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      final ong = ongDeExemplo()
+          .comPedidoDe(
+            const PessoaDaOng(email: 'luisa@pata.com', nome: 'Luisa'),
+          )
+          .respondendo('luisa@pata.com', aprovar: true)
+          .removendo('luisa@pata.com');
+      expect(ong.fazParte('luisa@pata.com'), isFalse);
+      final servico = _OngsFalsas([ong]);
+      await abrirSino(tester, estado, servico, 'luisa@pata.com');
+      expect(
+        find.text('Você não faz mais parte de Abrigo Focinhos (exemplo).'),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Entendi'));
+      await tester.pumpAndSettle();
+      expect(servico.salvas.single.foiRemovida('luisa@pata.com'), isFalse);
+      // Pedir de novo também apaga o aviso antigo
+      expect(
+        ong
+            .comPedidoDe(
+              const PessoaDaOng(email: 'luisa@pata.com', nome: 'Luisa'),
+            )
+            .foiRemovida('luisa@pata.com'),
+        isFalse,
+      );
+    });
+
+    testWidgets('a ONG aparece no cabeçalho do perfil e abre o perfil dela', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      await montar(tester, estado: estado, tela: const PerfilUsuario());
+      // Sem ONG, o cabeçalho não mostra vínculo nenhum
+      expect(find.textContaining('Abrigo'), findsNothing);
+
+      estado.atualizarOngs([
+        ongDeExemplo(id: 2).comPedidoDe(
+          PessoaDaOng(email: 'luisa@pata.com', nome: 'Luisa', telefone: ''),
+        ),
+      ]);
+      await tester.pumpAndSettle();
+      expect(find.text('Aguardando Abrigo Focinhos (exemplo)'), findsOneWidget);
+
+      estado.atualizarOngs([ongDeExemplo(email: 'luisa@pata.com')]);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Abrigo Focinhos (exemplo)'));
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Editar perfil da ONG'), findsOneWidget);
+    });
+
+    testWidgets('o editar perfil leva a criar o perfil de uma ONG', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      pi.GeocodingPlatformFactory.instance = _FabricaFalsa();
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      await montar(tester, estado: estado, tela: const EditarPerfil());
+      await tester.ensureVisible(find.text('Criar o perfil de uma ONG'));
+      await tester.tap(find.text('Criar o perfil de uma ONG'));
+      await tester.pumpAndSettle();
+      expect(find.text('PERFIL DA ONG'), findsOneWidget);
+    });
+
+    testWidgets('a ficha do animal da ONG leva ao perfil dela', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      estado.atualizarOngs([ongDeExemplo()]);
+      final animal = daOng('Thor', DateTime(2026, 10, 10));
+      await montar(
+        tester,
+        estado: estado,
+        tela: DetalhesAnimal(animal: animal),
+      );
+      await tester.ensureVisible(find.text('Ver perfil da ONG'));
+      await tester.tap(find.text('Ver perfil da ONG'));
+      await tester.pumpAndSettle();
+      expect(find.text('Para adoção'), findsNothing);
+      expect(find.text('Resgata cães e gatos.'), findsOneWidget);
+    });
+
+    testWidgets('a ficha de quem não é ONG não tem o atalho', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      estado.atualizarOngs([ongDeExemplo()]);
+      await montar(
+        tester,
+        estado: estado,
+        tela: DetalhesAnimal(animal: animaisMock.first),
+      );
+      expect(find.text('Ver perfil da ONG'), findsNothing);
+    });
+
+    testWidgets('quem faz parte da ONG escolhe em nome de quem publica', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      estado.atualizarOngs([ongDeExemplo(email: 'luisa@pata.com')]);
+      await montar(tester, estado: estado, tela: const CadastroAnimal());
+      await tester.tap(find.text('Adoção'));
+      await tester.pumpAndSettle();
+
+      Finder campo(String texto) => find.byWidgetPredicate(
+        (widget) => widget is EditableText && widget.controller.text == texto,
+      );
+      // Começa em nome da ONG, com o contato dela
+      await tester.scrollUntilVisible(
+        find.text('PUBLICAR COMO'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(campo('Abrigo Focinhos (exemplo)'), findsOneWidget);
+      expect(campo('(13) 99999-7777'), findsOneWidget);
+
+      // "Eu" troca para o contato da pessoa
+      await tester.tap(find.text('Eu'));
+      await tester.pumpAndSettle();
+      expect(campo('Luisa'), findsOneWidget);
+      expect(campo('37999990000'), findsOneWidget);
+    });
+
+    test('o animal da ONG não aparece também em Meus registros', () {
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      final daOngDela = Animal.fromJson({
+        ...daOng('Thor', DateTime(2026, 10, 10)).toJson(),
+        'responsavelEmail': 'luisa@pata.com',
+      });
+      final pessoal = Animal.fromJson({
+        ...daOng('Pipoca', DateTime(2026, 10, 12)).toJson()..remove('ongId'),
+        'responsavelEmail': 'luisa@pata.com',
+      });
+      estado.atualizarAnimais([daOngDela, pessoal]);
+      final ong = ongDeExemplo(email: 'luisa@pata.com');
+      expect(estado.cadastrosDe('luisa@pata.com').map((a) => a.nome), [
+        'Pipoca',
+      ]);
+      expect(estado.animaisDa(ong).map((a) => a.nome), ['Thor']);
+    });
+
+    testWidgets('o menu tem ONGs entre Reportar e Perfil', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final estado = EstadoPataAmiga();
+      addTearDown(estado.dispose);
+      await montar(
+        tester,
+        estado: estado,
+        tela: const Scaffold(bottomNavigationBar: BarraInferior()),
+      );
+      final itens = tester
+          .widget<BottomNavigationBar>(find.byType(BottomNavigationBar))
+          .items
+          .map((item) => item.label)
+          .toList();
+      expect(itens, ['Início', 'Mapa', 'Reportar', 'ONGs', 'Perfil']);
+
+      await tester.tap(find.text('ONGs'));
+      await tester.pumpAndSettle();
+      expect(find.text('ONGS E ABRIGOS'), findsOneWidget);
     });
   });
 }

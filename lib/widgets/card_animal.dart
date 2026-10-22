@@ -31,9 +31,9 @@ class CardAnimal extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Cores.cartao,
+          color: context.cores.cartao,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Cores.borda),
+          border: Border.all(color: context.cores.borda),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -50,21 +50,21 @@ class CardAnimal extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               animal.resumo,
-              style: const TextStyle(color: Cores.textoFraco),
+              style: TextStyle(color: context.cores.textoFraco),
             ),
             const SizedBox(height: 4),
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.location_on_outlined,
                   size: 15,
-                  color: Cores.principal,
+                  color: context.cores.principal,
                 ),
                 const SizedBox(width: 4),
                 Text(
                   '${animal.bairro}, ${animal.cidade}',
-                  style: const TextStyle(
-                    color: Cores.principal,
+                  style: TextStyle(
+                    color: context.cores.principal,
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
@@ -72,7 +72,7 @@ class CardAnimal extends StatelessWidget {
                 // Há quanto tempo foi publicado, na mesma linha do local
                 Text(
                   ' · ${animal.publicadoHa(DateTime.now())}',
-                  style: const TextStyle(color: Cores.textoFraco, fontSize: 13),
+                  style: TextStyle(color: context.cores.textoFraco, fontSize: 13),
                 ),
               ],
             ),
@@ -84,13 +84,13 @@ class CardAnimal extends StatelessWidget {
                 animal.observacoes,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Cores.texto, fontSize: 13),
+                style: TextStyle(color: context.cores.texto, fontSize: 13),
               ),
             ],
             // Separa o que se lê do que se toca
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: 10),
-              child: Divider(height: 1, thickness: 1, color: Cores.borda),
+              child: Divider(height: 1, thickness: 1, color: context.cores.borda),
             ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -135,7 +135,7 @@ class _Acao extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cor = destacado ? Cores.principal : Cores.textoFraco;
+    final cor = destacado ? context.cores.principal : context.cores.textoFraco;
     return GestureDetector(
       onTap: aoTocar,
       behavior: HitTestBehavior.opaque,

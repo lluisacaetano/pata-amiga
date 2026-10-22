@@ -17,15 +17,16 @@ String rotuloPlural(TipoRegistro tipo) {
 // Estilo das abas do app: a escolhida cheia no verde, as outras no fundo
 // claro com borda. Usado no feed, no cadastro e no perfil, para que toda
 // aba do app tenha a mesma cara
-ButtonStyle estiloDasAbas(Color fundoDaOpcao) => ButtonStyle(
+ButtonStyle estiloDasAbas(BuildContext context, Color fundoDaOpcao) =>
+    ButtonStyle(
   backgroundColor: WidgetStateProperty.resolveWith(
     (estados) => estados.contains(WidgetState.selected)
-        ? Cores.principal
+        ? context.cores.principal
         : fundoDaOpcao,
   ),
   foregroundColor: WidgetStateProperty.resolveWith(
     (estados) =>
-        estados.contains(WidgetState.selected) ? Colors.white : Cores.texto,
+        estados.contains(WidgetState.selected) ? context.sobrePrincipal : context.cores.texto,
   ),
   textStyle: WidgetStateProperty.resolveWith(
     (estados) => TextStyle(
@@ -35,7 +36,7 @@ ButtonStyle estiloDasAbas(Color fundoDaOpcao) => ButtonStyle(
           : FontWeight.w500,
     ),
   ),
-  side: const WidgetStatePropertyAll(BorderSide(color: Cores.borda)),
+  side: WidgetStatePropertyAll(BorderSide(color: context.cores.borda)),
   shape: WidgetStatePropertyAll(
     RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
   ),
@@ -68,7 +69,7 @@ class EscolhaDeTipo extends StatelessWidget {
         emptySelectionAllowed: true,
         showSelectedIcon: false,
         onSelectionChanged: (escolha) => aoEscolher(escolha.first),
-        style: estiloDasAbas(fundoDaOpcao),
+        style: estiloDasAbas(context, fundoDaOpcao),
       ),
     );
   }

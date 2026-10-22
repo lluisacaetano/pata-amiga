@@ -43,6 +43,15 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
   Future<void> _cadastrar() async {
     setState(() => _tentou = true);
     if (_tipo == null || _salvando) return;
+    // O endereço é obrigatório: é por ele que os outros acham o ponto
+    if (_local.rua.trim().isEmpty || _local.bairro.trim().isEmpty) {
+      setState(
+        () => _recusa =
+            'Marque no mapa onde fica o ponto, com rua e bairro, antes de '
+            'cadastrar.',
+      );
+      return;
+    }
     setState(() {
       _salvando = true;
       _recusa = null;
@@ -130,25 +139,25 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
     final semTipo = _tentou && _tipo == null;
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Cores.fundo,
+        backgroundColor: context.cores.fundo,
         leadingWidth: 64,
         leading: Padding(
           padding: const EdgeInsets.only(left: 12),
           child: IconButton(
             icon: const Icon(Icons.arrow_back),
             tooltip: 'Voltar',
-            color: Cores.principal,
+            color: context.cores.principal,
             onPressed: () => Navigator.maybePop(context),
           ),
         ),
         centerTitle: true,
-        title: const Text(
+        title: Text(
           'NOVO PONTO DE ALIMENTAÇÃO',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.8,
-            color: Cores.principal,
+            color: context.cores.principal,
           ),
         ),
       ),
@@ -177,15 +186,15 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
                     onSelectionChanged: (escolha) => setState(
                       () => _tipo = escolha.isEmpty ? null : escolha.first,
                     ),
-                    style: estiloDasAbas(Cores.fundo),
+                    style: estiloDasAbas(context, context.cores.fundo),
                   ),
                 ),
                 if (semTipo)
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.only(top: 5, left: 2),
                     child: Text(
                       'Escolha se é comedouro, bebedouro ou os dois.',
-                      style: TextStyle(fontSize: 12, color: Cores.destaque),
+                      style: TextStyle(fontSize: 12, color: context.cores.destaque),
                     ),
                   ),
                 const SizedBox(height: 14),
@@ -196,11 +205,11 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
                   decoration: InputDecoration(
                     isDense: true,
                     filled: true,
-                    fillColor: Cores.fundo,
+                    fillColor: context.cores.fundo,
                     hintText: 'Ponto de referência (opcional)',
-                    hintStyle: const TextStyle(
+                    hintStyle: TextStyle(
                       fontSize: 14,
-                      color: Cores.textoFraco,
+                      color: context.cores.textoFraco,
                     ),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 12,
@@ -208,12 +217,12 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Cores.borda),
+                      borderSide: BorderSide(color: context.cores.borda),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Cores.principal,
+                      borderSide: BorderSide(
+                        color: context.cores.principal,
                         width: 1.5,
                       ),
                     ),
@@ -231,17 +240,17 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
           Padding(
             padding: const EdgeInsets.only(bottom: 14),
             child: Material(
-              color: Cores.cartao,
+              color: context.cores.cartao,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: const BorderSide(color: Cores.borda),
+                side: BorderSide(color: context.cores.borda),
               ),
               clipBehavior: Clip.antiAlias,
               child: CheckboxListTile(
                 value: _abasteciHoje,
                 onChanged: (marcado) =>
                     setState(() => _abasteciHoje = marcado ?? false),
-                activeColor: Cores.principal,
+                activeColor: context.cores.principal,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -249,9 +258,9 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
                   'Abasteci este ponto hoje',
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                 ),
-                subtitle: const Text(
+                subtitle: Text(
                   'Conferimos se você está no ponto, a até 150 m.',
-                  style: TextStyle(fontSize: 13, color: Cores.textoFraco),
+                  style: TextStyle(fontSize: 13, color: context.cores.textoFraco),
                 ),
               ),
             ),
@@ -261,25 +270,25 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
               padding: const EdgeInsets.only(bottom: 12, left: 2),
               child: Text(
                 _recusa!,
-                style: const TextStyle(fontSize: 13, color: Cores.destaque),
+                style: TextStyle(fontSize: 13, color: context.cores.destaque),
               ),
             ),
           const SizedBox(height: 4),
           FilledButton.icon(
             onPressed: _salvando ? null : _cadastrar,
             icon: _salvando
-                ? const SizedBox(
+                ? SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Colors.white,
+                      color: context.sobrePrincipal,
                     ),
                   )
                 : const Icon(Icons.add_location_alt_outlined, size: 18),
             label: Text(_salvando ? 'Cadastrando…' : 'Cadastrar ponto'),
             style: FilledButton.styleFrom(
-              backgroundColor: Cores.principal,
+              backgroundColor: context.cores.principal,
               minimumSize: const Size.fromHeight(52),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
@@ -314,21 +323,21 @@ class _Cartao extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Cores.cartao,
+        color: context.cores.cartao,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Cores.borda),
+        border: Border.all(color: context.cores.borda),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              Icon(icone, size: 18, color: Cores.principal),
+              Icon(icone, size: 18, color: context.cores.principal),
               const SizedBox(width: 8),
               Text(
                 titulo,
-                style: const TextStyle(
-                  color: Cores.principal,
+                style: TextStyle(
+                  color: context.cores.principal,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),

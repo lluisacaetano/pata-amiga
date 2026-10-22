@@ -36,14 +36,39 @@ void navegarPelaBarra(
       if (aoIrParaInicio != null) {
         aoIrParaInicio();
       } else {
-        navegador.popUntil((rota) => rota.isFirst);
+        _voltarAoInicio(navegador);
       }
     case 1:
       navegador.pushNamed(AppRoutes.mapa);
+    case 2:
+      navegador.pushNamed(AppRoutes.reportar);
     case 3:
+      navegador.pushNamed(AppRoutes.ongs);
+    case 4:
       navegador.pushNamed(AppRoutes.perfilUsuario);
     default:
       avisarProximaSprint(context);
+  }
+}
+
+// Volta tela por tela até o feed com maybePop, e não com popUntil, para um
+// formulário com algo não salvo poder perguntar antes de sair. Se uma tela
+// segurar a volta (abrindo a pergunta), para ali
+Future<void> _voltarAoInicio(NavigatorState navegador) async {
+  Route<dynamic>? topo() {
+    Route<dynamic>? atual;
+    navegador.popUntil((rota) {
+      atual = rota;
+      return true;
+    });
+    return atual;
+  }
+
+  while (navegador.canPop()) {
+    final antes = topo();
+    await navegador.maybePop();
+    final depois = topo();
+    if (identical(antes, depois) || depois is PopupRoute) return;
   }
 }
 
@@ -60,21 +85,25 @@ class BarraInferior extends StatelessWidget {
     return BottomNavigationBar(
       currentIndex: atual,
       type: BottomNavigationBarType.fixed,
-      backgroundColor: Cores.cartao,
+      backgroundColor: context.cores.cartao,
       onTap: (indice) => navegarPelaBarra(
         context,
         indice,
         atual: atual,
         aoIrParaInicio: aoIrParaInicio,
       ),
-      selectedItemColor: Cores.principal,
-      unselectedItemColor: Cores.textoFraco,
+      selectedItemColor: context.cores.principal,
+      unselectedItemColor: context.cores.textoFraco,
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.pets), label: 'Início'),
         BottomNavigationBarItem(icon: Icon(Icons.map_outlined), label: 'Mapa'),
         BottomNavigationBarItem(
           icon: Icon(Icons.report_outlined),
           label: 'Reportar',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.volunteer_activism_outlined),
+          label: 'ONGs',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.person_outline),

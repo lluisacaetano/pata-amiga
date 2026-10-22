@@ -16,9 +16,9 @@ class Cuidado extends StatelessWidget {
       alignment: Alignment.center,
       padding: const EdgeInsets.symmetric(horizontal: 6),
       decoration: BoxDecoration(
-        color: marcado ? Cores.principalClara : Cores.fundo,
+        color: marcado ? context.cores.principalClara : context.cores.fundo,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: marcado ? Cores.principal : Cores.borda),
+        border: Border.all(color: marcado ? context.cores.principal : context.cores.borda),
       ),
       child: Text(
         rotulo,
@@ -27,7 +27,7 @@ class Cuidado extends StatelessWidget {
         style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w600,
-          color: marcado ? Cores.principal : Cores.textoFraco,
+          color: marcado ? context.cores.principal : context.cores.textoFraco,
         ),
       ),
     );

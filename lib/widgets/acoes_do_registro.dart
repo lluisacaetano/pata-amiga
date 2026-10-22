@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../estado/estado_pata_amiga.dart';
 import '../modelos/animal.dart';
+import '../modelos/ong.dart';
 import '../routes/route_names.dart';
 import '../services/animal_service.dart';
 import '../tema/cores.dart';
@@ -30,7 +31,7 @@ Future<void> mudarStatus(
   // O mesmo painel de baixo das outras confirmações do app
   final confirmou = await showModalBottomSheet<bool>(
     context: context,
-    backgroundColor: Cores.cartao,
+    backgroundColor: context.cores.cartao,
     showDragHandle: true,
     builder: (painel) => _ConfirmarStatus(
       titulo: voltando
@@ -65,6 +66,59 @@ Future<void> mudarStatus(
   }
 }
 
+// Quem entrou numa ONG leva para ela um animal que tinha publicado em nome
+// próprio: ele passa a sair com o contato da ONG e a aparecer no perfil dela,
+// e sai de "Meus registros". A partir daí, qualquer pessoa da ONG cuida dele
+Future<void> enviarParaOng(
+  BuildContext context,
+  Animal atual,
+  Ong ong, {
+  AnimalService? api,
+}) async {
+  final confirmou = await showModalBottomSheet<bool>(
+    context: context,
+    backgroundColor: context.cores.cartao,
+    showDragHandle: true,
+    builder: (painel) => _ConfirmarStatus(
+      titulo: 'Transferir ${atual.nome} para ${ong.nome}?',
+      texto:
+          'O animal passa a aparecer no perfil da ONG, com o contato dela, e '
+          'sai de Meus registros. Qualquer pessoa da ONG poderá atualizar o '
+          'status e o registro dele.',
+      aoConfirmar: () => Navigator.pop(painel, true),
+    ),
+  );
+  if (confirmou != true || !context.mounted) return;
+
+  final estado = PataAmigaScope.of(context);
+  final mensageiro = ScaffoldMessenger.of(context);
+  final daOng = Animal.fromJson({
+    ...atual.toJson(),
+    'ongId': ong.id,
+    'dono': {'nome': ong.nome, 'telefone': ong.telefone},
+  });
+  try {
+    await (api ?? AnimalService()).atualizarAnimal(daOng);
+  } on Exception {
+    mensageiro
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível transferir agora. Tente de novo.'),
+        ),
+      );
+    return;
+  }
+  await estado.substituirAnimal(daOng);
+  mensageiro
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: Text('${atual.nome} agora aparece no perfil de ${ong.nome}.'),
+      ),
+    );
+}
+
 // Abre o cadastro com todos os dados do registro. O formulário grava na API
 // antes de fechar; aqui só falta atualizar o feed, a ficha e o perfil
 Future<void> editarRegistro(
@@ -94,7 +148,7 @@ Future<void> _oferecerAdocao(
 ) async {
   final publicar = await showModalBottomSheet<bool>(
     context: context,
-    backgroundColor: Cores.cartao,
+    backgroundColor: context.cores.cartao,
     showDragHandle: true,
     builder: (painel) => _OfertaDeAdocao(
       nome: atual.nome,
@@ -166,15 +220,15 @@ class _ConfirmarStatus extends StatelessWidget {
             Text(
               titulo,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
             Text(
               texto,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
-                color: Cores.textoFraco,
+                color: context.cores.textoFraco,
                 height: 1.4,
               ),
             ),
@@ -182,7 +236,7 @@ class _ConfirmarStatus extends StatelessWidget {
             FilledButton(
               onPressed: aoConfirmar,
               style: FilledButton.styleFrom(
-                backgroundColor: Cores.principal,
+                backgroundColor: context.cores.principal,
                 minimumSize: const Size.fromHeight(48),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -193,7 +247,7 @@ class _ConfirmarStatus extends StatelessWidget {
             const SizedBox(height: 6),
             TextButton(
               onPressed: () => Navigator.pop(context),
-              style: TextButton.styleFrom(foregroundColor: Cores.textoFraco),
+              style: TextButton.styleFrom(foregroundColor: context.cores.textoFraco),
               child: const Text('Cancelar'),
             ),
           ],
@@ -219,12 +273,12 @@ class _OfertaDeAdocao extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Icon(Icons.check_circle, size: 40, color: Cores.principal),
+            Icon(Icons.check_circle, size: 40, color: context.cores.principal),
             const SizedBox(height: 10),
             const Text(
               'Resgate concluído',
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
             Text(
@@ -233,7 +287,7 @@ class _OfertaDeAdocao extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
-                color: Cores.textoFraco,
+                color: context.cores.textoFraco,
                 height: 1.4,
               ),
             ),
@@ -243,7 +297,7 @@ class _OfertaDeAdocao extends StatelessWidget {
               icon: const Icon(Icons.favorite_border, size: 18),
               label: const Text('Publicar para adoção'),
               style: FilledButton.styleFrom(
-                backgroundColor: Cores.principal,
+                backgroundColor: context.cores.principal,
                 minimumSize: const Size.fromHeight(48),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -253,7 +307,7 @@ class _OfertaDeAdocao extends StatelessWidget {
             const SizedBox(height: 6),
             TextButton(
               onPressed: () => Navigator.pop(context),
-              style: TextButton.styleFrom(foregroundColor: Cores.textoFraco),
+              style: TextButton.styleFrom(foregroundColor: context.cores.textoFraco),
               child: const Text('Agora não'),
             ),
           ],

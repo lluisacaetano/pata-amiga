@@ -12,12 +12,15 @@ import 'package:provider/provider.dart';
 
 import '../dados/bairros_formiga.dart';
 import '../dados/racas.dart';
+import '../estado/estado_pata_amiga.dart';
 import '../modelos/animal.dart';
 import '../modelos/dono.dart';
+import '../modelos/ong.dart';
 import '../provider/usuario_provider.dart';
 import '../services/animal_service.dart';
 import '../services/bairro_service.dart';
 import '../tema/cores.dart';
+import '../widgets/proteger_alteracoes.dart';
 import '../widgets/barra_inferior.dart';
 import '../widgets/cuidado.dart';
 import '../widgets/escolha_de_tipo.dart';
@@ -112,9 +115,48 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
   final _responsavel = TextEditingController();
   final _telefone = TextEditingController();
 
+  // O formulário como abriu, para saber se algo mudou e perguntar antes de
+  // sair sem salvar
+  String? _inicial;
+  String get _assinatura => [
+    _tipo,
+    _especie,
+    _porte,
+    _sexo,
+    _racaEscolhida,
+    _bairroEscolhido,
+    _castrado,
+    _vacinado,
+    _vermifugado,
+    _comoOng,
+    // O pino do mapa conta: mexer nele sem querer também é uma mudança
+    _ponto.latitude.toStringAsFixed(5),
+    _ponto.longitude.toStringAsFixed(5),
+    ..._fotos.map((foto) => foto.path),
+    for (final campo in [
+      _nome,
+      _outraRaca,
+      _idade,
+      _observacoes,
+      _necessidades,
+      _rua,
+      _outroBairro,
+      _responsavel,
+      _telefone,
+    ])
+      campo.text.trim(),
+  ].join('|');
+
+  bool get _alterado =>
+      _inicial != null && _assinatura != _inicial && !_salvando && !_gravando;
+
   @override
   void initState() {
     super.initState();
+    // O ponto de partida é o formulário já preenchido pelo initState
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _inicial = _assinatura;
+    });
     final base = widget.base;
     if (base != null) _preencherCom(base);
     final editando = widget.editando;
@@ -128,8 +170,31 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     // como nos testes da tela sozinha, os campos só começam vazios
     final usuario = context.read<UsuarioProvider?>()?.usuario;
     if (usuario == null) return;
-    _responsavel.text = usuario.nome.trim();
-    _telefone.text = usuario.telefone.trim();
+    // Quem faz parte de uma ONG começa publicando em nome dela, e pode trocar
+    _comoOng = _minhaOng != null;
+    _preencherContato();
+  }
+
+  // A ONG de quem está logado, se houver
+  Ong? get _minhaOng {
+    final email = context.read<UsuarioProvider?>()?.usuario.email ?? '';
+    return PataAmigaScope.talvez(context)?.ongDe(email);
+  }
+
+  // Se o animal sai em nome da ONG ou da própria pessoa
+  bool _comoOng = false;
+
+  // O contato acompanha a escolha: o da ONG ou o de quem está logado
+  void _preencherContato() {
+    final ong = _minhaOng;
+    if (_comoOng && ong != null) {
+      _responsavel.text = ong.nome;
+      _telefone.text = formatarTelefone(ong.telefone);
+      return;
+    }
+    final usuario = context.read<UsuarioProvider?>()?.usuario;
+    _responsavel.text = usuario?.nome.trim() ?? '';
+    _telefone.text = usuario?.telefone.trim() ?? '';
   }
 
   // A opção da lista com o mesmo nome, sem ligar para maiúsculas: a API
@@ -173,6 +238,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
       _ponto = LatLng(registro.latitude!, registro.longitude!);
       _enderecoDoPino = (rua: registro.rua, bairro: registro.bairro);
     }
+    _comoOng = registro.ongId != null;
     _responsavel.text = registro.dono.nome;
     // A API guarda só os dígitos; no campo, o telefone sempre com a máscara
     _telefone.text = formatarTelefone(registro.dono.telefone);
@@ -365,7 +431,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
           .timeout(const Duration(seconds: 8));
       if (achados.isEmpty) {
         aviso = 'Não encontrei essa rua em Formiga. Confira o nome ou '
-            'arraste o mapa.';
+            'destrave o mapa e arraste.';
       } else if (mounted) {
         _ponto = LatLng(achados.first.latitude, achados.first.longitude);
         _enderecoDoPino = (rua: rua, bairro: bairro);
@@ -438,7 +504,15 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
   void _removerFoto(int indice) => setState(() => _fotos.removeAt(indice));
 
   // Os mesmos campos que ficam vermelhos quando faltam
+  // O telefone vira o WhatsApp do animal: precisa do DDD
+  bool get _telefoneValido =>
+      _telefone.text.replaceAll(RegExp(r'\D'), '').length >= 10;
+
+  final _rolagem = ScrollController();
+
   bool get _completo =>
+      // Sem foto, ninguém reconhece nem se encanta pelo animal no feed
+      _fotos.isNotEmpty &&
       _tipo != null &&
       _especie != null &&
       _porte != null &&
@@ -449,6 +523,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
         _responsavel,
         _telefone,
       ].every((campo) => campo.text.trim().isNotEmpty) &&
+      _telefoneValido &&
       _bairro.isNotEmpty &&
       (_racaEscolhida != outraRaca || _raca.isNotEmpty);
 
@@ -490,7 +565,16 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
   Future<void> _cadastrar() async {
     if (_salvando || _gravando) return;
     setState(() => _tentouCadastrar = true);
-    if (!_completo) return;
+    if (!_completo) {
+      // O botão fica no fim e os campos em vermelho mais acima: a tela sobe
+      // até eles, para ninguém achar que o botão não funcionou
+      _rolagem.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+      return;
+    }
 
     final nome = _nome.text.trim();
     final rua = _rua.text.trim();
@@ -533,6 +617,8 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
         telefone: _telefone.text.trim(),
       ),
       responsavelEmail: context.read<UsuarioProvider?>()?.usuario.email ?? '',
+      // Na edição, o animal da ONG continua da ONG
+      ongId: widget.editando?.ongId ?? (_comoOng ? _minhaOng?.id : null),
       fotos: _fotos.map((foto) => foto.path).toList(),
       publicadoEm: DateTime.now(),
       latitude: coordenada?.latitude,
@@ -584,6 +670,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
 
   @override
   void dispose() {
+    _rolagem.dispose();
     _mapa.dispose();
     for (final campo in [
       _nome,
@@ -605,16 +692,19 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    // Com algo mudado e não salvo, voltar pergunta antes de sair
+    return ProtegerAlteracoes(
+      alterado: () => _alterado,
+      child: Scaffold(
       appBar: AppBar(
-        backgroundColor: Cores.fundo,
+        backgroundColor: context.cores.fundo,
         leadingWidth: 64,
         leading: Padding(
           padding: const EdgeInsets.only(left: 12),
           child: IconButton(
             icon: const Icon(Icons.arrow_back),
             tooltip: 'Voltar',
-            color: Cores.principal,
+            color: context.cores.principal,
             onPressed: () => Navigator.maybePop(context),
           ),
         ),
@@ -625,15 +715,16 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
               : widget.base == null
               ? 'CADASTRAR ANIMAL'
               : 'PUBLICAR PARA ADOÇÃO',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.8,
-            color: Cores.principal,
+            color: context.cores.principal,
           ),
         ),
       ),
       body: SingleChildScrollView(
+        controller: _rolagem,
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -644,6 +735,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
                 aoAdicionar: _adicionarFotos,
                 aoReordenar: _reordenarFotos,
                 aoRemover: _removerFoto,
+                semFoto: _tentouCadastrar && _fotos.isEmpty,
               ),
             ),
             _Cartao(
@@ -658,8 +750,14 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
                     escolhido: _tipo,
                     aoEscolher: (escolha) => setState(() => _tipo = escolha),
                     rotulo: rotuloSingular,
-                    fundoDaOpcao: Cores.fundo,
+                    fundoDaOpcao: context.cores.fundo,
                   ),
+                  // Sem o tipo, o resto do formulário nem aparece
+                  if (_tentouCadastrar && _tipo == null)
+                    const _Recado(
+                      'Escolha se é adoção, perdido ou resgate.',
+                      erro: true,
+                    ),
                   if (_tipo != null) ...[
                     const SizedBox(height: 16),
                     _Campo(
@@ -817,7 +915,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.search, size: 20),
-                      color: Cores.principal,
+                      color: context.cores.principal,
                       tooltip: 'Buscar no mapa',
                     ),
                   ),
@@ -847,10 +945,10 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
                   const SizedBox(height: 14),
                   const _Rotulo('Ponto no mapa'),
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     'Busque a rua pela lupa, toque na mira para usar sua '
-                    'localização ou arraste o mapa até o pino.',
-                    style: TextStyle(fontSize: 12, color: Cores.textoFraco),
+                    'localização ou destrave o mapa e arraste até o pino.',
+                    style: TextStyle(fontSize: 12, color: context.cores.textoFraco),
                   ),
                   const SizedBox(height: 8),
                   MapaDeLocal(
@@ -874,6 +972,40 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
                       texto: _tipo!.tituloDoContato,
                     ),
                     const SizedBox(height: 16),
+                    // Quem faz parte de uma ONG escolhe em nome de quem
+                    // publica: só os da ONG aparecem no perfil dela
+                    if (_minhaOng case final ong?
+                        when widget.editando?.ongId == null) ...[
+                      const _Rotulo('Publicar como'),
+                      const SizedBox(height: 6),
+                      SizedBox(
+                        width: double.infinity,
+                        child: SegmentedButton<bool>(
+                          segments: [
+                            const ButtonSegment(
+                              value: false,
+                              label: Text('Eu'),
+                            ),
+                            ButtonSegment(
+                              value: true,
+                              label: Text(
+                                ong.nome,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                          selected: {_comoOng},
+                          showSelectedIcon: false,
+                          onSelectionChanged: (escolha) => setState(() {
+                            _comoOng = escolha.first;
+                            _preencherContato();
+                          }),
+                          style: estiloDasAbas(context, context.cores.fundo),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                    ],
                     _Campo(
                       rotulo: 'Responsável',
                       controlador: _responsavel,
@@ -884,7 +1016,10 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
                       rotulo: 'Telefone',
                       controlador: _telefone,
                       exemplo: '(37) 90000-0000',
-                      comErro: _faltando(_telefone),
+                      comErro: _tentouCadastrar && !_telefoneValido,
+                      erro: _faltando(_telefone)
+                          ? null
+                          : 'Digite um telefone com DDD.',
                       teclado: TextInputType.phone,
                       formatadores: [MascaraDeTelefone()],
                     ),
@@ -895,12 +1030,12 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
             FilledButton.icon(
               onPressed: _salvando || _gravando ? null : _cadastrar,
               icon: _salvando || _gravando
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 18,
                       height: 18,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.white,
+                        color: context.sobrePrincipal,
                       ),
                     )
                   : Icon(
@@ -917,7 +1052,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
                     : 'Cadastrar',
               ),
               style: FilledButton.styleFrom(
-                backgroundColor: Cores.principal,
+                backgroundColor: context.cores.principal,
                 minimumSize: const Size.fromHeight(52),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -932,6 +1067,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
         ),
       ),
       bottomNavigationBar: BarraInferior(),
+    ),
     );
   }
 }
@@ -947,7 +1083,11 @@ class _BlocoDeFotos extends StatelessWidget {
     required this.aoAdicionar,
     required this.aoReordenar,
     required this.aoRemover,
+    this.semFoto = false,
   });
+
+  // Tentou cadastrar sem nenhuma foto
+  final bool semFoto;
 
   @override
   Widget build(BuildContext context) {
@@ -977,15 +1117,17 @@ class _BlocoDeFotos extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        const Text(
+        Text(
           'Você pode escolher até $_maximoDeFotos fotos.',
-          style: TextStyle(fontSize: 12, color: Cores.textoFraco),
+          style: TextStyle(fontSize: 12, color: context.cores.textoFraco),
         ),
+        if (semFoto)
+          const _Recado('Adicione pelo menos uma foto.', erro: true),
         if (fotos.isNotEmpty) ...[
           const SizedBox(height: 10),
-          const Text(
+          Text(
             'A primeira foto é a capa. Segure e arraste para ordenar.',
-            style: TextStyle(fontSize: 12, color: Cores.textoFraco),
+            style: TextStyle(fontSize: 12, color: context.cores.textoFraco),
           ),
           const SizedBox(height: 8),
           SizedBox(
@@ -1044,14 +1186,14 @@ class _AdicionarFoto extends StatelessWidget {
         height: 72,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Cores.fundo,
+          color: context.cores.fundo,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Cores.borda),
+          border: Border.all(color: context.cores.borda),
         ),
-        child: const Icon(
+        child: Icon(
           Icons.add_a_photo_outlined,
           size: 22,
-          color: Cores.principal,
+          color: context.cores.principal,
         ),
       ),
     );
@@ -1113,14 +1255,14 @@ class _BotaoDeRemover extends StatelessWidget {
               width: _desenhoDoBadge,
               height: _desenhoDoBadge,
               decoration: BoxDecoration(
-                color: Cores.destaque,
+                color: context.cores.destaque,
                 shape: BoxShape.circle,
-                border: Border.all(color: Cores.cartao, width: 1.5),
+                border: Border.all(color: context.cores.cartao, width: 1.5),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.close_rounded,
                 size: 12,
-                color: Cores.cartao,
+                color: context.cores.cartao,
               ),
             ),
           ),
@@ -1138,15 +1280,15 @@ class _SeloDeCapa extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Cores.principal,
+        color: context.cores.principal,
         borderRadius: BorderRadius.circular(4),
       ),
-      child: const Padding(
+      child: Padding(
         padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         child: Text(
           'Capa',
           style: TextStyle(
-            color: Cores.cartao,
+            color: context.cores.cartao,
             fontSize: 10,
             fontWeight: FontWeight.w600,
           ),
@@ -1224,9 +1366,9 @@ class _Cartao extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Cores.cartao,
+        color: context.cores.cartao,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Cores.borda),
+        border: Border.all(color: context.cores.borda),
       ),
       child: child,
     );
@@ -1243,12 +1385,12 @@ class _TituloDoCartao extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icone, size: 16, color: Cores.principal),
+        Icon(icone, size: 16, color: context.cores.principal),
         const SizedBox(width: 6),
         Text(
           texto,
-          style: const TextStyle(
-            color: Cores.principal,
+          style: TextStyle(
+            color: context.cores.principal,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -1258,26 +1400,30 @@ class _TituloDoCartao extends StatelessWidget {
   }
 }
 
-InputDecoration _caixa(String? exemplo, {bool comErro = false, Widget? acao}) =>
-    InputDecoration(
+InputDecoration _caixa(
+  BuildContext context,
+  String? exemplo, {
+  bool comErro = false,
+  Widget? acao,
+}) => InputDecoration(
       isDense: true,
       filled: true,
-      fillColor: Cores.fundo,
+      fillColor: context.cores.fundo,
       hintText: exemplo,
       suffixIcon: acao,
-      hintStyle: const TextStyle(fontSize: 14, color: Cores.textoFraco),
+      hintStyle: TextStyle(fontSize: 14, color: context.cores.textoFraco),
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(
-          color: comErro ? Cores.destaque : Cores.borda,
+          color: comErro ? context.cores.destaque : context.cores.borda,
           width: comErro ? 1.5 : 1,
         ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(
-          color: comErro ? Cores.destaque : Cores.principal,
+          color: comErro ? context.cores.destaque : context.cores.principal,
           width: 1.5,
         ),
       ),
@@ -1293,6 +1439,8 @@ class _Campo extends StatelessWidget {
   final bool comErro;
   final TextInputType? teclado;
   final List<TextInputFormatter>? formatadores;
+  // O texto do erro, quando não é só o campo vazio
+  final String? erro;
 
   const _Campo({
     required this.rotulo,
@@ -1304,6 +1452,7 @@ class _Campo extends StatelessWidget {
     this.comErro = false,
     this.teclado,
     this.formatadores,
+    this.erro,
   });
 
   @override
@@ -1320,9 +1469,14 @@ class _Campo extends StatelessWidget {
           inputFormatters: formatadores,
           textCapitalization: TextCapitalization.sentences,
           style: const TextStyle(fontSize: 15),
-          decoration: _caixa(exemplo, comErro: comErro, acao: acao),
+          decoration: _caixa(
+            context,
+            exemplo,
+            comErro: comErro,
+            acao: acao,
+          ),
         ),
-        if (comErro) const _Recado('Campo obrigatório', erro: true),
+        if (comErro) _Recado(erro ?? 'Campo obrigatório', erro: true),
         if (aviso != null && !comErro) _Recado(aviso!),
       ],
     );
@@ -1343,7 +1497,7 @@ class _Recado extends StatelessWidget {
         texto,
         style: TextStyle(
           fontSize: 12,
-          color: erro ? Cores.destaque : Cores.textoFraco,
+          color: erro ? context.cores.destaque : context.cores.textoFraco,
         ),
       ),
     );
@@ -1375,13 +1529,13 @@ class _Selecao extends StatelessWidget {
         DropdownButtonFormField<String>(
           initialValue: valor,
           isDense: true,
-          decoration: _caixa(null, comErro: comErro),
-          hint: const Text(
+          decoration: _caixa(context, null, comErro: comErro),
+          hint: Text(
             'Escolher',
-            style: TextStyle(fontSize: 14, color: Cores.textoFraco),
+            style: TextStyle(fontSize: 14, color: context.cores.textoFraco),
           ),
-          icon: const Icon(Icons.keyboard_arrow_down, color: Cores.textoFraco),
-          style: const TextStyle(fontSize: 15, color: Cores.texto),
+          icon: Icon(Icons.keyboard_arrow_down, color: context.cores.textoFraco),
+          style: TextStyle(fontSize: 15, color: context.cores.texto),
           items: [
             for (final opcao in opcoes)
               DropdownMenuItem(value: opcao, child: Text(_comMaiuscula(opcao))),
@@ -1403,11 +1557,11 @@ class _Rotulo extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       texto.toUpperCase(),
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 11,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.5,
-        color: Cores.textoFraco,
+        color: context.cores.textoFraco,
       ),
     );
   }

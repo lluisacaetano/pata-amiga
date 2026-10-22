@@ -8,6 +8,7 @@ import '../modelos/animal.dart';
 import '../modelos/avistamento.dart';
 import '../modelos/camadas_do_mapa.dart';
 import '../modelos/dono.dart';
+import '../modelos/ong.dart';
 import '../provider/usuario_provider.dart';
 import '../routes/route_names.dart';
 import '../services/animal_service.dart';
@@ -73,7 +74,7 @@ class DetalhesAnimal extends StatelessWidget {
     estado.adicionarAvistamento(novo);
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Cores.cartao,
+      backgroundColor: context.cores.cartao,
       showDragHandle: true,
       builder: (painel) => _AvisarOTutor(
         animal: animal,
@@ -95,30 +96,31 @@ class DetalhesAnimal extends StatelessWidget {
     final animal = estado.atual(this.animal);
     final email = context.read<UsuarioProvider?>()?.usuario.email ?? '';
     final ehResponsavel = estado.podeMudarStatus(animal, email);
+    final minhaOng = estado.ongDe(email);
     final estaCurtido = estado.estaCurtido(animal.nome);
     final perdido = animal.tipo == TipoRegistro.perdido;
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Cores.fundo,
+        backgroundColor: context.cores.fundo,
         leadingWidth: 64,
         leading: Padding(
           padding: const EdgeInsets.only(left: 12),
           child: IconButton(
             icon: const Icon(Icons.arrow_back),
             tooltip: 'Voltar',
-            color: Cores.principal,
+            color: context.cores.principal,
             onPressed: () => Navigator.maybePop(context, animal),
           ),
         ),
         centerTitle: true,
-        title: const Text(
+        title: Text(
           'DETALHES',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.8,
-            color: Cores.principal,
+            color: context.cores.principal,
           ),
         ),
         actions: [
@@ -147,6 +149,11 @@ class DetalhesAnimal extends StatelessWidget {
                 aoMudar: () => mudarStatus(context, animal, api: api),
                 aoEditar: () => editarRegistro(context, animal, api: api),
                 aoPublicar: () => publicarParaAdocao(context, animal, api: api),
+                // Quem faz parte de uma ONG leva o próprio cadastro para ela
+                ongParaTransferir: animal.ongId == null ? minhaOng : null,
+                aoTransferir: minhaOng == null
+                    ? null
+                    : () => enviarParaOng(context, animal, minhaOng, api: api),
               ),
             ],
             if (perdido) ...[
@@ -177,8 +184,8 @@ class DetalhesAnimal extends StatelessWidget {
                         icon: const Icon(Icons.visibility_outlined),
                         label: const Text('Registrar avistamento'),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Cores.principal,
-                          side: const BorderSide(color: Cores.principal),
+                          foregroundColor: context.cores.principal,
+                          side: BorderSide(color: context.cores.principal),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
                           ),
@@ -195,8 +202,8 @@ class DetalhesAnimal extends StatelessWidget {
                       icon: const Icon(Icons.chat_bubble_outline),
                       label: const Text('Conversar no WhatsApp'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Cores.principal,
-                        foregroundColor: Colors.white,
+                        backgroundColor: context.cores.principal,
+                        foregroundColor: context.sobrePrincipal,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),
@@ -248,9 +255,9 @@ class _Ficha extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Cores.cartao,
+        color: context.cores.cartao,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Cores.borda),
+        border: Border.all(color: context.cores.borda),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -279,7 +286,7 @@ class _Ficha extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             animal.identidade,
-            style: const TextStyle(color: Cores.textoFraco, fontSize: 14),
+            style: TextStyle(color: context.cores.textoFraco, fontSize: 14),
           ),
 
           if (medidas.isNotEmpty) ...[
@@ -318,7 +325,7 @@ class _Ficha extends StatelessWidget {
             const SizedBox(height: 8),
             PreviaDoMapa(
               ponto: LatLng(pino.latitude, pino.longitude),
-              cor: corDaCamada(animal.tipo),
+              cor: corDaCamada(context, animal.tipo),
               aoTocar: () => Navigator.pushNamed(
                 context,
                 AppRoutes.mapa,
@@ -342,6 +349,30 @@ class _Ficha extends StatelessWidget {
               ('Telefone', formatarTelefone(animal.dono.telefone)),
             ],
           ),
+          // Publicado em nome de uma ONG: o atalho leva ao perfil dela
+          if (PataAmigaScope.of(context).ongs
+                  .where((ong) => ong.id != null && ong.id == animal.ongId)
+                  .firstOrNull
+              case final ong?) ...[
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.pushNamed(
+                context,
+                AppRoutes.perfilOng,
+                arguments: ong,
+              ),
+              icon: const Icon(Icons.volunteer_activism_outlined, size: 18),
+              label: const Text('Ver perfil da ONG'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: context.cores.principal,
+                side: BorderSide(color: context.cores.principal),
+                minimumSize: const Size.fromHeight(44),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -360,7 +391,7 @@ class _PainelDeMedidas extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: Cores.fundo,
+        color: context.cores.fundo,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -398,11 +429,11 @@ class _Medida extends StatelessWidget {
       children: [
         Text(
           medida.$1.toUpperCase(),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.8,
-            color: Cores.textoFraco,
+            color: context.cores.textoFraco,
           ),
         ),
         const SizedBox(height: 2),
@@ -426,7 +457,7 @@ class _Rotulo extends StatelessWidget {
     padding: const EdgeInsets.only(bottom: 6),
     child: Text(
       texto,
-      style: const TextStyle(color: Cores.textoFraco, fontSize: 12),
+      style: TextStyle(color: context.cores.textoFraco, fontSize: 12),
     ),
   );
 }
@@ -436,9 +467,9 @@ class _Divisoria extends StatelessWidget {
   const _Divisoria();
 
   @override
-  Widget build(BuildContext context) => const Padding(
+  Widget build(BuildContext context) => Padding(
     padding: EdgeInsets.symmetric(vertical: 14),
-    child: Divider(height: 1, thickness: 1, color: Cores.borda),
+    child: Divider(height: 1, thickness: 1, color: context.cores.borda),
   );
 }
 
@@ -454,13 +485,13 @@ class _NecessidadesEspeciais extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
+        Padding(
           // desce o ícone para ele sentar na primeira linha do texto
           padding: EdgeInsets.only(top: 2),
           child: Icon(
             Icons.medical_services_outlined,
             size: 16,
-            color: Cores.principal,
+            color: context.cores.principal,
             semanticLabel: 'Necessidades especiais',
           ),
         ),
@@ -489,21 +520,21 @@ class _Avistamentos extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Cores.cartao,
+        color: context.cores.cartao,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Cores.borda),
+        border: Border.all(color: context.cores.borda),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.visibility_outlined, size: 18, color: Cores.principal),
+              Icon(Icons.visibility_outlined, size: 18, color: context.cores.principal),
               SizedBox(width: 8),
               Text(
                 'Avistamentos',
                 style: TextStyle(
-                  color: Cores.principal,
+                  color: context.cores.principal,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
@@ -512,10 +543,10 @@ class _Avistamentos extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           if (avistamentos.isEmpty)
-            const Text(
+            Text(
               'Ninguém registrou um avistamento ainda. Se você viu este '
               'animal, registre onde e quando.',
-              style: TextStyle(fontSize: 14, color: Cores.textoFraco),
+              style: TextStyle(fontSize: 14, color: context.cores.textoFraco),
             )
           else
             for (var i = 0; i < avistamentos.length && i < 5; i++)
@@ -550,7 +581,7 @@ class _LinhaDeAvistamento extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Cores.fundo,
+        color: context.cores.fundo,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -558,14 +589,14 @@ class _LinhaDeAvistamento extends StatelessWidget {
           Container(
             width: 38,
             height: 38,
-            decoration: const BoxDecoration(
-              color: Cores.principalClara,
+            decoration: BoxDecoration(
+              color: context.cores.principalClara,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.visibility_outlined,
               size: 20,
-              color: Cores.principal,
+              color: context.cores.principal,
             ),
           ),
           const SizedBox(width: 12),
@@ -594,9 +625,9 @@ class _LinhaDeAvistamento extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     avistamento.lugar,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
-                      color: Cores.principal,
+                      color: context.cores.principal,
                     ),
                   ),
                 ],
@@ -604,9 +635,9 @@ class _LinhaDeAvistamento extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     'Registrado por $quem',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: Cores.textoFraco,
+                      color: context.cores.textoFraco,
                     ),
                   ),
                 ],
@@ -646,7 +677,7 @@ class _AvisarOTutor extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Icon(Icons.check_circle, size: 40, color: Cores.principal),
+            Icon(Icons.check_circle, size: 40, color: context.cores.principal),
             const SizedBox(height: 10),
             const Text(
               'Avistamento registrado',
@@ -658,9 +689,9 @@ class _AvisarOTutor extends StatelessWidget {
               'O ponto já aparece no mapa. Avise ${animal.dono.nome}, que '
               'está procurando ${animal.nome}.',
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
-                color: Cores.textoFraco,
+                color: context.cores.textoFraco,
                 height: 1.4,
               ),
             ),
@@ -670,7 +701,7 @@ class _AvisarOTutor extends StatelessWidget {
               icon: const Icon(Icons.chat_bubble_outline, size: 18),
               label: const Text('Avisar o tutor pelo WhatsApp'),
               style: FilledButton.styleFrom(
-                backgroundColor: Cores.principal,
+                backgroundColor: context.cores.principal,
                 minimumSize: const Size.fromHeight(48),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -680,7 +711,7 @@ class _AvisarOTutor extends StatelessWidget {
             const SizedBox(height: 6),
             TextButton(
               onPressed: () => Navigator.pop(context),
-              style: TextButton.styleFrom(foregroundColor: Cores.textoFraco),
+              style: TextButton.styleFrom(foregroundColor: context.cores.textoFraco),
               child: const Text('Agora não'),
             ),
           ],
@@ -711,7 +742,7 @@ class _QuadroDoLugar extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Cores.fundo,
+        color: context.cores.fundo,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -719,14 +750,14 @@ class _QuadroDoLugar extends StatelessWidget {
           Container(
             width: 38,
             height: 38,
-            decoration: const BoxDecoration(
-              color: Cores.principalClara,
+            decoration: BoxDecoration(
+              color: context.cores.principalClara,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.location_on_outlined,
               size: 20,
-              color: Cores.principal,
+              color: context.cores.principal,
             ),
           ),
           const SizedBox(width: 12),
@@ -736,21 +767,21 @@ class _QuadroDoLugar extends StatelessWidget {
               children: [
                 Text(
                   principal,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: Cores.texto,
+                    color: context.cores.texto,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   secundario,
-                  style: const TextStyle(fontSize: 13, color: Cores.principal),
+                  style: TextStyle(fontSize: 13, color: context.cores.principal),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Publicado ${animal.publicadoHa(DateTime.now())}',
-                  style: const TextStyle(fontSize: 12, color: Cores.textoFraco),
+                  style: TextStyle(fontSize: 12, color: context.cores.textoFraco),
                 ),
               ],
             ),
@@ -773,12 +804,12 @@ class _Recado extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(12, 2, 4, 2),
-      decoration: const BoxDecoration(
-        border: Border(left: BorderSide(color: Cores.principal, width: 3)),
+      decoration: BoxDecoration(
+        border: Border(left: BorderSide(color: context.cores.principal, width: 3)),
       ),
       child: Text(
         texto,
-        style: const TextStyle(fontSize: 14, height: 1.5, color: Cores.texto),
+        style: TextStyle(fontSize: 14, height: 1.5, color: context.cores.texto),
       ),
     );
   }
@@ -791,12 +822,16 @@ class _ControleDoStatus extends StatelessWidget {
     required this.aoMudar,
     required this.aoEditar,
     required this.aoPublicar,
+    this.ongParaTransferir,
+    this.aoTransferir,
   });
 
   final Animal animal;
   final VoidCallback aoMudar;
   final VoidCallback aoEditar;
   final VoidCallback aoPublicar;
+  final Ong? ongParaTransferir;
+  final VoidCallback? aoTransferir;
 
   @override
   Widget build(BuildContext context) {
@@ -808,25 +843,28 @@ class _ControleDoStatus extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Cores.cartao,
+        color: context.cores.cartao,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Cores.borda),
+        border: Border.all(color: context.cores.borda),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Row(
+          Row(
             children: [
               Icon(
                 Icons.verified_user_outlined,
                 size: 18,
-                color: Cores.principal,
+                color: context.cores.principal,
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Text(
-                'Você cadastrou este animal',
+                // Na ONG, quem cuida pode não ser quem cadastrou
+                animal.ongId != null
+                    ? 'Animal da sua ONG'
+                    : 'Você cadastrou este animal',
                 style: TextStyle(
-                  color: Cores.principal,
+                  color: context.cores.principal,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
@@ -836,7 +874,7 @@ class _ControleDoStatus extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             'Situação: ${comMaiuscula(animal.rotuloDoStatus)}',
-            style: const TextStyle(fontSize: 14, color: Cores.textoFraco),
+            style: TextStyle(fontSize: 14, color: context.cores.textoFraco),
           ),
           const SizedBox(height: 12),
           OutlinedButton.icon(
@@ -847,8 +885,8 @@ class _ControleDoStatus extends StatelessWidget {
             ),
             label: Text(textoDoBotao),
             style: OutlinedButton.styleFrom(
-              foregroundColor: Cores.principal,
-              side: const BorderSide(color: Cores.principal),
+              foregroundColor: context.cores.principal,
+              side: BorderSide(color: context.cores.principal),
               minimumSize: const Size.fromHeight(44),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -861,10 +899,25 @@ class _ControleDoStatus extends StatelessWidget {
             icon: const Icon(Icons.edit_outlined, size: 18),
             label: const Text('Editar registro'),
             style: TextButton.styleFrom(
-              foregroundColor: Cores.principal,
+              foregroundColor: context.cores.principal,
               minimumSize: const Size.fromHeight(44),
             ),
           ),
+          if (ongParaTransferir case final ong?) ...[
+            TextButton.icon(
+              onPressed: aoTransferir,
+              icon: const Icon(Icons.volunteer_activism_outlined, size: 18),
+              label: Text(
+                'Transferir para ${ong.nome}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              style: TextButton.styleFrom(
+                foregroundColor: context.cores.principal,
+                minimumSize: const Size.fromHeight(44),
+              ),
+            ),
+          ],
           if (animal.status == StatusAnimal.resgatado) ...[
             const SizedBox(height: 4),
             FilledButton.icon(
@@ -872,7 +925,7 @@ class _ControleDoStatus extends StatelessWidget {
               icon: const Icon(Icons.favorite_border, size: 18),
               label: const Text('Publicar para adoção'),
               style: FilledButton.styleFrom(
-                backgroundColor: Cores.principal,
+                backgroundColor: context.cores.principal,
                 minimumSize: const Size.fromHeight(44),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
