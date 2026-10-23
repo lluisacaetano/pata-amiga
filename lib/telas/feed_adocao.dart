@@ -1,37 +1,65 @@
+// Biblioteca dart:async: Timer da verificação periódica e unawaited.
 import 'dart:async';
 
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote flutter/services: leitura dos assets (rootBundle).
 import 'package:flutter/services.dart';
+// Pacote provider: compartilha estado entre as telas e as reconstrói.
 import 'package:provider/provider.dart';
+// Pacote share_plus: abre o compartilhamento do sistema (WhatsApp etc.).
 import 'package:share_plus/share_plus.dart';
+// Pacote url_launcher: abre WhatsApp, telefone e links no navegador.
 import 'package:url_launcher/url_launcher.dart';
 
+// Arquivo estado_pata_amiga.dart: estado compartilhado de animais, ONGs e mapa.
 import '../estado/estado_pata_amiga.dart';
+// Arquivo animal.dart: modelo do animal e o tipo do registro.
 import '../modelos/animal.dart';
+// Arquivo dono.dart: número do responsável no formato do WhatsApp.
 import '../modelos/dono.dart';
+// Arquivo filtros_do_feed.dart: filtros do feed e os grupos de filtro.
 import '../modelos/filtros_do_feed.dart';
+// Arquivo ong.dart: modelo da ONG, para o nome nas etiquetas de filtro.
 import '../modelos/ong.dart';
+// Arquivo route_names.dart: nomes das rotas de navegação.
 import '../routes/route_names.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo barra_inferior.dart: barra de navegação inferior.
 import '../widgets/barra_inferior.dart';
+// Arquivo card_animal.dart: card de cada animal do feed.
 import '../widgets/card_animal.dart';
+// Arquivo escolha_de_tipo.dart: abas de adoção, perdidos e resgates.
 import '../widgets/escolha_de_tipo.dart';
+// Arquivo painel_de_filtros.dart: painel inferior com os filtros.
 import '../widgets/painel_de_filtros.dart';
+// Arquivo app_router.dart: configuração das rotas do aplicativo.
 import '../routes/app_router.dart';
-// [SPRINT 3 - NOVO] Camada de dados: API e cache local
+// Arquivo alimentacao_service.dart: pontos de alimentação na API.
 import '../services/alimentacao_service.dart';
+// Arquivo animal_service.dart: busca e cadastro de animais na API.
 import '../services/animal_service.dart';
+// Arquivo avistamento_service.dart: avistamentos na API.
 import '../services/avistamento_service.dart';
+// Arquivo cache_service.dart: cache local dos animais do feed.
 import '../services/cache_service.dart';
+// Arquivo ong_service.dart: ONGs na API.
 import '../services/ong_service.dart';
+// Arquivo usuario_provider.dart: usuário logado.
 import '../provider/usuario_provider.dart';
+// Arquivo sino_de_notificacoes.dart: pedidos de vínculo e vibração de aviso.
 import '../widgets/sino_de_notificacoes.dart';
 
+// Origem dos dados exibidos no feed: carregando, cache do aparelho, API ou
+// erro (sem API e sem cache)
 enum EstadoFeed { carregando, cache, atualizado, erro }
 
+// Tela principal: feed de animais com abas por tipo de registro, pesquisa,
+// filtros, banner de dados em cache e botão para cadastrar um animal
 class FeedAdocao extends StatefulWidget {
-  // Os dois são opcionais: o app usa os de verdade, e os testes passam
-  // versões falsas para não depender da API no ar
+  // Serviços opcionais: o app usa as implementações reais e os testes
+  // injetam versões falsas para não depender da API
   final AnimalService? api;
   final CacheService? cache;
   final AvistamentoService? avistamentos;
@@ -55,32 +83,33 @@ class _FeedAdocaoState extends State<FeedAdocao> {
   // Aba aberta no momento, que decide quais animais o feed mostra
   TipoRegistro _abaAtual = TipoRegistro.adocao;
 
+  // Animais cadastrados neste aparelho que não chegaram à API
   final List<Animal> _animaisCriados = [];
 
-  // O que foi digitado no campo de pesquisa
+  // Texto digitado no campo de pesquisa
   final _pesquisa = TextEditingController();
   String _busca = '';
 
-  // Os filtros aplicados: valem nas três abas e somam com a pesquisa
+  // Filtros aplicados: valem nas três abas e se somam à pesquisa
   FiltrosDoFeed _filtros = const FiltrosDoFeed();
 
-  // [SPRINT 3 - NOVO] Serviços de dados
+  // Serviços de dados
   late final _api = widget.api ?? AnimalService();
   late final _cache = widget.cache ?? CacheService();
   late final _avistamentos = widget.avistamentos ?? AvistamentoService();
   late final _alimentacao = widget.alimentacao ?? AlimentacaoService();
   late final _ongs = widget.ongs ?? OngService();
 
-  // [SPRINT 3 - NOVO] Animais que vieram da API ou do cache.
-  // Substitui a lista fixa animaisMock.
+  // Animais recebidos da API ou lidos do cache
   List<Animal> _animaisApi = [];
 
-  // [SPRINT 3 - NOVO] Estado atual da tela e dados que o banner usa
+  // Estado atual da tela e dados usados pelo banner
   EstadoFeed _estado = EstadoFeed.carregando;
-  DateTime? _dataCache; // quando os dados foram salvos / atualizados
-  bool _atualizando = false; // true enquanto há uma busca na API em andamento
+  // Momento em que os dados exibidos foram salvos ou atualizados
+  DateTime? _dataCache;
+  // Verdadeiro enquanto há uma busca na API em andamento
+  bool _atualizando = false;
 
-  // [SPRINT 3 - NOVO] Busca os animais ao abrir a tela
   @override
   void initState() {
     super.initState();
@@ -95,27 +124,20 @@ class _FeedAdocaoState extends State<FeedAdocao> {
     super.dispose();
   }
 
-  // [SPRINT 3 - NOVO] Fluxo principal da sprint:
-  //   1. Se existe cache, mostra na hora (estado: cache)
-  //      Se não existe, estado: carregando
-  //   2. Tenta a API
-  //        sucesso -> mostra, SOBRESCREVE o cache (estado: atualizado)
-  //        falha   -> com cache, continua no estado cache
-  //                   sem cache, estado erro
-  // É chamado ao abrir a tela e pelo botão "Tentar atualizar".
-  // Os avistamentos vêm à parte: se a API deles falhar, o feed segue igual,
-  // só o mapa fica sem o último ponto visto
+  // Carrega os avistamentos para o estado compartilhado. Uma falha aqui não
+  // afeta o feed; só o mapa fica sem o último ponto visto
   Future<void> _carregarAvistamentos() async {
     try {
       final lista = await _avistamentos.buscarTodos();
       if (!mounted) return;
       PataAmigaScope.of(context).atualizarAvistamentos(lista);
     } on Exception {
-      // sem avistamentos desta vez
+      // Falha ignorada: tenta de novo no próximo carregamento
     }
   }
 
-  // Os pontos de alimentação também vêm à parte, pelo mesmo motivo
+  // Carrega os pontos de alimentação e os abastecimentos para o mapa. Uma
+  // falha aqui também não afeta o feed
   Future<void> _carregarAlimentacao() async {
     try {
       final pontos = await _alimentacao.buscarPontos();
@@ -123,19 +145,20 @@ class _FeedAdocaoState extends State<FeedAdocao> {
       if (!mounted) return;
       PataAmigaScope.of(context).atualizarAlimentacao(pontos, abastecimentos);
     } on Exception {
-      // sem a camada de alimentação desta vez
+      // Falha ignorada: o mapa fica sem a camada de alimentação
     }
   }
 
-  // As ONGs também: sem elas, só a lista do menu e o atalho da ficha somem.
-  // Com o app aberto, elas são conferidas de novo a cada 30 segundos: se
-  // chegou um pedido para a ONG que a pessoa administra, o celular vibra e
-  // o contador do sino sobe
+  // Verificação periódica das ONGs (a cada 30 segundos com o app aberto),
+  // para avisar quando chega um pedido de vínculo à ONG que o usuário
+  // administra
   Timer? _vigia;
+  // Pedidos já conhecidos; nulo até a primeira busca, que só define a base
   Set<String>? _pedidosConhecidos;
-  // Em segundo plano a conferência para: ninguém está vendo o app
+  // Suspende a verificação com o app em segundo plano e retoma ao voltar
   AppLifecycleListener? _ciclo;
 
+  // Inicia o timer da verificação, se ainda não estiver ativo
   void _vigiar() => _vigia ??= Timer.periodic(
     const Duration(seconds: 30),
     (_) => _carregarOngs(),
@@ -146,6 +169,8 @@ class _FeedAdocaoState extends State<FeedAdocao> {
     _vigia = null;
   }
 
+  // Atualiza as ONGs no estado compartilhado e vibra o aparelho quando
+  // surge um pedido de vínculo que não existia na busca anterior
   Future<void> _carregarOngs() async {
     try {
       final ongs = await _ongs.buscarOngs();
@@ -159,10 +184,18 @@ class _FeedAdocaoState extends State<FeedAdocao> {
         await avisarNovaNotificacao();
       }
     } on Exception {
-      // sem as ONGs desta vez
+      // Falha ignorada: mantém as ONGs já carregadas
     }
   }
 
+  // Carregamento principal, chamado ao abrir a tela e pelo botão "Tentar
+  // atualizar":
+  //   1. Com cache, mostra os dados salvos na hora (estado cache); sem
+  //      cache, mostra o indicador de carregamento.
+  //   2. Busca na API. Com sucesso, exibe os dados e sobrescreve o cache
+  //      (estado atualizado). Com falha, mantém o cache ou, sem ele, passa
+  //      ao estado de erro.
+  // Também dispara as cargas paralelas e a verificação periódica das ONGs
   Future<void> _carregar() async {
     final salvos = await _cache.lerAnimais();
     final dataSalva = await _cache.dataDoCache();
@@ -196,7 +229,8 @@ class _FeedAdocaoState extends State<FeedAdocao> {
     );
     try {
       final novos = await _api.buscarAnimais();
-      await _cache.salvarAnimais(novos); // o cache nunca fica congelado
+      // Toda resposta da API substitui o cache, que nunca fica defasado
+      await _cache.salvarAnimais(novos);
       if (!mounted) return;
       setState(() {
         _animaisApi = novos;
@@ -207,18 +241,18 @@ class _FeedAdocaoState extends State<FeedAdocao> {
       PataAmigaScope.of(context)
           .atualizarAnimais([..._animaisApi, ..._animaisCriados]);
     } catch (_) {
-      // Sem internet, servidor fora do ar ou timeout
+      // Sem internet, servidor fora do ar ou tempo esgotado
       if (!mounted) return;
       setState(() {
         _atualizando = false;
         if (salvos == null) _estado = EstadoFeed.erro;
-        // Se havia cache, o estado continua "cache", e a faixa laranja do
-        // topo já avisa que os dados podem estar desatualizados
+        // Com cache, o estado continua "cache" e a faixa laranja do topo
+        // avisa que os dados podem estar desatualizados
       });
     }
   }
 
-  // [SPRINT 3 - NOVO] Formata a data do cache, ex.: "14/10 às 21:05"
+  // Formata a data do cache no padrão "dd/mm às hh:mm"
   String _formatarData(DateTime? data) {
     if (data == null) return 'data desconhecida';
     String dois(int n) => n.toString().padLeft(2, '0');
@@ -226,21 +260,8 @@ class _FeedAdocaoState extends State<FeedAdocao> {
         '${dois(data.hour)}:${dois(data.minute)}';
   }
 
-  /*
-   Future<void> _abrirCadastroAnimal() async {
-    final animal = (await Navigator.pushNamed(
-      context,
-      AppRoutes.registerAnimal,
-    )) as Animal?;
-    if (!mounted || animal == null) return;
-
-    setState(() => _animaisCriados.insert(0, animal));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${animal.nome} foi adicionado ao feed.')),
-    );
-  }
-  */
-
+  // Abre o cadastro e tenta salvar o animal na API. Se a API falhar, o
+  // animal fica só neste aparelho e o usuário é avisado
   Future<void> _abrirCadastroAnimal() async {
     final animal = (await Navigator.pushNamed(
       context,
@@ -255,14 +276,13 @@ class _FeedAdocaoState extends State<FeedAdocao> {
       await _api.criarAnimal(animal);
       salvoNaApi = true;
     } catch (_) {
-      // A API pode estar indisponível; o registro continua visível neste aparelho.
+      // API indisponível: o registro continua visível neste aparelho
     }
 
     await estado.registrarCadastro(animal);
     if (!mounted) return;
-    // O animal novo tem que aparecer na hora: abre a aba do tipo dele e
-    // limpa a busca, que poderia escondê-lo. Como o feed vai do mais recente
-    // para o mais antigo, ele fica no topo
+    // Garante que o animal novo apareça: abre a aba do tipo dele e limpa a
+    // pesquisa. Como o feed é do mais recente ao mais antigo, ele fica no topo
     _pesquisa.clear();
     setState(() {
       _abaAtual = animal.tipo;
@@ -272,8 +292,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${animal.nome} foi salvo na API.')),
       );
-      // Busca a lista de novo: o animal volta com o id da API e o cache
-      // local também é atualizado.
+      // Recarrega para obter o animal com o id da API e atualizar o cache
       await _carregar();
       return;
     }
@@ -290,6 +309,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
     );
   }
 
+  // Abre a ficha do animal
   Future<void> _abrirDetalhes(Animal animal) async {
     final animalRetornado = (await Navigator.pushNamed(
       context,
@@ -307,8 +327,8 @@ class _FeedAdocaoState extends State<FeedAdocao> {
 
   List<Animal> get _animaisVisiveis => _visiveis(_filtros);
 
-  // Do estado compartilhado, e não das listas do feed: assim um status
-  // mudado na ficha aparece aqui na hora
+  // Lê do estado compartilhado, e não das listas locais, para que uma
+  // mudança de status feita na ficha apareça aqui na hora
   List<Animal> get _todosOsAnimais {
     final estado = PataAmigaScope.of(context);
     return estado.animais.isNotEmpty
@@ -316,17 +336,17 @@ class _FeedAdocaoState extends State<FeedAdocao> {
         : [..._animaisApi, ..._animaisCriados];
   }
 
+  // Animais da aba atual que combinam com os filtros e a pesquisa (nome,
+  // raça ou espécie), do mais recente ao mais antigo
   List<Animal> _visiveis(FiltrosDoFeed filtros) {
     final termo = _busca.trim().toLowerCase();
-    // [SPRINT 3 - ALTERADO] antes: [...animaisMock, ..._animaisCriados]
-    // Do estado compartilhado, e não das listas do feed: assim um status
-    // mudado na ficha aparece aqui na hora
+    // Mesma origem de _todosOsAnimais, pelo mesmo motivo
     final estado = PataAmigaScope.of(context);
     final todos = estado.animais.isNotEmpty
         ? estado.animais
         : [..._animaisApi, ..._animaisCriados];
     final encontrados = todos.where((animal) {
-      // Com desfecho (adotado, encontrado ou resgatado), sai do feed
+      // Animal com desfecho (adotado, encontrado ou resgatado) sai do feed
       if (animal.finalizado) return false;
       if (animal.tipo != _abaAtual) return false;
       if (!filtros.combina(animal)) return false;
@@ -335,12 +355,12 @@ class _FeedAdocaoState extends State<FeedAdocao> {
           animal.raca.toLowerCase().contains(termo) ||
           animal.especie.toLowerCase().contains(termo);
     }).toList();
-    // O feed é cronológico decrescente: o que foi publicado por último abre
     encontrados.sort((a, b) => b.publicadoEm.compareTo(a.publicadoEm));
     return encontrados;
   }
 
-  // O painel conta, a cada toque, quantos animais da aba vão aparecer
+  // Abre o painel de filtros e aplica o que ele devolver. O painel recebe
+  // a contagem para mostrar quantos animais da aba vão aparecer
   Future<void> _abrirFiltros() async {
     final escolhidos = await showModalBottomSheet<FiltrosDoFeed>(
       context: context,
@@ -363,7 +383,8 @@ class _FeedAdocaoState extends State<FeedAdocao> {
 
   void _limparFiltros() => setState(() => _filtros = const FiltrosDoFeed());
 
-  // Junta os cuidados marcados numa frase só, concordando com o sexo
+  // Junta os cuidados de saúde marcados numa frase, concordando com o sexo
+  // (ex.: "Castrada e vacinada")
   String _saude(Animal animal) {
     final a = animal.sexo == 'fêmea' ? 'a' : 'o';
     final itens = [
@@ -378,7 +399,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
     return frase[0].toUpperCase() + frase.substring(1);
   }
 
-  // Abre a conversa direto no WhatsApp do responsável
+  // Abre a conversa no WhatsApp do responsável com uma mensagem pronta
   Future<void> _chamarNoWhatsApp(Animal animal) async {
     final mensageiro = ScaffoldMessenger.of(context);
     final texto = Uri.encodeComponent(
@@ -404,6 +425,8 @@ class _FeedAdocaoState extends State<FeedAdocao> {
     }
   }
 
+  // Compartilha um resumo do animal em texto, com a foto anexada quando
+  // houver
   Future<void> _compartilhar(Animal animal) async {
     final situacao = switch (animal.tipo) {
       TipoRegistro.adocao => 'Disponível para adoção',
@@ -428,11 +451,10 @@ class _FeedAdocaoState extends State<FeedAdocao> {
       'Divulgado pelo Pata Amiga',
     ].join('\n');
 
-    // [SPRINT 3 - ALTERADO] Só anexa a foto se o animal tiver uma.
-    // Antes, rootBundle.load('') dava erro com animal sem foto vindo da API.
+    // Animal sem foto é compartilhado só com o texto
     final arquivos = <XFile>[];
     if (animal.foto.isNotEmpty) {
-      // O compartilhamento só aceita arquivo, e a foto é um asset, então converte
+      // O compartilhamento exige arquivo: lê a foto dos assets e anexa os bytes
       final imagem = await rootBundle.load(animal.foto);
       arquivos.add(
         XFile.fromData(
@@ -446,7 +468,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
     await SharePlus.instance.share(ShareParams(text: texto, files: arquivos));
   }
 
-  // [SPRINT 3 - NOVO] Faixa colorida do banner de estado
+  // Faixa colorida usada pelo banner de estado
   Widget _faixa({
     required Color cor,
     required IconData icone,
@@ -472,14 +494,13 @@ class _FeedAdocaoState extends State<FeedAdocao> {
     );
   }
 
-  // [SPRINT 3 - NOVO] Banner que diz ao usuário de onde vêm os dados.
-  // É isto que a Sprint Review precisa mostrar em modo avião.
+  // Banner que avisa quando os dados exibidos vêm do cache do aparelho
   Widget _bannerDeEstado() {
     switch (_estado) {
       case EstadoFeed.cache:
-        // Busca em andamento: ainda não é "sem conexão", então não avisa nada
+        // Busca em andamento: ainda não se sabe se há conexão
         if (_atualizando) return const SizedBox.shrink();
-        // A busca falhou: mostra o aviso de dado possivelmente desatualizado
+        // A busca falhou: avisa que os dados podem estar desatualizados
         return _faixa(
           cor: Colors.orange,
           icone: Icons.cloud_off,
@@ -491,8 +512,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
             child: const Text('Tentar atualizar'),
           ),
         );
-      // Com internet, o feed só mostra os animais: a faixa fica para quando
-      // os dados vêm do aparelho
+      // Nos demais estados não há faixa
       case EstadoFeed.atualizado:
       case EstadoFeed.carregando:
       case EstadoFeed.erro:
@@ -500,16 +520,15 @@ class _FeedAdocaoState extends State<FeedAdocao> {
     }
   }
 
-  // [SPRINT 3 - NOVO] Corpo da tela conforme o estado.
-  // A lista de animais é a mesma de antes; só ganhou os casos
-  // carregando e erro à sua volta.
+  // Corpo da tela conforme o estado: carregando, erro, lista vazia ou lista
+  // de animais
   Widget _corpo() {
     if (_estado == EstadoFeed.carregando) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    // Sem conexão e sem cache, mas com animal cadastrado neste aparelho, o
-    // feed mostra esse animal em vez da tela de erro
+    // Sem conexão e sem cache: tela de erro, a menos que haja animal
+    // cadastrado neste aparelho para exibir
     if (_estado == EstadoFeed.erro && _animaisCriados.isEmpty) {
       return Center(
         child: Padding(
@@ -683,9 +702,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
               ),
               aoLimpar: _limparFiltros,
             ),
-          // [SPRINT 3 - NOVO] Banner de estado (cache / atualizado)
           _bannerDeEstado(),
-          // [SPRINT 3 - ALTERADO] O Expanded com a lista agora vem do _corpo()
           Expanded(child: _corpo()),
         ],
       ),
@@ -701,8 +718,8 @@ class _FeedAdocaoState extends State<FeedAdocao> {
   }
 }
 
-// Os filtros aplicados, logo abaixo das abas: cada um sai no X, e "Limpar"
-// tira todos de uma vez
+// Etiquetas dos filtros aplicados, logo abaixo das abas. Cada uma sai pelo
+// X e "Limpar filtros" remove todas
 class _FiltrosAplicados extends StatelessWidget {
   const _FiltrosAplicados({
     required this.filtros,
@@ -712,7 +729,7 @@ class _FiltrosAplicados extends StatelessWidget {
   });
 
   final FiltrosDoFeed filtros;
-  // Para a etiqueta da ONG mostrar o nome, e não o id que o filtro guarda
+  // Usadas para mostrar o nome da ONG, já que o filtro guarda o id
   final List<Ong> ongs;
   final void Function(GrupoDeFiltro grupo, String opcao) aoTirar;
   final VoidCallback aoLimpar;

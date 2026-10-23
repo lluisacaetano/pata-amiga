@@ -1,18 +1,30 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote provider: compartilha estado entre as telas e as reconstrói.
 import 'package:provider/provider.dart';
 
+// Arquivo estado_pata_amiga.dart: estado compartilhado do app.
 import '../estado/estado_pata_amiga.dart';
+// Arquivo ponto_de_alimentacao.dart: ponto de alimentação e suas regras.
 import '../modelos/ponto_de_alimentacao.dart';
+// Arquivo usuario_provider.dart: dados do usuário logado.
 import '../provider/usuario_provider.dart';
+// Arquivo alimentacao_service.dart: acesso à API dos pontos de alimentação.
 import '../services/alimentacao_service.dart';
+// Arquivo localizacao_service.dart: leitura da posição atual do aparelho.
 import '../services/localizacao_service.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo escolha_de_tipo.dart: estilo das abas de escolha (estiloDasAbas).
 import '../widgets/escolha_de_tipo.dart';
+// Arquivo mapa_de_local.dart: coordenada do centro de Formiga.
 import '../widgets/mapa_de_local.dart';
+// Arquivo seletor_de_local.dart: seletor de local com busca, mira e mapa.
 import '../widgets/seletor_de_local.dart';
 
-// Qualquer pessoa logada cadastra um comedouro ou bebedouro público e, se
-// acabou de abastecê-lo, já registra o abastecimento junto
+// Tela de cadastro de um comedouro ou bebedouro público. Quem está logado
+// marca o tipo e o local no mapa e, se acabou de abastecer o ponto, registra
+// o primeiro abastecimento junto com o cadastro
 class CadastrarPonto extends StatefulWidget {
   final AlimentacaoService? servico;
   final LocalizacaoService? localizacao;
@@ -40,10 +52,12 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
     super.dispose();
   }
 
+  // Valida o tipo e o endereço, confere a localização de quem diz ter
+  // abastecido e grava o ponto (e o abastecimento) na API e no estado do app
   Future<void> _cadastrar() async {
     setState(() => _tentou = true);
     if (_tipo == null || _salvando) return;
-    // O endereço é obrigatório: é por ele que os outros acham o ponto
+    // Rua e bairro são obrigatórios: é por eles que o ponto é encontrado
     if (_local.rua.trim().isEmpty || _local.bairro.trim().isEmpty) {
       setState(
         () => _recusa =
@@ -61,7 +75,8 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
     final nome = usuario?.nome.trim() ?? '';
     final email = usuario?.email ?? '';
     final agora = DateTime.now();
-    // Quem diz que abasteceu precisa estar no ponto que acabou de marcar
+    // Para registrar o abastecimento, a pessoa precisa estar perto do ponto
+    // marcado; sem isso, só o ponto pode ser cadastrado
     if (_abasteciHoje) {
       try {
         final onde = await _localizacao.posicaoAtual();
@@ -236,7 +251,7 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
             titulo: 'Onde fica',
             child: SeletorDeLocal(aoMudar: (local) => _local = local),
           ),
-          // Material, e não Container com cor, para o toque aparecer
+          // Material em vez de Container para o efeito de toque aparecer
           Padding(
             padding: const EdgeInsets.only(bottom: 14),
             child: Material(
@@ -305,7 +320,8 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
   }
 }
 
-// O mesmo cartão do cadastro de animal: branco, borda clara e título verde
+// Cartão de seção do formulário: fundo de cartão, borda e título com ícone
+// na cor principal, no mesmo padrão do cadastro de animal
 class _Cartao extends StatelessWidget {
   const _Cartao({
     required this.icone,

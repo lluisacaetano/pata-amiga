@@ -1,8 +1,8 @@
-// As raças do select do cadastro, separadas por espécie, com "Sem raça
+// As raças oferecidas no cadastro, separadas por espécie, com "Sem raça
 // definida" primeiro por ser a mais comum entre os animais para adoção. A raça
-// que faltar entra por "Outra".
+// ausente é informada pela opção "Outra".
 //
-// Fontes, consultadas em 20/10/2026:
+// Fontes:
 // - cachorros: guia de raças da Cobasi (cobasi.com.br/racas/cachorro), com o
 //   "Vira-lata" como "Sem raça definida";
 // - gatos: raças reconhecidas pela FIFe (fifeweb.org/cats/breeds), federação
@@ -182,11 +182,11 @@ const racasDeGato = [
   'Van Turco',
 ];
 
-// A opção para a raça que não está na lista
+// A opção para informar uma raça que não está na lista
 const outraRaca = 'Outra';
 
-// Os outros nomes que as pessoas dão às raças da lista. Assim os animais já
-// cadastrados com "labrador" ou "vira-lata" caem na raça certa
+// Nomes populares das raças da lista, sem acentos, ligados ao nome oficial.
+// Assim "labrador" ou "vira-lata" são reconhecidos como a raça correta
 const _apelidos = {
   'vira-lata': semRacaDefinida,
   'vira lata': semRacaDefinida,
@@ -211,6 +211,7 @@ const _apelidos = {
   'birman': 'Sagrado da Birmânia',
 };
 
+// As raças da espécie (cachorro ou gato); outra espécie não tem lista
 List<String> racasDa(String? especie) => switch (especie?.toLowerCase()) {
   'cachorro' => racasDeCachorro,
   'gato' => racasDeGato,
@@ -248,6 +249,8 @@ Iterable<String> buscarNaLista(Iterable<String> racas, String digitado) {
   return racas.where((raca) => _semAcento(raca).contains(busca));
 }
 
+// O texto em minúsculas, sem acentos e sem espaços repetidos, para comparar
+// nomes de raças
 String _semAcento(String texto) {
   const de = 'áàâãäéèêëíìîïóòôõöúùûüç';
   const para = 'aaaaaeeeeiiiiooooouuuuc';

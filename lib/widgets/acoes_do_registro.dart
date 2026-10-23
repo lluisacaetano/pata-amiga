@@ -1,25 +1,35 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
 
+// Arquivo estado_pata_amiga.dart: estado global com a lista de animais.
 import '../estado/estado_pata_amiga.dart';
+// Arquivo animal.dart: modelo do animal e o status do registro.
 import '../modelos/animal.dart';
+// Arquivo ong.dart: modelo da ONG.
 import '../modelos/ong.dart';
+// Arquivo route_names.dart: nomes das rotas de navegação.
 import '../routes/route_names.dart';
+// Arquivo animal_service.dart: serviço que grava os animais na API.
 import '../services/animal_service.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
 
-// O que quem cadastrou faz com o próprio registro: encerrar (ou reabrir),
-// editar e, depois do resgate, publicar para adoção. A ficha e a lista de
-// "Meus registros" usam as mesmas ações
+// Ações do dono sobre o próprio registro: encerrar ou reabrir, editar,
+// transferir para uma ONG e, após um resgate, publicar para adoção. São
+// compartilhadas pela tela de detalhes e pela lista "Meus registros"
 
-// O argumento da rota de cadastro quando ela abre para editar um registro
+// Argumento da rota de cadastro que indica edição de um registro existente
+// (em vez de um cadastro novo)
 class EdicaoDoRegistro {
   final Animal animal;
 
   const EdicaoDoRegistro(this.animal);
 }
 
-// Marca o desfecho (adotado, encontrado ou resgatado) ou volta atrás.
-// Confirma antes, porque o animal sai do feed e do mapa
+// Alterna o status do animal entre disponível e o desfecho do tipo
+// (adotado, encontrado ou resgatado), após confirmação, porque a mudança tira
+// ou devolve o animal ao feed e ao mapa. Grava na API, atualiza o estado
+// local e, num resgate concluído, oferece publicar para adoção
 Future<void> mudarStatus(
   BuildContext context,
   Animal atual, {
@@ -28,7 +38,6 @@ Future<void> mudarStatus(
   final novo = atual.finalizado ? StatusAnimal.disponivel : atual.desfecho;
   final voltando = novo == StatusAnimal.disponivel;
   final textoNovo = atual.comStatus(novo).rotuloDoStatus;
-  // O mesmo painel de baixo das outras confirmações do app
   final confirmou = await showModalBottomSheet<bool>(
     context: context,
     backgroundColor: context.cores.cartao,
@@ -66,9 +75,9 @@ Future<void> mudarStatus(
   }
 }
 
-// Quem entrou numa ONG leva para ela um animal que tinha publicado em nome
-// próprio: ele passa a sair com o contato da ONG e a aparecer no perfil dela,
-// e sai de "Meus registros". A partir daí, qualquer pessoa da ONG cuida dele
+// Transfere para a ONG um animal publicado em nome próprio, após
+// confirmação. O registro passa a ter o contato da ONG, aparece no perfil
+// dela e sai de "Meus registros"; qualquer membro da ONG pode atualizá-lo
 Future<void> enviarParaOng(
   BuildContext context,
   Animal atual,
@@ -119,8 +128,8 @@ Future<void> enviarParaOng(
     );
 }
 
-// Abre o cadastro com todos os dados do registro. O formulário grava na API
-// antes de fechar; aqui só falta atualizar o feed, a ficha e o perfil
+// Abre o cadastro preenchido para edição. O formulário já grava na API antes
+// de fechar; aqui o estado local é atualizado com o registro devolvido
 Future<void> editarRegistro(
   BuildContext context,
   Animal atual, {
@@ -140,7 +149,7 @@ Future<void> editarRegistro(
     ..showSnackBar(const SnackBar(content: Text('Alterações salvas.')));
 }
 
-// Depois do resgate, o convite para publicar o animal para adoção
+// Após um resgate, pergunta se a pessoa quer publicar o animal para adoção
 Future<void> _oferecerAdocao(
   BuildContext context,
   Animal atual,
@@ -160,7 +169,8 @@ Future<void> _oferecerAdocao(
   }
 }
 
-// Abre o cadastro já preenchido com os dados do resgate e o tipo Adoção
+// Abre o cadastro preenchido com os dados do resgate e o tipo Adoção. Se a
+// API falhar, o registro fica salvo apenas no aparelho e o aviso informa isso
 Future<void> publicarParaAdocao(
   BuildContext context,
   Animal atual, {
@@ -196,7 +206,8 @@ Future<void> publicarParaAdocao(
     );
 }
 
-// Antes de mudar o status: o que vai acontecer e a confirmação
+// Painel inferior de confirmação com título, explicação e os botões
+// Confirmar e Cancelar
 class _ConfirmarStatus extends StatelessWidget {
   const _ConfirmarStatus({
     required this.titulo,
@@ -257,7 +268,8 @@ class _ConfirmarStatus extends StatelessWidget {
   }
 }
 
-// Depois de marcar como resgatado: o convite para publicar para adoção
+// Painel inferior exibido após o resgate, com o convite para publicar o
+// animal para adoção
 class _OfertaDeAdocao extends StatelessWidget {
   const _OfertaDeAdocao({required this.nome, required this.aoPublicar});
 

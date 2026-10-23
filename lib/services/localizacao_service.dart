@@ -1,7 +1,8 @@
+// Pacote geolocator: lê a localização atual do aparelho e pede a permissão.
 import 'package:geolocator/geolocator.dart';
 
-// Onde a pessoa está agora. Quando não dá para saber, o erro já vem com o
-// texto para mostrar na tela
+// Obtém a posição atual do aparelho, pedindo a permissão quando preciso. Em
+// caso de falha, lança ErroDeLocalizacao com a mensagem pronta para a tela
 class LocalizacaoService {
   Future<({double latitude, double longitude})> posicaoAtual() async {
     if (!await Geolocator.isLocationServiceEnabled()) {
@@ -34,6 +35,7 @@ class LocalizacaoService {
   }
 }
 
+// Falha ao obter a localização, com o texto a exibir para a pessoa
 class ErroDeLocalizacao implements Exception {
   final String texto;
   const ErroDeLocalizacao(this.texto);

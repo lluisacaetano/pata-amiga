@@ -1,28 +1,38 @@
+// Biblioteca dart:convert: converte texto JSON em objetos e vice-versa.
 import 'dart:convert';
 
+// Pacote http: faz as requisições à API (GET, POST, PATCH, DELETE).
 import 'package:http/http.dart' as http;
 
+// Arquivo ong.dart: modelo da ONG e das pessoas ligadas a ela.
 import '../modelos/ong.dart';
+// Arquivo endereco_da_api.dart: endereço base da API.
 import 'endereco_da_api.dart';
 
-// A pessoa do pedido já faz parte de outra ONG: aprovar a deixaria em duas
+// Lançada quando a pessoa já faz parte de outra ONG (ou pediu para entrar
+// nela); cada conta pode estar em uma ONG só
 class JaFazParteDeOutra implements Exception {
   final String ong;
 
   const JaFazParteDeOutra(this.ong);
 }
 
-// O pedido já não existe na API: a pessoa desistiu ou outra admin respondeu
+// Lançada quando o pedido de entrada já não existe na API: a pessoa
+// desistiu ou ele já foi respondido
 class PedidoNaoExiste implements Exception {
   const PedidoNaoExiste();
 }
 
-// A pessoa escolhida para administrar já não é membro da ONG
+// Lançada quando a pessoa escolhida para administrar não é membro da ONG
 class NaoEMembro implements Exception {
   const NaoEMembro();
 }
 
+// Leitura e gravação das ONGs e dos vínculos das pessoas com elas. Cada
+// operação lê a versão atual da ONG na API antes de gravar, para não
+// sobrescrever mudanças feitas por outra pessoa
 class OngService {
+  // Todas as ONGs cadastradas
   Future<List<Ong>> buscarOngs() async {
     final resposta = await http
         .get(Uri.parse('$enderecoDaApi/ongs'))
@@ -35,6 +45,7 @@ class OngService {
         .toList();
   }
 
+  // Uma ONG pelo id
   Future<Ong> buscarOng(int id) async {
     final resposta = await http
         .get(Uri.parse('$enderecoDaApi/ongs/$id'))
@@ -47,10 +58,9 @@ class OngService {
     );
   }
 
-  // O pedido e a resposta partem da versão da API, e não da que o app
-  // guardou: outra pessoa pode ter pedido para entrar nesse meio-tempo
-  // Cada conta tem no máximo uma ONG: quem já faz parte de outra, ou já
-  // pediu para entrar em outra, não pede de novo
+  // Registra o pedido de entrada da pessoa na ONG. Recusa com
+  // JaFazParteDeOutra se ela já faz parte de outra ONG ou já pediu para
+  // entrar em outra
   Future<Ong> pedirEntrada(Ong ong, PessoaDaOng pessoa) async {
     for (final outra in await buscarOngs()) {
       if (outra.id != ong.id &&
@@ -61,6 +71,8 @@ class OngService {
     return salvarOng((await buscarOng(ong.id!)).comPedidoDe(pessoa));
   }
 
+  // Aprova ou recusa o pedido de entrada. Na aprovação, confere de novo se
+  // a pessoa não entrou em outra ONG nesse meio-tempo
   Future<Ong> responderPedido(
     Ong ong,
     String email, {
@@ -78,19 +90,19 @@ class OngService {
     return salvarOng(naApi.respondendo(email, aprovar: aprovar));
   }
 
-  // A admin remove um membro, que recebe o aviso no sino
+  // Remove um membro da ONG e deixa um aviso para ele no sino
   Future<Ong> removerMembro(Ong ong, String email) async =>
       salvarOng((await buscarOng(ong.id!)).removendo(email));
 
-  // A pessoa removida dispensa o aviso
+  // Apaga o aviso deixado para a pessoa, depois que ela o dispensa
   Future<Ong> dispensarAviso(Ong ong, String email) async =>
       salvarOng((await buscarOng(ong.id!)).semAviso(email));
 
-  // Sair da ONG, ou cancelar o pedido para entrar nela
+  // Tira a pessoa da ONG ou cancela o pedido de entrada dela
   Future<Ong> sairDaOng(Ong ong, String email) async =>
       salvarOng((await buscarOng(ong.id!)).semAPessoa(email));
 
-  // A admin escolhe um membro para administrar a ONG e sai dela
+  // Transfere a administração para um membro; quem administrava sai da ONG
   Future<Ong> passarAdministracao(Ong ong, String paraEmail) async {
     final naApi = await buscarOng(ong.id!);
     if (!naApi.fazParte(paraEmail) || naApi.eDoResponsavel(paraEmail)) {
@@ -99,8 +111,8 @@ class OngService {
     return salvarOng(naApi.passandoPara(paraEmail));
   }
 
-  // Cria a ONG, ou grava a edição quando ela já tem id. Devolve o que a API
-  // gravou, já com o id
+  // Cria a ONG (POST) quando ela ainda não tem id, ou substitui o registro
+  // (PUT) quando já tem. Devolve a ONG como a API gravou
   Future<Ong> salvarOng(Ong ong) async {
     final nova = ong.id == null;
     final endereco = Uri.parse(

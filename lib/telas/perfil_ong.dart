@@ -1,33 +1,55 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote flutter/services: área de transferência (Clipboard).
 import 'package:flutter/services.dart';
+// Pacote latlong2: coordenadas (latitude e longitude) e cálculo de distâncias.
 import 'package:latlong2/latlong.dart';
+// Pacote provider: compartilha estado entre as telas e as reconstrói.
 import 'package:provider/provider.dart';
+// Pacote url_launcher: abre WhatsApp, telefone e links no navegador.
 import 'package:url_launcher/url_launcher.dart';
 
+// Arquivo estado_pata_amiga.dart: estado global com ONGs e animais.
 import '../estado/estado_pata_amiga.dart';
+// Arquivo animal.dart: modelo do animal e tipo do registro.
 import '../modelos/animal.dart';
+// Arquivo dono.dart: número do WhatsApp a partir do telefone.
 import '../modelos/dono.dart';
+// Arquivo ong.dart: modelo da ONG e dos seus membros.
 import '../modelos/ong.dart';
+// Arquivo usuario_provider.dart: dados do usuário logado.
 import '../provider/usuario_provider.dart';
+// Arquivo route_names.dart: nomes das rotas de navegação.
 import '../routes/route_names.dart';
+// Arquivo ong_service.dart: serviço da API das ONGs (remoção de membros).
 import '../services/ong_service.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo avatar_da_ong.dart: foto da ONG e iniciais de um nome.
 import '../widgets/avatar_da_ong.dart';
+// Arquivo escolha_de_tipo.dart: nome do tipo de registro no singular.
 import '../widgets/escolha_de_tipo.dart';
+// Arquivo etiqueta.dart: etiqueta arredondada do tipo do animal.
 import '../widgets/etiqueta.dart';
+// Arquivo foto_animal.dart: exibição da foto do animal.
 import '../widgets/foto_animal.dart';
+// Arquivo mapa_de_local.dart: prévia do mapa com a localização da ONG.
 import '../widgets/mapa_de_local.dart';
+// Arquivo mascaras.dart: formatação do telefone para exibição.
 import '../widgets/mascaras.dart';
 
-// O perfil público da ONG: quem ela é, como adotar, como falar com ela, como
-// doar e os animais que ela cadastrou. Quem administra a ONG vê também o "Editar"
+// Perfil público de uma ONG: identificação, descrição, contato pelo
+// WhatsApp, chave Pix, animais cadastrados por tipo, política de adoção e
+// localização. O responsável pela ONG vê também o botão de edição e a lista
+// de membros.
 class PerfilOng extends StatelessWidget {
   final Ong ong;
-  // Os testes passam um serviço de ONGs falso; o app usa o de verdade
+  // Serviço de ONGs; os testes injetam uma versão falsa
   final OngService? servico;
 
   const PerfilOng({super.key, required this.ong, this.servico});
 
+  // Abre uma conversa no WhatsApp com a ONG, com uma mensagem inicial
   Future<void> _chamarNoWhatsApp(BuildContext context, Ong ong) async {
     final mensageiro = ScaffoldMessenger.of(context);
     final numero = Dono(
@@ -52,6 +74,7 @@ class PerfilOng extends StatelessWidget {
     }
   }
 
+  // Copia a chave Pix para a área de transferência e confirma com um aviso
   Future<void> _copiarPix(BuildContext context, Ong ong) async {
     final mensageiro = ScaffoldMessenger.of(context);
     await Clipboard.setData(ClipboardData(text: ong.chavePix));
@@ -66,7 +89,7 @@ class PerfilOng extends StatelessWidget {
       );
   }
 
-  // O mapa do aparelho, com o ponto da ONG, para traçar o caminho até lá
+  // Abre a localização da ONG no app de mapas, para traçar a rota
   Future<void> _abrirNoMapa(Ong ong) => launchUrl(
     Uri.parse(
       'https://www.google.com/maps/search/?api=1'
@@ -78,7 +101,8 @@ class PerfilOng extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final estado = PataAmigaScope.of(context);
-    // A versão mais nova: o perfil pode ter sido editado depois de aberto
+    // Usa a versão do estado global, que reflete edições feitas depois que
+    // a tela foi aberta
     final atual = estado.ongs.firstWhere(
       (item) => item.id != null && item.id == ong.id,
       orElse: () => ong,
@@ -122,7 +146,7 @@ class PerfilOng extends StatelessWidget {
           ),
         ),
         actions: [
-          // Só quem administra a ONG muda os dados dela, como a chave Pix
+          // Edição disponível apenas para o responsável pela ONG
           if (atual.eDoResponsavel(email))
             IconButton(
               tooltip: 'Editar perfil da ONG',
@@ -139,8 +163,7 @@ class PerfilOng extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
-          // Quem é: o rosto, o nome e onde fica, abertos no fundo da tela,
-          // como o cabeçalho do "Meu perfil"
+          // Cabeçalho: foto, nome e endereço da ONG
           Row(
             children: [
               AvatarDaOng(ong: atual, raio: 38),
@@ -218,10 +241,9 @@ class PerfilOng extends StatelessWidget {
               aoCopiar: () => _copiarPix(context, atual),
             ),
           ],
-          // Os animais logo depois de quem é a ONG: é por eles que a maioria
-          // das pessoas abre o perfil
-          // Uma seção por tipo, na ordem adoção, resgate e perdidos; tipo
-          // sem animal não aparece
+          // Animais da ONG: uma seção por tipo (adoção, resgate e perdidos),
+          // só para os tipos com algum animal em aberto, e uma seção final
+          // para os já finalizados
           if (animais.isEmpty) ...[
             const SizedBox(height: 26),
             const _TituloDaSecao('Animais da ONG'),
@@ -252,7 +274,7 @@ class PerfilOng extends StatelessWidget {
             const SizedBox(height: 10),
             _CarrosselDeAnimais(animais: encerrados),
           ],
-          // Só quem administra a ONG vê os membros e pode remover
+          // Membros: visíveis apenas ao responsável, que pode removê-los
           if (atual.eDoResponsavel(email))
             _Cartao(
               icone: Icons.group_outlined,
@@ -284,8 +306,8 @@ class PerfilOng extends StatelessWidget {
   }
 }
 
-// A chave Pix numa faixa só, com o botão de copiar ao lado: o app só mostra
-// a chave, a doação é feita no banco de quem doa
+// Faixa com a chave Pix e o botão de copiar. O app não processa doações:
+// a pessoa cola a chave no app do próprio banco
 class _FaixaDoPix extends StatelessWidget {
   const _FaixaDoPix({required this.chave, required this.aoCopiar});
 
@@ -351,6 +373,7 @@ class _FaixaDoPix extends StatelessWidget {
   }
 }
 
+// Título de seção, com a quantidade de itens opcional ao lado
 class _TituloDaSecao extends StatelessWidget {
   const _TituloDaSecao(this.texto, {this.quantidade});
 
@@ -392,7 +415,7 @@ class _TituloDaSecao extends StatelessWidget {
   }
 }
 
-// Os animais num carrossel de cards, que rola para o lado
+// Carrossel horizontal de cartões de animais
 class _CarrosselDeAnimais extends StatelessWidget {
   const _CarrosselDeAnimais({required this.animais});
 
@@ -415,8 +438,8 @@ class _CarrosselDeAnimais extends StatelessWidget {
   }
 }
 
-// O card: a foto, o nome, o tipo com a situação e o bairro. O toque abre a
-// ficha do animal
+// Cartão de um animal no carrossel: foto, nome, tipo, situação e bairro.
+// Ao tocar, abre a ficha do animal
 class _CartaoDoAnimal extends StatelessWidget {
   const _CartaoDoAnimal({required this.animal});
 
@@ -439,8 +462,8 @@ class _CartaoDoAnimal extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // A foto fica com o que sobrar da altura do card, para o texto
-              // embaixo nunca estourar
+              // A foto ocupa a altura restante do cartão, garantindo espaço
+              // para o texto abaixo
               Expanded(
                 child: LayoutBuilder(
                   builder: (context, restricoes) => FotoAnimal(
@@ -508,6 +531,7 @@ class _CartaoDoAnimal extends StatelessWidget {
   }
 }
 
+// Seção em cartão, com ícone e título acima do conteúdo
 class _Cartao extends StatelessWidget {
   const _Cartao({
     required this.icone,
@@ -554,14 +578,15 @@ class _Cartao extends StatelessWidget {
   }
 }
 
-// Quem faz parte da ONG, para quem a administra: o nome, o telefone e o
-// remover. A admin aparece primeiro e não pode ser removida
+// Lista de membros da ONG, exibida ao responsável. O responsável aparece
+// primeiro e não pode ser removido; os demais têm o botão "Remover"
 class _PessoasDaOng extends StatelessWidget {
   const _PessoasDaOng({required this.ong, this.servico});
 
   final Ong ong;
   final OngService? servico;
 
+  // Pede confirmação, remove o membro na API e atualiza o estado global
   Future<void> _remover(BuildContext context, PessoaDaOng pessoa) async {
     final confirmou = await showModalBottomSheet<bool>(
       context: context,
@@ -636,6 +661,7 @@ class _PessoasDaOng extends StatelessWidget {
       ..showSnackBar(SnackBar(content: Text(aviso)));
   }
 
+  // Linha de uma pessoa: iniciais, nome, detalhe e uma ação opcional
   Widget _linha(
     BuildContext context,
     String nome,

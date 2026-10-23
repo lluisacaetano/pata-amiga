@@ -1,31 +1,40 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
 
+// Arquivo filtros_do_feed.dart: filtros do feed e as opções de cada grupo.
 import '../modelos/filtros_do_feed.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo bairros_formiga.dart: bairros de Formiga.
 import '../dados/bairros_formiga.dart';
+// Arquivo racas.dart: raças e a busca na lista.
 import '../dados/racas.dart';
+// Arquivo animal.dart: modelo do animal.
 import '../modelos/animal.dart';
+// Arquivo ong.dart: modelo da ONG e a comparação de nomes.
 import '../modelos/ong.dart';
+// Arquivo escolha_de_tipo.dart: estilo das abas.
 import 'escolha_de_tipo.dart';
+// Arquivo selecao_com_busca.dart: seleção com campo de busca.
 import 'selecao_com_busca.dart';
 
-// O painel que sobe de baixo com os filtros do feed, com o mesmo vocabulário
-// do cadastro: um cartão branco, abas para as escolhas curtas e os selects com
-// busca para raça e bairro. Marcar não muda o feed: ele só recarrega ao tocar
-// em "Mostrar", e o botão já diz quantos vão aparecer
-// A opção do rodapé da raça que desliga o filtro de raça
+// Opção do rodapé da raça que remove o filtro de raça
 const todasAsRacas = 'Todas as raças';
-// As opções do rodapé da ONG: marcar todas ou nenhuma de uma vez
+// Opções do rodapé da ONG para marcar todas ou nenhuma de uma vez
 const _todasAsOngs = 'Selecionar todas';
 const _nenhumaOng = 'Desmarcar todas';
 
+// Painel inferior com os filtros do feed. As escolhas ficam em rascunho e só
+// são aplicadas ao tocar no botão final, que devolve os filtros pelo
+// Navigator.pop e já mostra quantos animais vão aparecer
 class PainelDeFiltros extends StatefulWidget {
   final FiltrosDoFeed inicial;
-  // Os animais do feed: raças e bairros do filtro saem deles, para não
-  // oferecer uma opção que não devolve ninguém
+  // Animais do feed. As opções de raça, bairro e ONG saem deles, para não
+  // oferecer uma opção que não traga nenhum resultado
   final List<Animal> animais;
+  // Conta quantos animais combinam com os filtros, para o texto do botão
   final int Function(FiltrosDoFeed) contar;
-  // As ONGs, para o select mostrar o nome de cada uma
+  // ONGs cadastradas, para mostrar o nome no lugar do id
   final List<Ong> ongs;
 
   const PainelDeFiltros({
@@ -42,7 +51,8 @@ class PainelDeFiltros extends StatefulWidget {
 
 class _PainelDeFiltrosState extends State<PainelDeFiltros> {
   late FiltrosDoFeed _filtros = widget.inicial;
-  // Os campos de busca de raça e bairro; as escolhidas ficam nas etiquetas
+  // Textos digitados nas buscas de raça, bairro e ONG. As opções marcadas
+  // ficam em _filtros, não nos campos
   final _raca = TextEditingController();
   final _bairro = TextEditingController();
   final _ong = TextEditingController();
@@ -55,9 +65,9 @@ class _PainelDeFiltrosState extends State<PainelDeFiltros> {
     super.dispose();
   }
 
-  // Tocar numa raça marca ou desmarca; "Todas as raças" desmarca todas. As
-  // raças escolhidas marcam sozinhas as espécies delas, porque não existe
-  // Labrador gato; "Sem raça definida" serve às duas e não mexe na espécie
+  // Marca ou desmarca uma raça; "Todas as raças" limpa o grupo. Depois,
+  // ajusta a espécie para a das raças marcadas (uma raça pertence a uma só
+  // espécie). "Sem raça definida" vale para as duas e não altera a espécie
   void _alternarRaca(String? raca) {
     if (raca == null) return;
     setState(() {
@@ -81,8 +91,8 @@ class _PainelDeFiltrosState extends State<PainelDeFiltros> {
     setState(() => _filtros = _filtros.alternar(GrupoDeFiltro.bairro, bairro));
   }
 
-  // Só as ONGs que têm animais no feed, em ordem alfabética: escolher uma
-  // que não traz ninguém seria uma falsa esperança, como nas raças
+  // ONGs com pelo menos um animal no feed, em ordem alfabética. As demais
+  // ficam de fora porque não trariam nenhum resultado
   List<Ong> get _ongsDisponiveis {
     final comAnimais = opcoesDe(GrupoDeFiltro.ong, widget.animais).toSet();
     return widget.ongs.where((ong) => comAnimais.contains('${ong.id}')).toList()
@@ -92,7 +102,8 @@ class _PainelDeFiltrosState extends State<PainelDeFiltros> {
       );
   }
 
-  // O select mostra o nome; o filtro guarda o id
+  // Marca ou desmarca uma ONG pelo nome exibido, guardando o id no filtro.
+  // Também trata as opções de marcar todas e desmarcar todas
   void _alternarOng(String? escolha) {
     if (escolha == null) return;
     final disponiveis = _ongsDisponiveis;
@@ -111,7 +122,8 @@ class _PainelDeFiltrosState extends State<PainelDeFiltros> {
     });
   }
 
-  // Trocar a espécie apaga as raças que não são dela, como no cadastro
+  // Atualiza um grupo de abas. Ao trocar a espécie, remove as raças marcadas
+  // que não pertencem a ela
   void _mudarAba(GrupoDeFiltro grupo, Set<String> opcoes) {
     setState(() {
       _filtros = _filtros.comGrupo(grupo, opcoes);
@@ -124,6 +136,7 @@ class _PainelDeFiltrosState extends State<PainelDeFiltros> {
     });
   }
 
+  // Limpa todos os filtros e os textos das buscas
   void _limpar() {
     _raca.clear();
     _bairro.clear();
@@ -131,8 +144,8 @@ class _PainelDeFiltrosState extends State<PainelDeFiltros> {
     setState(() => _filtros = const FiltrosDoFeed());
   }
 
-  // As raças dos animais cadastrados, só da espécie marcada quando houver
-  // uma; "Sem raça definida" vai para o rodapé
+  // Raças presentes no feed, restritas às espécies marcadas quando houver.
+  // "Sem raça definida" aparece no rodapé da seleção
   List<String> get _racas {
     final especies = _filtros.de(GrupoDeFiltro.especie);
     return opcoesDe(GrupoDeFiltro.raca, [
@@ -313,7 +326,7 @@ class _PainelDeFiltrosState extends State<PainelDeFiltros> {
   }
 }
 
-// O mesmo cartão do cadastro: branco, borda clara e canto de 16
+// Cartão que agrupa os filtros, no mesmo estilo do cartão do cadastro
 class _Cartao extends StatelessWidget {
   const _Cartao({required this.children});
 
@@ -338,7 +351,7 @@ class _Cartao extends StatelessWidget {
   }
 }
 
-// O rótulo pequeno em cima de cada escolha, como no cadastro
+// Rótulo pequeno exibido acima de cada grupo de filtro
 class _Rotulo extends StatelessWidget {
   const _Rotulo(this.texto);
 
@@ -356,8 +369,8 @@ class _Rotulo extends StatelessWidget {
   );
 }
 
-// As escolhas curtas (espécie, porte, sexo) nas abas do feed, aqui deixando
-// marcar mais de uma ou nenhuma
+// Abas para os grupos curtos (espécie, porte, sexo e saúde). Permitem marcar
+// várias opções ou nenhuma
 class _Abas extends StatelessWidget {
   const _Abas({
     required this.opcoes,

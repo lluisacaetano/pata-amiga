@@ -1,9 +1,10 @@
+// Arquivo animal.dart: modelo do animal e o tipo do registro.
 import '../modelos/animal.dart';
+// Arquivo donos_mock.dart: responsáveis de exemplo.
 import 'donos_mock.dart';
 
-// Dados de exemplo usados enquanto o aplicativo não conversa com a API.
-// As datas são contadas a partir de agora, e não fixas, para o feed não
-// parecer parado no dia em que alguém abrir o aplicativo.
+// Animais de exemplo, usados pelos testes. As datas são relativas ao momento
+// atual, para os textos de tempo ("hoje", "há 2 dias") se manterem estáveis
 final DateTime _agora = DateTime.now();
 DateTime _haDias(int dias) => _agora.subtract(Duration(days: dias));
 

@@ -1,11 +1,19 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote flutter/services: formatação de teclado (TextInputFormatter).
 import 'package:flutter/services.dart';
 
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../../tema/cores.dart';
 
+// Componentes visuais comuns às telas de entrada (boas-vindas, login,
+// cadastro, recuperação de senha e recepção)
+
+// Fundo em degradê das telas de entrada, com o conteúdo centralizado,
+// rolável e limitado a 420 de largura. Adapta as cores ao tema escuro
 class AuthBackground extends StatelessWidget {
   final Widget child;
-  // A mesma seta de voltar do cadastro do animal, no canto de cima
+  // Mostra a seta de voltar no canto superior esquerdo
   final bool comVoltar;
 
   const AuthBackground({
@@ -66,6 +74,7 @@ class AuthBackground extends StatelessWidget {
   }
 }
 
+// A patinha da marca, usada como logotipo nas telas de entrada
 class AuthBrandMark extends StatelessWidget {
   final double size;
 
@@ -83,6 +92,8 @@ class AuthBrandMark extends StatelessWidget {
   }
 }
 
+// Campo de formulário das telas de entrada: rótulo acima, ícone à esquerda
+// e, opcionalmente, um botão à direita (como o de mostrar a senha)
 class AuthField extends StatelessWidget {
   final String label;
   final String hint;
@@ -169,6 +180,8 @@ class AuthField extends StatelessWidget {
   }
 }
 
+// Botão de largura total das telas de entrada. O principal é preenchido de
+// verde; o secundário é contornado. [leading] aparece antes do rótulo
 class AuthButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
@@ -242,6 +255,8 @@ class AuthButton extends StatelessWidget {
   }
 }
 
+// A palavra "Google" nas cores da marca, usada no botão de entrar com o
+// Google
 class GoogleWordmark extends StatelessWidget {
   const GoogleWordmark({super.key});
 

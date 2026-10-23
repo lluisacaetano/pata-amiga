@@ -1,30 +1,53 @@
+// Biblioteca dart:async: tempo limite das buscas de endereço.
 import 'dart:async';
+// Biblioteca dart:io: arquivo da foto escolhida na galeria.
 import 'dart:io';
 
+// Pacote flutter/foundation: detecção da versão web (kIsWeb).
 import 'package:flutter/foundation.dart';
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote flutter_map: mapa interativo com os blocos do OpenStreetMap.
 import 'package:flutter_map/flutter_map.dart';
+// Pacote geocoding: converte coordenadas em endereço e endereço em coordenadas.
 import 'package:geocoding/geocoding.dart';
+// Pacote geolocator: lê a localização atual do aparelho e pede a permissão.
 import 'package:geolocator/geolocator.dart';
+// Pacote image_picker: abre a câmera ou a galeria para escolher fotos.
 import 'package:image_picker/image_picker.dart';
+// Pacote latlong2: coordenadas (latitude e longitude) e cálculo de distâncias.
 import 'package:latlong2/latlong.dart';
+// Pacote provider: compartilha estado entre as telas e as reconstrói.
 import 'package:provider/provider.dart';
 
+// Arquivo bairros_formiga.dart: bairro informado pelo geocoder.
 import '../dados/bairros_formiga.dart';
+// Arquivo estado_pata_amiga.dart: avistamentos já registrados.
 import '../estado/estado_pata_amiga.dart';
+// Arquivo animal.dart: modelo do animal.
 import '../modelos/animal.dart';
+// Arquivo avistamento.dart: modelo do avistamento e o último registro.
 import '../modelos/avistamento.dart';
+// Arquivo usuario_provider.dart: nome de quem registra.
 import '../provider/usuario_provider.dart';
+// Arquivo avistamento_service.dart: gravação do avistamento na API.
 import '../services/avistamento_service.dart';
+// Arquivo bairro_service.dart: consulta de bairro no ViaCEP.
 import '../services/bairro_service.dart';
+// Arquivo foto_animal.dart: foto do animal no cabeçalho.
 import '../widgets/foto_animal.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo mapa_de_local.dart: mapa com pino e centro de Formiga.
 import '../widgets/mapa_de_local.dart';
 
-// Quem viu um animal perdido conta quando e onde, e pode mandar uma foto.
-// Devolve o avistamento gravado para a ficha, que oferece avisar o tutor
+// Formulário para registrar que um animal perdido foi visto: data, local no
+// mapa e foto opcional. Ao gravar, devolve o avistamento à ficha do animal,
+// que oferece avisar o responsável
 class RegistrarAvistamento extends StatefulWidget {
+  // Animal que foi visto
   final Animal animal;
+  // Serviço opcional, para os testes injetarem uma versão falsa
   final AvistamentoService? servico;
 
   const RegistrarAvistamento({super.key, required this.animal, this.servico});
@@ -45,11 +68,12 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
   bool _buscandoPosicao = false;
   bool _salvando = false;
   XFile? _foto;
-  // Quem prefere escrever o endereço: a busca leva o mapa até lá
+  // Campo de busca por endereço, que move o mapa até o local digitado
   final _busca = TextEditingController();
   bool _buscandoNoMapa = false;
   String? _avisoDaBusca;
 
+  // Data de hoje sem a hora, para comparar dias
   static DateTime _hoje() {
     final agora = DateTime.now();
     return DateTime(agora.year, agora.month, agora.day);
@@ -58,7 +82,8 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
   @override
   void initState() {
     super.initState();
-    // O mapa abre onde o animal foi visto por último, ou onde foi cadastrado
+    // O mapa abre no último avistamento; sem ele, no local do cadastro do
+    // animal; sem os dois, no centro de Formiga
     final ultimo = ultimoAvistamento(
       widget.animal,
       PataAmigaScope.talvez(context)?.avistamentos ?? const [],
@@ -78,8 +103,8 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
     super.dispose();
   }
 
-  // Leva o mapa até o endereço digitado. O ponto salvo continua sendo o do
-  // pino, então a pessoa vê onde o endereço caiu e ainda pode arrastar
+  // Move o mapa até o endereço digitado. O ponto gravado é sempre o do
+  // pino, que o usuário ainda pode ajustar arrastando o mapa
   Future<void> _buscarNoMapa() async {
     final texto = _busca.text.trim();
     if (texto.isEmpty || _buscandoNoMapa) return;
@@ -112,7 +137,8 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
     });
   }
 
-  // O endereço do ponto do pino, para a pessoa conferir onde marcou
+  // Converte o ponto do pino em rua e bairro, para o usuário conferir e para
+  // preencher o campo de busca
   Future<void> _lerEndereco() async {
     setState(() => _buscandoEndereco = true);
     final ponto = _ponto;
@@ -125,7 +151,8 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
         final lugar = lugares.first;
         final rua = lugar.thoroughfare?.trim() ?? '';
         var bairro = bairroDoServico(lugar.subLocality, lugar.locality);
-        // Sem bairro do Android, o ViaCEP completa pelo CEP ou pela rua
+        // Quando o geocoder não informa o bairro, consulta o ViaCEP pelo CEP
+        // ou pela rua
         if (bairro.isEmpty) {
           final servico = BairroService();
           bairro =
@@ -138,12 +165,12 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
     } on Exception {
       lido = null;
     }
-    // Se o pino mudou enquanto buscava, este endereço já não vale
+    // Descarta o resultado se o pino mudou durante a busca
     if (!mounted || ponto != _ponto) return;
     setState(() {
       _endereco = lido;
       _buscandoEndereco = false;
-      // O campo de busca acompanha o pino: mexeu no mapa, o endereço aparece
+      // O campo de busca passa a mostrar o endereço do pino
       final lugar = [
         lido?.rua ?? '',
         lido?.bairro ?? '',
@@ -152,6 +179,8 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
     });
   }
 
+  // Move o pino para a localização atual do aparelho, pedindo permissão
+  // quando necessário
   Future<void> _irParaMinhaPosicao() async {
     if (_buscandoPosicao) return;
     setState(() => _buscandoPosicao = true);
@@ -185,11 +214,12 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
     }
   }
 
+  // Abre o calendário para escolher o dia do avistamento
   Future<void> _escolherData() async {
     final escolhida = await showDatePicker(
       context: context,
       initialDate: _data,
-      // Não dá para ter visto antes de o animal sumir, nem no futuro
+      // Intervalo válido: da publicação do animal até hoje
       firstDate: DateTime(
         widget.animal.publicadoEm.year,
         widget.animal.publicadoEm.month,
@@ -201,6 +231,7 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
     if (escolhida != null) setState(() => _data = escolhida);
   }
 
+  // Abre a galeria para anexar uma foto opcional
   Future<void> _escolherFoto() async {
     try {
       final foto = await _seletorDeFoto.pickImage(source: ImageSource.gallery);
@@ -210,9 +241,11 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
     }
   }
 
+  // Valida o endereço e grava o avistamento na API
   Future<void> _registrar() async {
     if (_salvando) return;
-    // O endereço é obrigatório: é ele que diz ao tutor onde procurar
+    // Rua e bairro são obrigatórios, pois indicam ao responsável onde
+    // procurar
     final endereco = _endereco;
     if (endereco == null ||
         endereco.rua.trim().isEmpty ||
@@ -247,6 +280,7 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
     }
   }
 
+  // Mostra uma mensagem curta no rodapé, substituindo a anterior
   void _avisar(String mensagem) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
@@ -254,6 +288,7 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
       ..showSnackBar(SnackBar(content: Text(mensagem)));
   }
 
+  // Data escolhida no formato dd/mm/aaaa, com "Hoje" ou "Ontem" quando couber
   String get _textoDaData {
     String dois(int numero) => numero.toString().padLeft(2, '0');
     final data = '${dois(_data.day)}/${dois(_data.month)}/${_data.year}';
@@ -493,7 +528,7 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
   }
 }
 
-// Quem está sendo procurado: a foto e o nome, com o convite para registrar
+// Cabeçalho com a foto e o nome do animal procurado
 class _CabecalhoDoAnimal extends StatelessWidget {
   const _CabecalhoDoAnimal({required this.animal});
 
@@ -549,6 +584,7 @@ class _CabecalhoDoAnimal extends StatelessWidget {
   }
 }
 
+// Linha que mostra o endereço do pino ou o andamento da busca
 class _EnderecoDoPino extends StatelessWidget {
   const _EnderecoDoPino({required this.buscando, required this.endereco});
 
@@ -589,7 +625,7 @@ class _EnderecoDoPino extends StatelessWidget {
   }
 }
 
-// O mesmo cartão do cadastro de animal: branco, borda clara e título verde
+// Cartão de seção do formulário, com ícone e título
 class _Cartao extends StatelessWidget {
   const _Cartao({
     required this.icone,

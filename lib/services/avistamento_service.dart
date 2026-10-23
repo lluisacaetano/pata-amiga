@@ -1,11 +1,17 @@
+// Biblioteca dart:convert: converte texto JSON em objetos e vice-versa.
 import 'dart:convert';
 
+// Pacote http: faz as requisições à API (GET, POST, PATCH, DELETE).
 import 'package:http/http.dart' as http;
 
+// Arquivo avistamento.dart: modelo do avistamento.
 import '../modelos/avistamento.dart';
+// Arquivo endereco_da_api.dart: endereço base da API.
 import 'endereco_da_api.dart';
 
+// Leitura e gravação dos avistamentos de animais perdidos na API
 class AvistamentoService {
+  // Todos os avistamentos registrados
   Future<List<Avistamento>> buscarTodos() async {
     final resposta = await http
         .get(Uri.parse('$enderecoDaApi/avistamentos'))
@@ -19,7 +25,7 @@ class AvistamentoService {
         .toList();
   }
 
-  // Devolve o avistamento como a API gravou, já com o id
+  // Grava um avistamento e o devolve como a API gravou, já com o id
   Future<Avistamento> registrar(Avistamento avistamento) async {
     final resposta = await http
         .post(

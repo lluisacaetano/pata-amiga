@@ -1,7 +1,9 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
 
-// O osso de comida de pet, desenhado à mão: o Material não tem um. No ponto
-// que é comedouro e bebedouro ao mesmo tempo, leva uma gotinha d'água junto
+// Ícone de osso desenhado com CustomPaint, já que o Material Icons não tem
+// um equivalente. Marca pontos de alimentação no mapa; com [comAgua], ganha
+// uma gota para indicar comedouro e bebedouro no mesmo ponto
 class IconeDeOsso extends StatelessWidget {
   final bool comAgua;
   final double tamanho;
@@ -24,6 +26,7 @@ class IconeDeOsso extends StatelessWidget {
   }
 }
 
+// Desenha o osso inclinado e, se pedido, a gota no canto inferior direito
 class _Osso extends CustomPainter {
   _Osso({required this.cor, required this.comAgua});
 
@@ -37,7 +40,7 @@ class _Osso extends CustomPainter {
     final tinta = Paint()..color = cor;
 
     canvas.save();
-    // O osso inclinado, como costuma aparecer nos desenhos de pet
+    // Gira o canvas em torno do centro para inclinar o osso
     canvas.translate(w / 2, h / 2);
     canvas.rotate(-0.6);
     final comprimento = w * (comAgua ? 0.62 : 0.78);
@@ -55,6 +58,7 @@ class _Osso extends CustomPainter {
       ),
       tinta,
     );
+    // Duas bolinhas em cada ponta formam as cabeças do osso
     for (final x in [-metade, metade]) {
       for (final y in [-cabeca * 0.85, cabeca * 0.85]) {
         canvas.drawCircle(Offset(x, y), cabeca, tinta);
@@ -63,7 +67,7 @@ class _Osso extends CustomPainter {
     canvas.restore();
 
     if (comAgua) {
-      // A gotinha no canto de baixo
+      // Gota d'água desenhada com duas curvas de Bézier
       final gota = Path()
         ..moveTo(w * 0.80, h * 0.56)
         ..quadraticBezierTo(w * 0.98, h * 0.80, w * 0.80, h * 0.96)

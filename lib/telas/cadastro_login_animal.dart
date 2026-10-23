@@ -1,9 +1,16 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
 
+// Arquivo animal.dart: modelo do animal e o tipo do registro.
 import '../modelos/animal.dart';
+// Arquivo dono.dart: modelo do contato responsável pelo animal.
 import '../modelos/dono.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
 
+// Formulário simplificado de cadastro de animal, usado apenas pelo ponto de
+// entrada lib/main_cadastro.dart. Devolve o Animal criado ao fechar a tela.
+// O cadastro completo do app fica em cadastro_animal.dart
 class CadastroAnimal extends StatefulWidget {
   const CadastroAnimal({super.key});
 
@@ -24,6 +31,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
 
   TipoRegistro _tipo = TipoRegistro.adocao;
 
+  // Valida o formulário e fecha a tela devolvendo o animal preenchido
   void _cadastrar() {
     if (!_formKey.currentState!.validate()) return;
 
@@ -128,6 +136,8 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     );
   }
 
+  // Campo de texto do formulário. [obrigatorio] exige preenchimento e
+  // [validarTelefone] exige 10 ou 11 dígitos (DDD e número)
   Widget _campo(
     String rotulo,
     TextEditingController controller, {
@@ -175,10 +185,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
   }
 }
 
-// ============================================
-// CUSTOM PAINTERS
-// ============================================
-
+// Desenha uma pata simples: um círculo central e quatro dedos ao redor
 class PawPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
@@ -189,10 +196,10 @@ class PawPainter extends CustomPainter {
     final centerX = size.width / 2;
     final centerY = size.height / 2;
 
-    // Centro
+    // Almofada central
     canvas.drawCircle(Offset(centerX, centerY), 6, paint);
 
-    // Dedos
+    // Quatro dedos, acima, abaixo e dos lados da almofada
     final fingerRadius = 3.5;
     final fingerDistance = 10.0;
 

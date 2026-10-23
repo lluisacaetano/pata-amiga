@@ -1,11 +1,14 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
 
+// Arquivo cadastro_animal.dart: tela de cadastro de animal.
 import 'telas/cadastro_animal.dart';
+// Arquivo cores.dart: tema claro do app.
 import 'tema/cores.dart';
 
-// Entrada temporária, só para abrir a tela de cadastro no emulador enquanto ela não está ligada ao feed
-// Rodar com: flutter run -t lib/main_cadastro.dart
-// APAGAR quando o botão de "+" do feed virar o caminho de entrada
+// Ponto de entrada alternativo: abre direto a tela de cadastro de animal, sem
+// login, feed nem estado compartilhado. Serve para testar o formulário
+// isoladamente. Uso: flutter run -t lib/main_cadastro.dart
 void main() {
   runApp(
     MaterialApp(

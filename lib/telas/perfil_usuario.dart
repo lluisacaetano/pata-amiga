@@ -1,31 +1,52 @@
+// Biblioteca dart:io: acesso a arquivos do aparelho, como a foto de perfil.
 import 'dart:io';
 
+// Pacote flutter/foundation: kIsWeb, para carregar a foto na web.
 import 'package:flutter/foundation.dart';
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote provider: compartilha estado entre as telas e as reconstrói.
 import 'package:provider/provider.dart';
 
+// Arquivo estado_pata_amiga.dart: estado compartilhado do app.
 import '../estado/estado_pata_amiga.dart';
+// Arquivo animal.dart: modelo do animal, tipo e status do registro.
 import '../modelos/animal.dart';
+// Arquivo usuario.dart: modelo do usuário.
 import '../modelos/usuario.dart';
+// Arquivo usuario_provider.dart: sessão e perfil da pessoa logada.
 import '../provider/usuario_provider.dart';
+// Arquivo route_names.dart: nomes das rotas de navegação.
 import '../routes/route_names.dart';
+// Arquivo animal_service.dart: serviço de animais da API.
 import '../services/animal_service.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo acoes_do_registro.dart: ações sobre um registro de animal.
 import '../widgets/acoes_do_registro.dart';
+// Arquivo barra_inferior.dart: barra de navegação inferior.
 import '../widgets/barra_inferior.dart';
+// Arquivo vinculo_com_ong.dart: vínculo da pessoa com a ONG.
 import '../widgets/vinculo_com_ong.dart';
+// Arquivo escolha_de_tipo.dart: nome do tipo no singular e estilo das abas.
 import '../widgets/escolha_de_tipo.dart';
+// Arquivo etiqueta.dart: etiqueta de tipo e status.
 import '../widgets/etiqueta.dart';
+// Arquivo foto_animal.dart: foto do animal.
 import '../widgets/foto_animal.dart';
+// Arquivo mascaras.dart: formatação do telefone.
 import '../widgets/mascaras.dart';
+// Arquivo sino_de_notificacoes.dart: sino de notificações da conta.
 import '../widgets/sino_de_notificacoes.dart';
 
+// Abas do perfil
 enum _SecaoPerfil { curtidos, meusCadastros }
 
+// Itens do menu de três pontos da barra superior
 enum _OpcaoDoMenu { denuncias, aparencia, acessibilidade, sair }
 
-// Os grupos de "Meus registros", na ordem em que aparecem: primeiro o que
-// ainda precisa de alguém, depois cada desfecho
+// Grupos de "Meus registros", na ordem de exibição: primeiro os que ainda
+// estão em aberto, depois cada desfecho
 const _gruposDeRegistro = [
   (titulo: 'Em aberto', status: StatusAnimal.disponivel),
   (titulo: 'Adotados', status: StatusAnimal.adotado),
@@ -33,8 +54,10 @@ const _gruposDeRegistro = [
   (titulo: 'Encontrados', status: StatusAnimal.encontrado),
 ];
 
+// Perfil da pessoa logada: dados de contato, vínculo com ONG, notificações,
+// curtidos e os animais que ela registrou, agrupados por status
 class PerfilUsuario extends StatefulWidget {
-  // Os testes passam uma API falsa; o app usa a de verdade
+  // Serviço injetável para os testes; sem ele, usa o AnimalService padrão
   final AnimalService? api;
 
   const PerfilUsuario({super.key, this.api});
@@ -44,11 +67,11 @@ class PerfilUsuario extends StatefulWidget {
 }
 
 class _PerfilUsuarioState extends State<PerfilUsuario> {
-  // Abre nos curtidos, que é a lista que a pessoa mais volta para consultar
+  // Abre na aba de curtidos, a mais consultada
   _SecaoPerfil _secao = _SecaoPerfil.curtidos;
 
-  // O feed é sempre a primeira tela depois do login. Voltar só uma tela
-  // levaria ao mapa quando o perfil foi aberto por ele
+  // Volta até a primeira rota da pilha, que é sempre o feed depois do login.
+  // Um pop simples poderia cair no mapa, se o perfil foi aberto por ele
   void _voltarAoFeed() {
     Navigator.of(context).popUntil((rota) => rota.isFirst);
   }
@@ -57,8 +80,8 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
     Navigator.pushNamed(context, AppRoutes.details, arguments: animal);
   }
 
-  // Tira dos curtidos e deixa desfazer, porque o coração fica fácil de tocar
-  // sem querer em cima da foto
+  // Remove dos curtidos e oferece "Desfazer", porque o coração sobre a foto
+  // é fácil de tocar sem querer
   Future<void> _removerCurtida(EstadoPataAmiga estado, Animal animal) async {
     await estado.removerCurtida(animal.nome);
     if (!mounted) return;
@@ -75,8 +98,8 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
       );
   }
 
-  // Um grupo de "Meus registros": o título com quantos são e as linhas.
-  // Grupo vazio não aparece
+  // Um grupo de "Meus registros": título com a quantidade e a grade de
+  // cards. Grupo vazio não é exibido
   List<Widget> _grupo(
     String titulo,
     List<Animal> animais,
@@ -86,7 +109,7 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
     if (animais.isEmpty) return const [];
     return [
       _TituloDoGrupo(titulo: titulo, quantidade: animais.length),
-      // Os registros em cards de duas colunas, como os curtidos
+      // Grade de duas colunas, como a dos curtidos
       GridView.count(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
@@ -101,7 +124,8 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
               animal: animal,
               aoAbrir: () => _abrirDetalhes(animal),
               ong: estado.ongDe(email)?.nome,
-              // Num aparelho dividido, os cadastros de outra conta só abrem
+              // Sem permissão para alterar (por exemplo, cadastro feito por
+              // outra conta no mesmo aparelho), o card só abre a ficha
               aoEscolher: estado.podeMudarStatus(animal, email)
                   ? (acao) => _agir(acao, animal)
                   : null,
@@ -111,6 +135,7 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
     ];
   }
 
+  // Executa a ação escolhida no menu do card
   Future<void> _agir(_AcaoDoRegistro acao, Animal animal) => switch (acao) {
     _AcaoDoRegistro.editar => editarRegistro(context, animal, api: widget.api),
     _AcaoDoRegistro.mudarStatus => mudarStatus(
@@ -126,7 +151,8 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
     ),
   };
 
-  // A ONG é buscada na hora: a pessoa pode ter saído dela com o menu aberto
+  // Busca a ONG no momento da ação, porque a pessoa pode ter saído dela
+  // enquanto o menu estava aberto
   Future<void> _transferir(Animal animal) async {
     final email = context.read<UsuarioProvider>().usuario.email;
     final ong = PataAmigaScope.of(context).ongDe(email);
@@ -141,6 +167,7 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
     await enviarParaOng(context, animal, ong, api: widget.api);
   }
 
+  // Item do menu com ícone e texto; a cor opcional destaca "Sair da conta"
   PopupMenuItem<_OpcaoDoMenu> _itemDoMenu(
     _OpcaoDoMenu opcao,
     IconData icone,
@@ -162,6 +189,7 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
     ),
   );
 
+  // Encerra a sessão e volta para as boas-vindas, limpando a pilha de telas
   Future<void> _sair() async {
     await context.read<UsuarioProvider>().encerrarSessao();
     if (!mounted) return;
@@ -200,10 +228,11 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
           ),
         ),
         actions: [
-          // Quem administra uma ONG recebe aqui os pedidos para entrar nela
+          // Notificações da conta, como os pedidos de entrada na ONG que a
+          // pessoa administra
           SinoDeNotificacoes(email: usuario.email),
-          // Aparência, acessibilidade e sair ficam num menu só, no canto,
-          // em vez de ocupar o meio do perfil
+          // Denúncias, aparência, acessibilidade e sair ficam num menu só,
+          // para não ocupar o corpo do perfil
           PopupMenuButton<_OpcaoDoMenu>(
             tooltip: 'Mais opções',
             icon: Icon(Icons.more_vert, color: context.cores.principal),
@@ -301,8 +330,8 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Quem entrou numa ONG descobre que pode levar os
-                      // animais disponíveis para ela
+                      // Para quem faz parte de uma ONG, uma dica de que os
+                      // registros podem ser transferidos para ela
                       if (estado.ongDe(usuario.email) case final ong?
                           when cadastros.isNotEmpty)
                         _DicaDaOng(ong: ong.nome),
@@ -325,6 +354,7 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
   }
 }
 
+// Topo do perfil: foto, nome, contato, vínculo com ONG e o botão de editar
 class _Cabecalho extends StatelessWidget {
   const _Cabecalho({
     required this.usuario,
@@ -334,7 +364,7 @@ class _Cabecalho extends StatelessWidget {
 
   final Usuario usuario;
   final VoidCallback aoEditar;
-  // A ONG de que a pessoa faz parte, embaixo do contato
+  // Vínculo com ONG exibido abaixo do contato, quando houver
   final Widget? vinculo;
 
   @override
@@ -405,6 +435,7 @@ class _Cabecalho extends StatelessWidget {
   }
 }
 
+// Foto de perfil salva no aparelho (ou URL, na web); sem foto, um ícone
 class _Avatar extends StatelessWidget {
   const _Avatar({required this.caminho});
 
@@ -418,7 +449,7 @@ class _Avatar extends StatelessWidget {
         : kIsWeb
         ? NetworkImage(foto)
         : FileImage(File(foto));
-    // O anel claro destaca a foto do fundo da tela
+    // O anel claro separa a foto do fundo da tela
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
@@ -437,6 +468,7 @@ class _Avatar extends StatelessWidget {
   }
 }
 
+// Linha de contato com ícone, cortada em uma linha
 class _Contato extends StatelessWidget {
   const _Contato({required this.icone, required this.texto});
 
@@ -462,7 +494,7 @@ class _Contato extends StatelessWidget {
   }
 }
 
-// As mesmas abas do feed, com o mesmo estilo, para a pessoa reconhecer o gesto
+// Alternância entre as abas, com o mesmo estilo das abas do feed
 class _SeletorDeSecao extends StatelessWidget {
   const _SeletorDeSecao({required this.secao, required this.aoEscolher});
 
@@ -490,8 +522,8 @@ class _SeletorDeSecao extends StatelessWidget {
   }
 }
 
-// Os curtidos em grade de fotos, como a pessoa os viu no feed: é pela foto
-// que ela reconhece o animal que tinha guardado
+// Curtidos em grade com foto em destaque, já que é pela foto que a pessoa
+// reconhece o animal que guardou
 class _GradeDeCurtidos extends StatelessWidget {
   const _GradeDeCurtidos({
     required this.animais,
@@ -527,6 +559,7 @@ class _GradeDeCurtidos extends StatelessWidget {
   }
 }
 
+// Card de um curtido: foto com o botão de remover, nome, tipo, status e local
 class _CartaoCurtido extends StatelessWidget {
   const _CartaoCurtido({
     required this.animal,
@@ -546,8 +579,8 @@ class _CartaoCurtido extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // A foto fica com o que sobrar da altura do card, para o texto
-          // embaixo nunca estourar
+          // A foto ocupa a altura que sobra no card, para o texto abaixo
+          // nunca estourar
           Expanded(
             child: LayoutBuilder(
               builder: (context, restricoes) => Stack(
@@ -609,10 +642,10 @@ class _CartaoCurtido extends StatelessWidget {
   }
 }
 
-// O que se faz com um registro pelo menu do card
+// Ações disponíveis no menu do card de um registro
 enum _AcaoDoRegistro { editar, mudarStatus, publicar, enviarParaOng }
 
-// O nome do grupo e quantos registros ele tem, acima das linhas
+// Nome do grupo e a quantidade de registros, acima da grade
 class _TituloDoGrupo extends StatelessWidget {
   const _TituloDoGrupo({required this.titulo, required this.quantidade});
 
@@ -644,6 +677,8 @@ class _TituloDoGrupo extends StatelessWidget {
   }
 }
 
+// Card de um registro próprio: foto com o menu de ações, nome, tipo, status,
+// local e há quanto tempo foi publicado
 class _CartaoDeRegistro extends StatelessWidget {
   const _CartaoDeRegistro({
     required this.animal,
@@ -654,9 +689,9 @@ class _CartaoDeRegistro extends StatelessWidget {
 
   final Animal animal;
   final VoidCallback aoAbrir;
-  // A ONG de que a pessoa faz parte: o animal disponível pode ir para ela
+  // Nome da ONG da pessoa; quando presente, o menu oferece a transferência
   final String? ong;
-  // Sem ação, a linha só abre a ficha
+  // Sem callback, o card não mostra o menu e só abre a ficha
   final ValueChanged<_AcaoDoRegistro>? aoEscolher;
 
   @override
@@ -667,8 +702,8 @@ class _CartaoDeRegistro extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // A foto fica com o que sobrar da altura do card, como nos
-          // curtidos; as opções ficam no círculo branco do canto
+          // A foto ocupa a altura que sobra, como nos curtidos; o menu de
+          // ações fica no botão redondo do canto
           Expanded(
             child: LayoutBuilder(
               builder: (context, restricoes) => Stack(
@@ -768,7 +803,8 @@ class _CartaoDeRegistro extends StatelessWidget {
   }
 }
 
-// Mesma moldura do card do feed: branco, borda clara e canto de 16
+// Moldura tocável igual à do card do feed: cor de cartão do tema, borda
+// clara e canto arredondado de 16
 class _CartaoDoFeed extends StatelessWidget {
   const _CartaoDoFeed({
     required this.child,
@@ -797,7 +833,7 @@ class _CartaoDoFeed extends StatelessWidget {
   }
 }
 
-// O lugar em verde com o alfinete, como no card do feed
+// Bairro e cidade na cor principal, com o ícone de local, como no feed
 class _Lugar extends StatelessWidget {
   const _Lugar({required this.animal});
 
@@ -830,7 +866,8 @@ class _Lugar extends StatelessWidget {
   }
 }
 
-// Lista vazia aponta o caminho: o feed é onde se curte e de onde se cadastra
+// Estado vazio de uma aba, com o atalho para o feed, onde se curte e de
+// onde se cadastra
 class _ListaVazia extends StatelessWidget {
   const _ListaVazia({
     required this.icone,
@@ -890,6 +927,7 @@ class _ListaVazia extends StatelessWidget {
   }
 }
 
+// Aviso de que os registros podem ser transferidos para a ONG da pessoa
 class _DicaDaOng extends StatelessWidget {
   const _DicaDaOng({required this.ong});
 

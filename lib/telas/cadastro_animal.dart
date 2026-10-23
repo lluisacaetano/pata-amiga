@@ -1,54 +1,86 @@
+// Biblioteca dart:async: prazo das consultas de endereço (TimeoutException).
 import 'dart:async';
 
+// Pacote flutter/foundation: kIsWeb, defaultTargetPlatform e Uint8List.
 import 'package:flutter/foundation.dart';
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote flutter/services: TextInputFormatter e PlatformException.
 import 'package:flutter/services.dart';
+// Pacote geocoding: converte coordenadas em endereço e endereço em coordenadas.
 import 'package:geocoding/geocoding.dart';
+// Pacote geolocator: lê a localização atual do aparelho e pede a permissão.
 import 'package:geolocator/geolocator.dart';
+// Pacote flutter_map: mapa interativo com os blocos do OpenStreetMap.
 import 'package:flutter_map/flutter_map.dart';
+// Pacote image_picker: abre a câmera ou a galeria para escolher fotos.
 import 'package:image_picker/image_picker.dart';
+// Pacote latlong2: coordenadas (latitude e longitude) e cálculo de distâncias.
 import 'package:latlong2/latlong.dart';
+// Pacote provider: compartilha estado entre as telas e as reconstrói.
 import 'package:provider/provider.dart';
 
+// Arquivo bairros_formiga.dart: bairros de Formiga e comparação de nomes.
 import '../dados/bairros_formiga.dart';
+// Arquivo racas.dart: listas de raças por espécie.
 import '../dados/racas.dart';
+// Arquivo estado_pata_amiga.dart: estado compartilhado do app.
 import '../estado/estado_pata_amiga.dart';
+// Arquivo animal.dart: modelo do animal e o tipo do registro.
 import '../modelos/animal.dart';
+// Arquivo dono.dart: contato do responsável pelo animal.
 import '../modelos/dono.dart';
+// Arquivo ong.dart: modelo da ONG.
 import '../modelos/ong.dart';
+// Arquivo usuario_provider.dart: dados do usuário logado.
 import '../provider/usuario_provider.dart';
+// Arquivo animal_service.dart: gravação do animal na API.
 import '../services/animal_service.dart';
+// Arquivo bairro_service.dart: consulta do bairro pelo ViaCEP.
 import '../services/bairro_service.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo proteger_alteracoes.dart: confirma a saída sem salvar.
 import '../widgets/proteger_alteracoes.dart';
+// Arquivo barra_inferior.dart: barra de navegação inferior.
 import '../widgets/barra_inferior.dart';
+// Arquivo cuidado.dart: selo de cuidado (castrado, vacinado, vermifugado).
 import '../widgets/cuidado.dart';
+// Arquivo escolha_de_tipo.dart: seletor do tipo de registro e estilo das abas.
 import '../widgets/escolha_de_tipo.dart';
+// Arquivo foto_animal.dart: exibição da foto do animal.
 import '../widgets/foto_animal.dart';
+// Arquivo mapa_de_local.dart: mapa com pino central e o centro de Formiga.
 import '../widgets/mapa_de_local.dart';
+// Arquivo mascaras.dart: máscara e formatação de telefone.
 import '../widgets/mascaras.dart';
+// Arquivo selecao_com_busca.dart: campo de seleção com busca (raça e bairro).
 import '../widgets/selecao_com_busca.dart';
 
+// Primeira letra em maiúscula, para exibir as opções das listas
 String _comMaiuscula(String texto) =>
     texto.isEmpty ? texto : texto[0].toUpperCase() + texto.substring(1);
 
+// Texto de exemplo do campo Observações, adequado a cada tipo de registro
 String _exemploDeObservacoes(TipoRegistro tipo) => switch (tipo) {
   TipoRegistro.adocao => 'Temperamento, convívio com crianças e outros animais',
   TipoRegistro.perdido => 'Onde e quando sumiu, coleira, se atende pelo nome',
   TipoRegistro.resgate => 'Onde está, em que estado, se corre risco',
 };
 
-// Sem tipo escolhido o cartão do lugar já existe, e usa o texto do caso comum
+// Título do cartão de endereço; sem tipo escolhido, usa o texto da adoção
 String _tituloDoLugar(TipoRegistro? tipo) =>
     (tipo ?? TipoRegistro.adocao).tituloDoLugar;
 
 const _nomePadrao = 'Sem nome';
 const _maximoDeFotos = 5;
-// Aviso de quantidade de imagens selecionadas
+// Números por extenso usados no aviso de fotos que excederam o limite
 const _porExtenso = {2: 'duas', 3: 'três', 4: 'quatro', 5: 'cinco'};
+// Medidas da tira de miniaturas. O botão de remover tem 20 px desenhados,
+// mas área de toque de 44 px, e sobressai do canto da miniatura; a folga
+// reserva espaço acima da tira para essa área não ser cortada
 const _ladoDaMiniatura = 84.0;
 const _alvoDeToque = 44.0;
-// Badge de remover foto
 const _desenhoDoBadge = 20.0;
 const _quantoSobrevoa = 6.0;
 const _folgaDaTira = _quantoSobrevoa + (_alvoDeToque - _desenhoDoBadge) / 2;
@@ -57,12 +89,15 @@ const _especies = ['Cachorro', 'Gato'];
 const _portes = ['pequeno', 'médio', 'grande'];
 const _sexos = ['macho', 'fêmea'];
 
+// Formulário de registro de animal (adoção, perdido ou resgate). Também
+// serve para publicar para adoção um animal resgatado e para editar um
+// registro já publicado
 class CadastroAnimal extends StatefulWidget {
-  // Um animal resgatado sendo publicado para adoção: o formulário abre com os
-  // dados dele e o tipo Adoção marcado
+  // Animal resgatado que será publicado para adoção: o formulário abre com
+  // os dados dele e o tipo Adoção marcado
   final Animal? base;
-  // Um registro já publicado sendo editado por quem o cadastrou: o
-  // formulário abre com todos os dados dele e grava antes de fechar
+  // Registro já publicado em edição: o formulário abre com todos os dados
+  // e grava as alterações na API antes de fechar
   final Animal? editando;
   final AnimalService? api;
 
@@ -79,12 +114,11 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
   final _bairros = BairroService();
   bool _buscandoLocalizacao = false;
   bool _salvando = false;
-  // Gravando a edição na API
+  // Indica que a edição está sendo gravada na API
   bool _gravando = false;
-  // O ponto do pino no mapa e a rua e o bairro que correspondem a ele. O
-  // pino é marcado pela mira, pelo arrasto do mapa ou pela busca; o ponto só
-  // vai para o animal se a rua e o bairro continuarem os mesmos: mudados à
-  // mão depois, ele já não corresponde ao que está escrito
+  // Ponto do pino no mapa e o endereço que corresponde a ele. O pino é
+  // marcado pela mira, pelo arrasto do mapa ou pela busca. A coordenada só
+  // é salva se a rua e o bairro digitados continuarem iguais a esse endereço
   final _mapa = MapController();
   LatLng _ponto = centroDeFormiga;
   ({String rua, String bairro})? _enderecoDoPino;
@@ -99,8 +133,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
   String? _sexo;
 
   final _nome = TextEditingController();
-  // A raça sai da lista da espécie; "Outra" abre o campo para escrever,
-  // como no bairro
+  // Raça escolhida na lista da espécie; "Outra" abre um campo de texto livre
   String? _racaEscolhida;
   final _buscaDaRaca = TextEditingController();
   final _outraRaca = TextEditingController();
@@ -108,15 +141,15 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
   final _observacoes = TextEditingController();
   final _necessidades = TextEditingController();
   final _rua = TextEditingController();
-  // O bairro sai da lista de Formiga; "Outro" abre o campo para escrever
+  // Bairro escolhido na lista de Formiga; "Outro" abre um campo de texto livre
   String? _bairroEscolhido;
   final _buscaDoBairro = TextEditingController();
   final _outroBairro = TextEditingController();
   final _responsavel = TextEditingController();
   final _telefone = TextEditingController();
 
-  // O formulário como abriu, para saber se algo mudou e perguntar antes de
-  // sair sem salvar
+  // Retrato do formulário ao abrir. Comparado com o estado atual, indica se
+  // há alterações não salvas para confirmar antes de sair
   String? _inicial;
   String get _assinatura => [
     _tipo,
@@ -129,7 +162,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     _vacinado,
     _vermifugado,
     _comoOng,
-    // O pino do mapa conta: mexer nele sem querer também é uma mudança
+    // A posição do pino também conta como alteração
     _ponto.latitude.toStringAsFixed(5),
     _ponto.longitude.toStringAsFixed(5),
     ..._fotos.map((foto) => foto.path),
@@ -153,7 +186,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
   @override
   void initState() {
     super.initState();
-    // O ponto de partida é o formulário já preenchido pelo initState
+    // Tira o retrato depois do primeiro quadro, com os campos já preenchidos
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _inicial = _assinatura;
     });
@@ -164,27 +197,26 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
       _preencherTudo(editando);
       return;
     }
-    // Quem cadastra costuma ser o responsável, então o contato já vem
-    // preenchido com o de quem está logado. Continua editável, porque numa
-    // ONG quem cadastra nem sempre é quem atende. Sem provider na árvore,
-    // como nos testes da tela sozinha, os campos só começam vazios
+    // Num cadastro novo, o contato começa com os dados de quem está logado
+    // e continua editável. Sem UsuarioProvider na árvore (testes da tela
+    // isolada), os campos começam vazios
     final usuario = context.read<UsuarioProvider?>()?.usuario;
     if (usuario == null) return;
-    // Quem faz parte de uma ONG começa publicando em nome dela, e pode trocar
+    // Membro de ONG começa publicando em nome dela; a escolha pode mudar
     _comoOng = _minhaOng != null;
     _preencherContato();
   }
 
-  // A ONG de quem está logado, se houver
+  // ONG do usuário logado, se ele fizer parte de uma
   Ong? get _minhaOng {
     final email = context.read<UsuarioProvider?>()?.usuario.email ?? '';
     return PataAmigaScope.talvez(context)?.ongDe(email);
   }
 
-  // Se o animal sai em nome da ONG ou da própria pessoa
+  // Indica se o animal é publicado em nome da ONG ou do próprio usuário
   bool _comoOng = false;
 
-  // O contato acompanha a escolha: o da ONG ou o de quem está logado
+  // Preenche o contato com os dados da ONG ou do usuário, conforme a escolha
   void _preencherContato() {
     final ong = _minhaOng;
     if (_comoOng && ong != null) {
@@ -197,8 +229,8 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     _telefone.text = usuario?.telefone.trim() ?? '';
   }
 
-  // A opção da lista com o mesmo nome, sem ligar para maiúsculas: a API
-  // guarda "cachorro" e a lista mostra "Cachorro"
+  // Acha a opção da lista equivalente ao valor, ignorando maiúsculas (a API
+  // guarda "cachorro" e a lista exibe "Cachorro")
   String? _opcao(List<String> opcoes, String valor) {
     for (final opcao in opcoes) {
       if (opcao.toLowerCase() == valor.trim().toLowerCase()) return opcao;
@@ -206,8 +238,8 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     return null;
   }
 
-  // O que vale para a adoção vem do resgate; observações e endereço ficam em
-  // branco, porque o animal agora está com quem o acolheu
+  // Copia os dados do animal de base. Observações e endereço ficam em branco,
+  // pois na adoção o animal já está com quem o acolheu
   void _preencherCom(Animal base) {
     _tipo = TipoRegistro.adocao;
     if (base.nome != _nomePadrao) _nome.text = base.nome;
@@ -220,14 +252,13 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     _vacinado = base.vacinado;
     _vermifugado = base.vermifugado;
     _necessidades.text = base.necessidadesEspeciais;
-    // As fotos que o animal já tem entram na mesma lista das escolhidas
-    // agora: dá para tirar, reordenar e trocar a capa do mesmo jeito
+    // As fotos existentes entram na mesma lista das novas, podendo ser
+    // removidas e reordenadas da mesma forma
     _fotos.addAll(base.fotos.take(_maximoDeFotos).map(XFile.new));
   }
 
-  // Na edição vem tudo, inclusive o tipo, o local, o contato e as
-  // observações, e o ponto do mapa continua valendo enquanto a rua e o
-  // bairro não mudarem
+  // Preenche todos os campos para edição, inclusive tipo, endereço, ponto
+  // no mapa, contato e observações
   void _preencherTudo(Animal registro) {
     _preencherCom(registro);
     _tipo = registro.tipo;
@@ -240,7 +271,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     }
     _comoOng = registro.ongId != null;
     _responsavel.text = registro.dono.nome;
-    // A API guarda só os dígitos; no campo, o telefone sempre com a máscara
+    // Exibe o telefone com a máscara, mesmo que tenha sido salvo só com dígitos
     _telefone.text = formatarTelefone(registro.dono.telefone);
   }
 
@@ -249,6 +280,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
 
   bool _naoEscolhido(String? valor) => _tentouCadastrar && valor == null;
 
+  // Usa o GPS para posicionar o pino e preencher a rua e o bairro
   Future<void> _usarMinhaLocalizacao() async {
     if (_buscandoLocalizacao) return;
     setState(() => _buscandoLocalizacao = true);
@@ -272,8 +304,8 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
       final posicao = await Geolocator.getCurrentPosition(
         locationSettings: _ajustesDeLocalizacao(),
       );
-      // O serviço de endereços depende da internet; sem prazo, a mira fica
-      // girando para sempre quando a conexão está ruim
+      // Prazo para a consulta do endereço, que depende da internet e pode
+      // não responder com conexão ruim
       final lugares = await Geocoding()
           .placemarkFromCoordinates(posicao.latitude, posicao.longitude)
           .timeout(const Duration(seconds: 10));
@@ -301,7 +333,8 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     }
   }
 
-  // O provedor do Google exige o serviço de precisão ligado e um diálogo a mais
+  // No Android, usa o LocationManager do sistema em vez do provedor do
+  // Google, que exigiria a precisão do Google ligada e um diálogo extra
   LocationSettings _ajustesDeLocalizacao() {
     const prazo = Duration(seconds: 15);
     if (defaultTargetPlatform == TargetPlatform.android) {
@@ -310,8 +343,8 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     return const LocationSettings(timeLimit: prazo);
   }
 
-  // A rua leva o número quando o GPS o encontra; a cidade não entra, porque
-  // o app é de Formiga
+  // Monta rua (com número, quando disponível) e bairro a partir do resultado
+  // da geocodificação; a cidade é sempre Formiga
   ({String rua, String bairro}) _enderecoDe(Placemark lugar) {
     final rua = lugar.thoroughfare?.trim() ?? '';
     final numero = lugar.subThoroughfare?.trim() ?? '';
@@ -321,8 +354,8 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     );
   }
 
-  // O GPS escreve o bairro do jeito dele: se bater com a lista, ele já vem
-  // escolhido; se não bater, vai para "Outro" com o nome que o GPS deu
+  // Seleciona o bairro na lista quando o nome corresponde; se não, escolhe
+  // "Outro" e preenche o campo livre com o nome recebido
   void _escolherBairroDoGps(String bairro) {
     if (bairro.isEmpty) return;
     final daLista = bairroDaLista(bairro);
@@ -336,8 +369,8 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     }
   }
 
-  // A raça já cadastrada: se bater com a lista da espécie, vem escolhida; se
-  // não bater, vai para "Outra" com o nome que estava escrito
+  // Seleciona a raça na lista da espécie quando corresponde; se não,
+  // escolhe "Outra" e preenche o campo livre
   void _escolherRaca(String raca) {
     if (raca.trim().isEmpty) return;
     final daLista = racaDaLista(_especie, raca);
@@ -351,7 +384,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     }
   }
 
-  // Trocar a espécie apaga a raça que não existe na outra lista
+  // Troca a espécie e limpa a raça se ela não existir na nova lista
   void _escolherEspecie(String? especie) {
     setState(() {
       _especie = especie;
@@ -373,8 +406,8 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
       ? _outroBairro.text.trim()
       : _bairroEscolhido ?? '';
 
-  // O Android raramente sabe o bairro em Formiga; quando não vem, o ViaCEP
-  // completa pelo CEP do ponto ou pelo nome da rua
+  // Completa o bairro pelo ViaCEP (CEP ou nome da rua) quando a
+  // geocodificação do aparelho não o informa
   Future<({String rua, String bairro})> _comBairro(Placemark lugar) async {
     final endereco = _enderecoDe(lugar);
     if (endereco.bairro.isNotEmpty) return endereco;
@@ -385,7 +418,8 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     return (rua: endereco.rua, bairro: bairro);
   }
 
-  // Arrastou o mapa: o endereço do novo ponto preenche a rua e o bairro
+  // Ao arrastar o mapa, preenche rua e bairro com o endereço do novo ponto.
+  // Respostas de pontos antigos são descartadas
   Future<void> _aoArrastarOMapa(LatLng centro) async {
     _ponto = centro;
     try {
@@ -406,11 +440,11 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
         _avisoDaBusca = null;
       });
     } on Exception {
-      // Sem o endereço, o pino continua onde a pessoa deixou
+      // Sem endereço, o pino permanece onde foi deixado
     }
   }
 
-  // Escreveu a rua: a lupa leva o mapa até ela, e a pessoa confere o pino
+  // Busca a rua digitada e move o mapa até ela para o usuário conferir o pino
   Future<void> _buscarNoMapa() async {
     final rua = _rua.text.trim();
     if (rua.isEmpty || _buscandoNoMapa) return;
@@ -447,6 +481,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     });
   }
 
+  // Mostra uma mensagem curta no rodapé, se a tela ainda existir
   void _avisar(String mensagem) {
     if (!mounted) return;
     ScaffoldMessenger.of(
@@ -454,6 +489,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     ).showSnackBar(SnackBar(content: Text(mensagem)));
   }
 
+  // Abre a galeria e adiciona fotos até o limite
   Future<void> _adicionarFotos() async {
     final vagas = _maximoDeFotos - _fotos.length;
     if (vagas <= 0) return;
@@ -465,8 +501,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
       );
       if (!mounted || escolhidas.isEmpty) return;
 
-      // A galeria do sistema não respeita o limite de seleção,
-      // então guardamos só as primeiras 5 fotos
+      // A galeria do sistema não aplica o limite; guarda só as que cabem
       setState(() => _fotos.addAll(escolhidas.take(vagas)));
       if (escolhidas.length > vagas) {
         _avisarQueSobrou(escolhidas.length, vagas);
@@ -481,6 +516,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     }
   }
 
+  // Avisa quantas fotos foram descartadas por exceder o limite
   void _avisarQueSobrou(int escolhidas, int vagas) {
     final quantas =
         vagas == 1 ? 'a primeira' : 'as ${_porExtenso[vagas] ?? vagas} primeiras';
@@ -503,15 +539,16 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
 
   void _removerFoto(int indice) => setState(() => _fotos.removeAt(indice));
 
-  // Os mesmos campos que ficam vermelhos quando faltam
-  // O telefone vira o WhatsApp do animal: precisa do DDD
+  // O telefone é usado no contato por WhatsApp, por isso exige DDD
   bool get _telefoneValido =>
       _telefone.text.replaceAll(RegExp(r'\D'), '').length >= 10;
 
   final _rolagem = ScrollController();
 
+  // Indica se todos os campos obrigatórios estão preenchidos (os mesmos que
+  // ficam marcados em vermelho quando faltam)
   bool get _completo =>
-      // Sem foto, ninguém reconhece nem se encanta pelo animal no feed
+      // A foto é obrigatória para o animal ser reconhecido no feed
       _fotos.isNotEmpty &&
       _tipo != null &&
       _especie != null &&
@@ -527,10 +564,9 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
       _bairro.isNotEmpty &&
       (_racaEscolhida != outraRaca || _raca.isNotEmpty);
 
-  // Devolve o animal ao feed, que é quem o põe na lista
-  // Sem a mira, o endereço digitado vira um ponto da rua, para o animal
-  // também aparecer no mapa. Se o serviço não achar ou demorar, o cadastro
-  // segue sem ponto: o mapa é um extra, não pode travar o cadastro
+  // Converte o endereço digitado em coordenada para o animal aparecer no
+  // mapa. Em caso de falha ou demora devolve null e o cadastro segue sem
+  // ponto, pois o mapa não deve impedir o cadastro
   Future<({double latitude, double longitude})?> _pontoDaRua(
     String rua,
     String bairro,
@@ -544,9 +580,8 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
       final ponto = achados.first;
 
       // Com a rua escrita errado, o serviço pode devolver o centro do bairro
-      // ou da cidade sem avisar. Por isso o ponto só vale se ficar no bairro
-      // escolhido, em Formiga; na dúvida, é melhor ficar fora do mapa do que
-      // aparecer num lugar errado
+      // ou da cidade. O ponto só é aceito se ficar no bairro escolhido, em
+      // Formiga, para evitar marcar o animal num lugar errado
       final lugares = await servico
           .placemarkFromCoordinates(ponto.latitude, ponto.longitude)
           .timeout(const Duration(seconds: 8));
@@ -562,12 +597,13 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     }
   }
 
+  // Valida o formulário e monta o animal. No cadastro novo, devolve o
+  // animal à tela anterior, que o envia à API; na edição, grava aqui mesmo
   Future<void> _cadastrar() async {
     if (_salvando || _gravando) return;
     setState(() => _tentouCadastrar = true);
     if (!_completo) {
-      // O botão fica no fim e os campos em vermelho mais acima: a tela sobe
-      // até eles, para ninguém achar que o botão não funcionou
+      // Rola para o topo, onde começam os campos marcados com erro
       _rolagem.animateTo(
         0,
         duration: const Duration(milliseconds: 300),
@@ -579,7 +615,8 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     final nome = _nome.text.trim();
     final rua = _rua.text.trim();
     final bairro = _bairro;
-    // Se o GPS não achou o bairro, a pessoa o escolhe sem invalidar o ponto
+    // O ponto do pino vale se o endereço não mudou; campos vazios no
+    // endereço lido (GPS sem bairro, por exemplo) não invalidam o ponto
     final lido = _enderecoDoPino;
     final mesmoLugar =
         lido != null &&
@@ -617,7 +654,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
         telefone: _telefone.text.trim(),
       ),
       responsavelEmail: context.read<UsuarioProvider?>()?.usuario.email ?? '',
-      // Na edição, o animal da ONG continua da ONG
+      // Na edição, mantém o vínculo com a ONG que o registro já tinha
       ongId: widget.editando?.ongId ?? (_comoOng ? _minhaOng?.id : null),
       fotos: _fotos.map((foto) => foto.path).toList(),
       publicadoEm: DateTime.now(),
@@ -633,8 +670,8 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     await _salvarEdicao(editando, animal);
   }
 
-  // O registro editado mantém o que o formulário não mostra: o id, a
-  // situação, a data da publicação e quem o cadastrou
+  // Grava a edição na API mantendo os campos que o formulário não exibe:
+  // id, situação, data da publicação, responsável, peso e cor
   Future<void> _salvarEdicao(Animal original, Animal novo) async {
     final editado = Animal.fromJson({
       ...novo.toJson(),
@@ -692,7 +729,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
 
   @override
   Widget build(BuildContext context) {
-    // Com algo mudado e não salvo, voltar pergunta antes de sair
+    // Pede confirmação ao sair com alterações não salvas
     return ProtegerAlteracoes(
       alterado: () => _alterado,
       child: Scaffold(
@@ -752,7 +789,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
                     rotulo: rotuloSingular,
                     fundoDaOpcao: context.cores.fundo,
                   ),
-                  // Sem o tipo, o resto do formulário nem aparece
+                  // Os demais campos só aparecem depois de escolhido o tipo
                   if (_tentouCadastrar && _tipo == null)
                     const _Recado(
                       'Escolha se é adoção, perdido ou resgate.',
@@ -795,7 +832,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
                     ),
                     const SizedBox(height: 14),
                     SelecaoComBusca(
-                      // A lista muda com a espécie; a chave refaz o campo
+                      // A chave recria o campo quando a espécie muda
                       key: ValueKey(_especie),
                       rotulo: 'Raça',
                       dica: _especie == null
@@ -972,8 +1009,8 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
                       texto: _tipo!.tituloDoContato,
                     ),
                     const SizedBox(height: 16),
-                    // Quem faz parte de uma ONG escolhe em nome de quem
-                    // publica: só os da ONG aparecem no perfil dela
+                    // Membro de ONG escolhe se publica em nome próprio ou
+                    // da ONG; só os da ONG aparecem no perfil dela
                     if (_minhaOng case final ong?
                         when widget.editando?.ongId == null) ...[
                       const _Rotulo('Publicar como'),
@@ -1072,6 +1109,8 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
   }
 }
 
+// Seção de fotos: capa em destaque, tira de miniaturas reordenáveis e
+// botão para adicionar
 class _BlocoDeFotos extends StatelessWidget {
   final List<XFile> fotos;
   final VoidCallback aoAdicionar;
@@ -1086,7 +1125,7 @@ class _BlocoDeFotos extends StatelessWidget {
     this.semFoto = false,
   });
 
-  // Tentou cadastrar sem nenhuma foto
+  // Exibe o erro de foto obrigatória
   final bool semFoto;
 
   @override
@@ -1171,6 +1210,7 @@ class _BlocoDeFotos extends StatelessWidget {
   }
 }
 
+// Quadrado com ícone de câmera para adicionar mais fotos
 class _AdicionarFoto extends StatelessWidget {
   final VoidCallback aoTocar;
 
@@ -1200,6 +1240,7 @@ class _AdicionarFoto extends StatelessWidget {
   }
 }
 
+// Miniatura de uma foto, com selo de capa e botão de remover
 class _Miniatura extends StatelessWidget {
   final XFile arquivo;
   final bool ehCapa;
@@ -1234,7 +1275,7 @@ class _Miniatura extends StatelessWidget {
   }
 }
 
-// Badge de remover foto 
+// Botão de remover foto: desenho pequeno com área de toque de 44 px
 class _BotaoDeRemover extends StatelessWidget {
   final VoidCallback aoTocar;
 
@@ -1272,7 +1313,7 @@ class _BotaoDeRemover extends StatelessWidget {
   }
 }
 
-// Selo de imagem de capa para a primeira foto
+// Selo "Capa" exibido na primeira foto
 class _SeloDeCapa extends StatelessWidget {
   const _SeloDeCapa();
 
@@ -1298,6 +1339,7 @@ class _SeloDeCapa extends StatelessWidget {
   }
 }
 
+// Exibe uma foto escolhida no aparelho ou uma foto já publicada
 class _FotoDaGaleria extends StatefulWidget {
   final XFile arquivo;
   final double altura;
@@ -1311,8 +1353,8 @@ class _FotoDaGaleria extends StatefulWidget {
 class _FotoDaGaleriaState extends State<_FotoDaGaleria> {
   late Future<Uint8List> _bytes;
 
-  // A foto que o animal já tinha pode vir da internet ou do app, e não do
-  // celular: essa a FotoAnimal já sabe mostrar
+  // Foto já publicada (URL ou asset do app), e não um arquivo do aparelho;
+  // nesse caso a exibição fica com a FotoAnimal
   bool get _jaPublicada =>
       kIsWeb ? false : !widget.arquivo.path.startsWith('/');
 
@@ -1355,6 +1397,7 @@ class _FotoDaGaleriaState extends State<_FotoDaGaleria> {
   }
 }
 
+// Cartão de seção do formulário
 class _Cartao extends StatelessWidget {
   final Widget child;
 
@@ -1375,6 +1418,7 @@ class _Cartao extends StatelessWidget {
   }
 }
 
+// Título de seção com ícone, na cor principal
 class _TituloDoCartao extends StatelessWidget {
   final IconData icone;
   final String texto;
@@ -1400,6 +1444,7 @@ class _TituloDoCartao extends StatelessWidget {
   }
 }
 
+// Decoração padrão dos campos, com borda de erro quando necessário
 InputDecoration _caixa(
   BuildContext context,
   String? exemplo, {
@@ -1429,6 +1474,7 @@ InputDecoration _caixa(
       ),
     );
 
+// Campo de texto com rótulo, mensagem de erro e aviso opcional
 class _Campo extends StatelessWidget {
   final String rotulo;
   final TextEditingController controlador;
@@ -1439,7 +1485,7 @@ class _Campo extends StatelessWidget {
   final bool comErro;
   final TextInputType? teclado;
   final List<TextInputFormatter>? formatadores;
-  // O texto do erro, quando não é só o campo vazio
+  // Mensagem de erro específica; sem ela, usa "Campo obrigatório"
   final String? erro;
 
   const _Campo({
@@ -1483,6 +1529,7 @@ class _Campo extends StatelessWidget {
   }
 }
 
+// Texto pequeno abaixo de um campo: aviso ou erro
 class _Recado extends StatelessWidget {
   final String texto;
   final bool erro;
@@ -1504,6 +1551,7 @@ class _Recado extends StatelessWidget {
   }
 }
 
+// Lista suspensa com rótulo e mensagem de campo obrigatório
 class _Selecao extends StatelessWidget {
   final String rotulo;
   final List<String> opcoes;
@@ -1548,6 +1596,7 @@ class _Selecao extends StatelessWidget {
   }
 }
 
+// Rótulo de campo em maiúsculas
 class _Rotulo extends StatelessWidget {
   final String texto;
 
@@ -1567,6 +1616,7 @@ class _Rotulo extends StatelessWidget {
   }
 }
 
+// Opção de cuidado (castrado, vacinado, vermifugado) que alterna ao tocar
 class _Cuidado extends StatelessWidget {
   final String rotulo;
   final bool marcado;
@@ -1592,4 +1642,3 @@ class _Cuidado extends StatelessWidget {
   }
 }
 
-// Vai desenhando (DD) NNNNN-NNNN conforme se digita, e recusa o que não é dígito

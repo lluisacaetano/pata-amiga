@@ -1,5 +1,8 @@
+// Arquivo animal.dart: modelo do animal e o tipo do registro.
 import 'animal.dart';
+// Arquivo avistamento.dart: avistamentos, que definem onde o perdido aparece.
 import 'avistamento.dart';
+// Arquivo ponto_de_alimentacao.dart: pontos de alimentação e distâncias.
 import 'ponto_de_alimentacao.dart';
 
 // As camadas do mapa: só perdido e resgate. Adoção fica fora, porque o

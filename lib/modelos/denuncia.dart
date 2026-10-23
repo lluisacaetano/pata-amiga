@@ -1,6 +1,7 @@
+// Biblioteca dart:math: Random, para sortear o número do protocolo.
 import 'dart:math';
 
-// O que a denúncia relata
+// O tipo de ocorrência relatada na denúncia
 enum TipoDeDenuncia { mausTratos, abandono, negligencia, outros }
 
 extension RotuloDoTipoDeDenuncia on TipoDeDenuncia {
@@ -12,7 +13,7 @@ extension RotuloDoTipoDeDenuncia on TipoDeDenuncia {
   };
 }
 
-// Por onde a denúncia passa depois de registrada
+// As etapas da denúncia depois de registrada
 enum SituacaoDaDenuncia { recebida, emApuracao, encerrada }
 
 extension RotuloDaSituacao on SituacaoDaDenuncia {
@@ -23,8 +24,8 @@ extension RotuloDaSituacao on SituacaoDaDenuncia {
   };
 }
 
-// Uma denúncia de maus-tratos. Na anônima, nome e contato de quem denunciou
-// ficam vazios e não vão para a API
+// Uma denúncia de maus-tratos, abandono ou negligência. Na anônima, o nome e
+// o contato de quem denunciou não são enviados à API
 class Denuncia {
   final int? id;
   final String protocolo;
@@ -34,7 +35,7 @@ class Denuncia {
   final String bairro;
   final double? latitude;
   final double? longitude;
-  // Quando aconteceu, se a pessoa souber
+  // Data da ocorrência; nula quando a pessoa não informa
   final DateTime? ocorridaEm;
   final List<String> fotos;
   final bool anonima;
@@ -63,7 +64,8 @@ class Denuncia {
     required this.registradaEm,
   });
 
-  // O protocolo sai do aparelho, com a data e quatro dígitos: PA-20261022-4821
+  // Gera o protocolo no aparelho: a data do registro e quatro dígitos
+  // sorteados, no formato PA-AAAAMMDD-NNNN
   static String novoProtocolo(DateTime agora, [Random? sorte]) {
     String dois(int n) => n.toString().padLeft(2, '0');
     final numero = (sorte ?? Random())
@@ -73,6 +75,8 @@ class Denuncia {
     return 'PA-${agora.year}${dois(agora.month)}${dois(agora.day)}-$numero';
   }
 
+  // Cria a denúncia a partir do JSON da API. Campos ausentes ou valores
+  // desconhecidos recebem um padrão, sem gerar erro
   factory Denuncia.fromJson(Map<String, dynamic> json) => Denuncia(
     id: (json['id'] as num?)?.toInt(),
     protocolo: json['protocolo'] as String? ?? '',
@@ -102,6 +106,7 @@ class Denuncia {
         DateTime.fromMillisecondsSinceEpoch(0),
   );
 
+  // Converte a denúncia no JSON enviado à API
   Map<String, dynamic> toJson() => {
     if (id != null) 'id': id,
     'protocolo': protocolo,
@@ -114,7 +119,7 @@ class Denuncia {
     if (ocorridaEm != null) 'ocorridaEm': ocorridaEm!.toIso8601String(),
     'fotos': fotos,
     'anonima': anonima,
-    // Na anônima, quem denunciou não vai para a API
+    // Na anônima, os dados de quem denunciou vão vazios
     'denuncianteNome': anonima ? '' : denuncianteNome,
     'denuncianteTelefone': anonima ? '' : denuncianteTelefone,
     'denuncianteEmail': anonima ? '' : denuncianteEmail,
@@ -122,8 +127,8 @@ class Denuncia {
     'registradaEm': registradaEm.toIso8601String(),
   };
 
-  // O texto que vai para a APAF junto com as fotos, pelo compartilhar do
-  // celular
+  // O texto enviado ao canal de denúncia pelo compartilhamento do aparelho,
+  // junto com as fotos
   String get mensagemParaOCanal {
     String dois(int n) => n.toString().padLeft(2, '0');
     final quando = ocorridaEm == null
@@ -146,8 +151,8 @@ class Denuncia {
   }
 }
 
-// Quando a denúncia foi registrada, do jeito que se fala: "hoje às 14:19",
-// "ontem às 09:05" e, antes disso, a data
+// O momento da denúncia em texto: "hoje às 14:19", "ontem às 09:05" ou, nos
+// dias anteriores, a data completa com a hora
 String quandoFoi(DateTime momento, DateTime agora) {
   String dois(int n) => n.toString().padLeft(2, '0');
   final hora = '${dois(momento.hour)}:${dois(momento.minute)}';

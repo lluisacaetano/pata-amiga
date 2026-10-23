@@ -1,32 +1,43 @@
+// Biblioteca dart:convert: converte texto JSON em objetos e vice-versa.
 import 'dart:convert';
 
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote shared_preferences: guarda dados simples no aparelho (chave e valor).
 import 'package:shared_preferences/shared_preferences.dart';
 
+// Arquivo animal.dart: modelo do animal.
 import '../modelos/animal.dart';
+// Arquivo avistamento.dart: modelo do avistamento de animal perdido.
 import '../modelos/avistamento.dart';
+// Arquivo ong.dart: modelo da ONG e dos avisos aos membros.
 import '../modelos/ong.dart';
+// Arquivo ponto_de_alimentacao.dart: pontos e abastecimentos.
 import '../modelos/ponto_de_alimentacao.dart';
 
+// Estado compartilhado entre as telas: animais do feed, curtidas, cadastros
+// feitos neste aparelho, avistamentos, pontos de alimentação e ONGs. As
+// curtidas e os cadastros locais ficam salvos no aparelho
 class EstadoPataAmiga extends ChangeNotifier {
-  // Chave usada para gravar as curtidas no armazenamento do aparelho
+  // Chaves de gravação no aparelho
   static const _chaveCurtidos = 'curtidos';
   static const _chaveMeusCadastros = 'meus_cadastros';
 
-  // Guarda o nome dos animais que o usuário curtiu
+  // Nomes dos animais curtidos (a curtida é identificada pelo nome)
   final Set<String> _curtidos = {};
   List<Animal> _animais = [];
   final List<Animal> _meusCadastros = [];
+  // Evita notificar depois do dispose, quando uma leitura termina tarde
   bool _descartado = false;
 
   bool estaCurtido(String nome) => _curtidos.contains(nome);
 
   List<Animal> get meusCadastros => List.unmodifiable(_meusCadastros);
 
-  // Os animais que o feed carregou, para as telas que também os mostram
+  // Animais carregados pelo feed, compartilhados com as outras telas
   List<Animal> get animais => _animais;
 
-  // Os avistamentos de animais perdidos, que movem o pino no mapa
+  // Avistamentos de animais perdidos; o mais recente define o pino no mapa
   List<Avistamento> _avistamentos = [];
   List<Avistamento> get avistamentos => List.unmodifiable(_avistamentos);
 
@@ -35,7 +46,7 @@ class EstadoPataAmiga extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Os comedouros e bebedouros e quem os abasteceu, para a camada do mapa
+  // Comedouros, bebedouros e seus abastecimentos, para a camada do mapa
   List<PontoDeAlimentacao> _pontos = [];
   List<Abastecimento> _abastecimentos = [];
   List<PontoDeAlimentacao> get pontos => List.unmodifiable(_pontos);
@@ -60,7 +71,7 @@ class EstadoPataAmiga extends ChangeNotifier {
     notifyListeners();
   }
 
-  // As ONGs e abrigos, para a lista do menu, o perfil e a ficha do animal
+  // ONGs e abrigos, usados na lista de ONGs, nos perfis e na ficha do animal
   List<Ong> _ongs = [];
   List<Ong> get ongs => List.unmodifiable(_ongs);
 
@@ -69,7 +80,7 @@ class EstadoPataAmiga extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Põe a ONG criada ou troca a editada pela versão nova
+  // Acrescenta a ONG nova ou substitui a de mesmo id pela versão atualizada
   void salvarOng(Ong ong) {
     final indice = _ongs.indexWhere((item) => item.id == ong.id);
     _ongs = indice >= 0
@@ -78,8 +89,8 @@ class EstadoPataAmiga extends ChangeNotifier {
     notifyListeners();
   }
 
-  // A ONG de que essa pessoa faz parte, ou null: cada conta tem no máximo
-  // uma, criada por ela ou em que o pedido para entrar foi aprovado
+  // ONG de que o e-mail faz parte (como administrador ou membro aprovado),
+  // ou null. Cada conta pertence a no máximo uma ONG
   Ong? ongDe(String email) {
     for (final ong in _ongs) {
       if (ong.fazParte(email)) return ong;
@@ -87,14 +98,14 @@ class EstadoPataAmiga extends ChangeNotifier {
     return null;
   }
 
-  // Os avisos das ONGs para essa pessoa (aprovado, recusado, removido),
-  // enquanto ela não os dispensa
+  // Avisos pendentes das ONGs para o e-mail (pedido aprovado, recusado ou
+  // remoção), até a pessoa dispensá-los
   List<(Ong, AvisoDaOng)> avisosPara(String email) => [
     for (final ong in _ongs)
       if (ong.avisoPara(email) case final aviso?) (ong, aviso),
   ];
 
-  // A ONG em que essa pessoa pediu para entrar e ainda espera resposta
+  // ONG em que o e-mail pediu para entrar e ainda aguarda resposta
   Ong? ongPedidaPor(String email) {
     for (final ong in _ongs) {
       if (ong.pediuEntrada(email)) return ong;
@@ -102,9 +113,8 @@ class EstadoPataAmiga extends ChangeNotifier {
     return null;
   }
 
-  // Os animais publicados em nome da ONG, do mais novo para o mais antigo:
-  // o recém-cadastrado é sempre o primeiro. Os que a pessoa publicou em nome
-  // próprio não entram, mesmo sendo da mesma conta
+  // Animais publicados em nome da ONG, do mais novo para o mais antigo.
+  // Os publicados em nome próprio por membros da ONG não entram
   List<Animal> animaisDa(Ong ong) =>
       _animais
           .where((animal) => ong.id != null && animal.ongId == ong.id)
@@ -116,6 +126,7 @@ class EstadoPataAmiga extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Animais curtidos que ainda estão ativos (os finalizados saem da lista)
   List<Animal> get animaisCurtidos => _animais
       .where((animal) => _curtidos.contains(animal.nome) && !animal.finalizado)
       .toList(growable: false);
@@ -125,10 +136,9 @@ class EstadoPataAmiga extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Troca um animal pela versão nova (o status mudou), no feed e nos
-  // cadastros do usuário, e grava os cadastros no aparelho
-  // Na edição, o nome pode mudar, e o animal só do aparelho é achado pelo
-  // nome: por isso dá para dizer qual era a chave antes
+  // Substitui um animal pela versão nova no feed e nos cadastros locais, e
+  // regrava os cadastros no aparelho. [chaveAntiga] localiza o animal quando
+  // a edição mudou a chave (no animal só local, a chave é o nome)
   Future<void> substituirAnimal(Animal novo, {String? chaveAntiga}) async {
     final chave = chaveAntiga ?? novo.chave;
     _animais = [
@@ -148,7 +158,8 @@ class EstadoPataAmiga extends ChangeNotifier {
     }
   }
 
-  // A versão mais nova de um animal: a tela pode ter recebido uma cópia antiga
+  // Versão mais recente do animal no feed ou nos cadastros locais; útil
+  // quando a tela recebeu uma cópia que já foi alterada
   Animal atual(Animal animal) => _animais.firstWhere(
     (item) => item.chave == animal.chave,
     orElse: () => _meusCadastros.firstWhere(
@@ -157,10 +168,9 @@ class EstadoPataAmiga extends ChangeNotifier {
     ),
   );
 
-  // Os cadastros de quem está logado: os feitos neste aparelho e os da API
-  // registrados no e-mail dele, do mais novo para o mais antigo. Os
-  // publicados em nome de uma ONG ficam só no perfil dela, para não
-  // aparecerem duas vezes
+  // Cadastros do e-mail: os feitos neste aparelho e os da API registrados
+  // nele, sem repetição, do mais novo para o mais antigo. Os publicados em
+  // nome de uma ONG ficam só no perfil da ONG
   List<Animal> cadastrosDe(String email) {
     final chaves = _meusCadastros.map((animal) => animal.chave).toSet();
     return [
@@ -173,13 +183,11 @@ class EstadoPataAmiga extends ChangeNotifier {
       ..sort((a, b) => b.publicadoEm.compareTo(a.publicadoEm));
   }
 
-  // Quem pode mudar o status: o e-mail de quem cadastrou ou, nos cadastros
-  // gravados antes de o app guardar o e-mail, quem os fez neste aparelho
+  // Diz se o e-mail pode alterar o status do animal:
+  // - animal de ONG: qualquer pessoa que faça parte dela hoje;
+  // - animal com responsável registrado: só esse responsável;
+  // - animal sem e-mail registrado: quem o cadastrou neste aparelho
   bool podeMudarStatus(Animal animal, String email) {
-    // O animal da ONG é de toda a ONG: quem faz parte dela, admin ou membro,
-    // cuida de qualquer um, mesmo os que outra pessoa cadastrou
-    // Quem saiu ou foi removido da ONG deixa de cuidar dos animais dela,
-    // mesmo dos que cadastrou
     if (animal.ongId != null) return ongDe(email)?.id == animal.ongId;
     if (animal.responsavelEmail.trim().isNotEmpty) {
       return animal.eDoResponsavel(email);
@@ -188,6 +196,8 @@ class EstadoPataAmiga extends ChangeNotifier {
         _meusCadastros.any((item) => item.chave == animal.chave);
   }
 
+  // Lê do aparelho as curtidas e os cadastros locais. Se os cadastros
+  // salvos estiverem corrompidos, a lista local é zerada
   Future<void> carregarCurtidos() async {
     final armazenamento = await SharedPreferences.getInstance();
     if (_descartado) return;
@@ -214,6 +224,8 @@ class EstadoPataAmiga extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Põe o animal no topo dos cadastros locais (substituindo o de mesmo
+  // nome) e salva a lista no aparelho
   Future<void> registrarCadastro(Animal animal) async {
     _meusCadastros.removeWhere((registro) => registro.nome == animal.nome);
     _meusCadastros.insert(0, animal);
@@ -226,6 +238,7 @@ class EstadoPataAmiga extends ChangeNotifier {
     );
   }
 
+  // Curte ou descurte o animal e salva as curtidas no aparelho
   Future<void> alternarCurtida(String nome) async {
     if (!_curtidos.add(nome)) _curtidos.remove(nome);
     notifyListeners();
@@ -234,6 +247,7 @@ class EstadoPataAmiga extends ChangeNotifier {
     await armazenamento.setStringList(_chaveCurtidos, _curtidos.toList());
   }
 
+  // Remove a curtida, se existir, e salva as curtidas no aparelho
   Future<void> removerCurtida(String nome) async {
     if (!_curtidos.remove(nome)) return;
     notifyListeners();
@@ -249,6 +263,8 @@ class EstadoPataAmiga extends ChangeNotifier {
   }
 }
 
+// Disponibiliza o [EstadoPataAmiga] para a árvore de widgets e reconstrói
+// quem depende dele a cada notificação
 class PataAmigaScope extends InheritedNotifier<EstadoPataAmiga> {
   const PataAmigaScope({
     super.key,
@@ -256,11 +272,12 @@ class PataAmigaScope extends InheritedNotifier<EstadoPataAmiga> {
     required super.child,
   }) : super(notifier: notifier);
 
-  // Para quem só precisa ler uma vez, como no initState, sem passar a ouvir
-  // as mudanças; devolve null se a tela estiver fora do escopo
+  // Lê o estado sem se inscrever nas mudanças (útil no initState e em
+  // callbacks). Devolve null quando não há escopo acima
   static EstadoPataAmiga? talvez(BuildContext context) =>
       context.getInheritedWidgetOfExactType<PataAmigaScope>()?.notifier;
 
+  // Lê o estado e reconstrói o widget sempre que ele mudar
   static EstadoPataAmiga of(BuildContext context) {
     final scope = context.dependOnInheritedWidgetOfExactType<PataAmigaScope>();
     assert(scope != null, 'PataAmigaScope não encontrado na árvore.');

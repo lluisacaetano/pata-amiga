@@ -1,13 +1,24 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote provider: compartilha estado entre as telas e as reconstrói.
 import 'package:provider/provider.dart';
 
+// Arquivo auth_components.dart: fundo, campos e botões das telas de entrada.
 import 'auth_components.dart';
+// Arquivo onboarding_screen.dart: navegação para o app depois do login.
 import '../../telas/onboarding_screen.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../../tema/cores.dart';
+// Arquivo route_names.dart: nomes das rotas de navegação.
 import '../../routes/route_names.dart';
+// Arquivo mascaras.dart: máscara do campo de e-mail.
 import '../../widgets/mascaras.dart';
+// Arquivo usuario_provider.dart: início da sessão.
 import '../../provider/usuario_provider.dart';
 
+// Tela de login. Valida o formato do e-mail e se a senha foi preenchida,
+// carrega o perfil salvo no aparelho para esse e-mail e segue para o app.
+// A senha não é conferida, porque o app ainda não tem autenticação real
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -106,6 +117,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 },
               ),
               const SizedBox(height: 12),
+              // Entrar com o Google: apenas visual, ainda sem integração
               AuthButton(
                 label: '',
                 primary: false,

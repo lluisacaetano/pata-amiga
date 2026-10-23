@@ -1,9 +1,15 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
 
+// Arquivo auth_components.dart: fundo, campos e botões das telas de entrada.
 import 'auth_components.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../../tema/cores.dart';
+// Arquivo mascaras.dart: máscara do campo de e-mail.
 import '../../widgets/mascaras.dart';
 
+// Tela de recuperação de senha. Apenas visual: o botão ainda não envia
+// nenhum e-mail
 class RecoverPasswordScreen extends StatefulWidget {
   const RecoverPasswordScreen({super.key});
 

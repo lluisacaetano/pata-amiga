@@ -1,8 +1,7 @@
-// Bairros de Formiga (MG) para o cadastro de animal, em ordem alfabética.
-// É a união de duas bases de CEP montadas a partir dos Correios, consultadas
-// em 19/10/2026: ruacep.com.br/mg/formiga/bairros (112 bairros) e
-// cepsbrasil.com.br/mg/formiga (109). Nenhuma é a lista oficial da
-// prefeitura; quem não achar o seu bairro escolhe "Outro" e escreve.
+// Bairros de Formiga (MG), em ordem alfabética, usados nos cadastros. A lista
+// une duas bases de CEP derivadas dos Correios (ruacep.com.br e
+// cepsbrasil.com.br) e não é a lista oficial da prefeitura; o bairro ausente
+// é informado pela opção "Outro"
 const List<String> bairrosDeFormiga = [
   'Água Vermelha',
   'Albertos',
@@ -119,10 +118,11 @@ const List<String> bairrosDeFormiga = [
   'Vista Alegre',
 ];
 
-// A opção para o bairro que não está na lista
+// A opção para informar um bairro que não está na lista
 const outroBairro = 'Outro';
 
-// Compara sem maiúsculas e sem acentos: "agua vermelha" acha "Água Vermelha"
+// O texto em minúsculas, sem acentos e sem espaços repetidos, para comparar
+// nomes: "agua vermelha" corresponde a "Água Vermelha"
 String _semAcento(String texto) {
   const de = 'áàâãäéèêëíìîïóòôõöúùûüçñ';
   const para = 'aaaaaeeeeiiiiooooouuuucn';
@@ -135,9 +135,10 @@ String _semAcento(String texto) {
   return saida.toString();
 }
 
+// Se os dois nomes são do mesmo bairro, ignorando maiúsculas e acentos
 bool mesmoBairro(String a, String b) => _semAcento(a) == _semAcento(b);
 
-// O bairro da lista com esse nome, ou null se não houver
+// O nome oficial do bairro na lista, ou null se ele não estiver nela
 String? bairroDaLista(String nome) {
   if (nome.trim().isEmpty) return null;
   for (final bairro in bairrosDeFormiga) {
@@ -146,15 +147,15 @@ String? bairroDaLista(String nome) {
   return null;
 }
 
-// Os bairros cujo nome contém o que foi digitado
+// Os bairros cujo nome contém o texto digitado; sem texto, todos
 Iterable<String> filtrarBairros(String digitado) {
   final busca = _semAcento(digitado);
   if (busca.isEmpty) return bairrosDeFormiga;
   return bairrosDeFormiga.where((bairro) => _semAcento(bairro).contains(busca));
 }
 
-// O serviço de endereços do Android às vezes devolve o nome da cidade no lugar
-// do bairro. Quando isso acontece, o bairro é tratado como desconhecido
+// Limpa o bairro devolvido pelo geocoding do aparelho, que às vezes traz o
+// nome da cidade no lugar dele. Nesse caso, devolve vazio (desconhecido)
 String bairroDoServico(String? bairro, String? cidade) {
   final lido = bairro?.trim() ?? '';
   if (lido.isEmpty) return '';

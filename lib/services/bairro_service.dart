@@ -1,17 +1,20 @@
+// Biblioteca dart:convert: converte texto JSON em objetos e vice-versa.
 import 'dart:convert';
 
+// Pacote http: faz as requisições à API (GET, POST, PATCH, DELETE).
 import 'package:http/http.dart' as http;
 
+// Arquivo bairros_formiga.dart: bairros de Formiga e a comparação de nomes.
 import '../dados/bairros_formiga.dart';
 
-// O serviço de endereços do Android não conhece os bairros de Formiga e
-// costuma devolver o nome da cidade no lugar deles. O ViaCEP, a base pública
-// dos Correios, sabe: pelo CEP do ponto, ou pelo nome da rua
+// Descobre o bairro de um endereço pelo ViaCEP, a base pública de CEPs dos
+// Correios. Complementa o geocoding do aparelho, que muitas vezes devolve o
+// nome da cidade no lugar do bairro. Toda falha resulta em null
 class BairroService {
   static const _viaCep = 'https://viacep.com.br/ws';
 
-  // O bairro de um CEP, se ele for de uma rua (os CEPs terminados em 000 são
-  // da cidade inteira e não dizem o bairro)
+  // O bairro de um CEP de Formiga, desde que esteja na lista de bairros. CEPs
+  // terminados em 000 são gerais da cidade e não indicam o bairro
   Future<String?> pelaCep(String? cep) async {
     final digitos = (cep ?? '').replaceAll(RegExp(r'\D'), '');
     if (digitos.length != 8 || digitos.endsWith('000')) return null;
@@ -31,7 +34,8 @@ class BairroService {
     }
   }
 
-  // O bairro de uma rua de Formiga, só quando ela fica em um bairro só
+  // O bairro de uma rua de Formiga, apenas quando a rua inteira fica em um
+  // único bairro
   Future<String?> pelaRua(String rua) async {
     final nome = nomeDaRuaParaBusca(rua);
     if (nome.length < 3) return null;
@@ -51,8 +55,8 @@ class BairroService {
   }
 }
 
-// "Rua do Expedicionário, 155" vira "do Expedicionário": o ViaCEP busca pelo
-// nome, sem o tipo da via e sem o número
+// Prepara o nome da rua para a busca no ViaCEP, que não aceita o tipo da via
+// nem o número: "Rua do Expedicionário, 155" vira "do Expedicionário"
 String nomeDaRuaParaBusca(String rua) {
   var nome = rua.split(',').first.trim();
   nome = nome.replaceFirst(
@@ -65,8 +69,8 @@ String nomeDaRuaParaBusca(String rua) {
   return nome.trim();
 }
 
-// Dos resultados do ViaCEP, o bairro da rua quando ele é um só. Rua que
-// atravessa mais de um bairro fica sem: melhor a pessoa escolher do que chutar
+// Entre os resultados do ViaCEP, devolve o bairro da rua quando há um só.
+// Rua que atravessa mais de um bairro devolve null, e a pessoa escolhe
 String? bairroUnicoDaRua(List<dynamic> resultados, String nome) {
   final bairros = <String>{};
   for (final item in resultados) {

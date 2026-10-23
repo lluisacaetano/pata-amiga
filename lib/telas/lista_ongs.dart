@@ -1,16 +1,25 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
 
+// Arquivo estado_pata_amiga.dart: ONGs e animais compartilhados.
 import '../estado/estado_pata_amiga.dart';
+// Arquivo animal.dart: modelo do animal.
 import '../modelos/animal.dart';
+// Arquivo ong.dart: modelo da ONG e a comparação de nomes.
 import '../modelos/ong.dart';
+// Arquivo route_names.dart: nomes das rotas de navegação.
 import '../routes/route_names.dart';
+// Arquivo ong_service.dart: busca das ONGs na API.
 import '../services/ong_service.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo barra_inferior.dart: barra de navegação inferior.
 import '../widgets/barra_inferior.dart';
+// Arquivo avatar_da_ong.dart: avatar da ONG com foto ou iniciais.
 import '../widgets/avatar_da_ong.dart';
 
-// As ONGs e abrigos de Formiga, pelo item "ONGs" do menu: para quem quer
-// adotar, ajudar ou doar chegar à ONG sem precisar passar antes por um animal
+// Lista das ONGs e abrigos, aberta pelo item "ONGs" da barra inferior. Dá
+// acesso ao perfil de cada ONG sem passar por um animal do feed
 class ListaOngs extends StatefulWidget {
   final OngService? servico;
 
@@ -39,7 +48,8 @@ class _ListaOngsState extends State<ListaOngs> {
     super.dispose();
   }
 
-  // Busca de novo ao abrir: uma ONG pode ter sido criada depois do feed
+  // Recarrega as ONGs da API ao abrir, pois uma ONG pode ter sido criada
+  // depois do carregamento do feed. Sem conexão, mantém a lista em memória
   Future<void> _carregar() async {
     try {
       final ongs = await _servico.buscarOngs();
@@ -68,7 +78,7 @@ class _ListaOngsState extends State<ListaOngs> {
   Widget build(BuildContext context) {
     final estado = PataAmigaScope.of(context);
     final ongs = estado.ongs.where(_combina).toList()
-      // Sempre em ordem alfabética, com "Órfãos" junto do "O", e não no fim
+      // Ordem alfabética ignorando acentos, para "Órfãos" ficar junto do "O"
       ..sort(
         (a, b) =>
             Ong.nomeComparavel(a.nome).compareTo(Ong.nomeComparavel(b.nome)),
@@ -164,8 +174,8 @@ class _ListaOngsState extends State<ListaOngs> {
   }
 }
 
-// O card da ONG, no padrão dos cards do feed, com a foto de perfil dela em
-// círculo, como um perfil; sem foto, as iniciais
+// Card de uma ONG: avatar (foto ou iniciais), nome, bairro e quantos animais
+// dela estão em aberto. O toque abre o perfil da ONG
 class _CartaoDaOng extends StatelessWidget {
   const _CartaoDaOng({required this.ong, required this.emAberto});
 
@@ -272,6 +282,7 @@ class _CartaoDaOng extends StatelessWidget {
   }
 }
 
+// Aviso de lista vazia, com texto diferente para busca sem resultado
 class _ListaVazia extends StatelessWidget {
   const _ListaVazia({required this.buscando});
 

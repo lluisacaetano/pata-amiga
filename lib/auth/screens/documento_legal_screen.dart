@@ -1,9 +1,13 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
 
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../../tema/cores.dart';
 
+// Qual documento legal a tela mostra
 enum TipoDocumentoLegal { termos, privacidade }
 
+// Mostra os Termos de Uso ou a Política de Privacidade, seção por seção
 class DocumentoLegalScreen extends StatelessWidget {
   const DocumentoLegalScreen({super.key, required this.tipo});
 
@@ -56,6 +60,7 @@ class DocumentoLegalScreen extends StatelessWidget {
   }
 }
 
+// Uma seção do documento: título e texto
 class _SecaoDocumento {
   const _SecaoDocumento(this.titulo, this.conteudo);
 
@@ -63,6 +68,7 @@ class _SecaoDocumento {
   final String conteudo;
 }
 
+// Seções dos Termos de Uso
 const _termos = [
   _SecaoDocumento(
     '1. Sobre o aplicativo',
@@ -114,6 +120,7 @@ const _termos = [
   ),
 ];
 
+// Seções da Política de Privacidade
 const _privacidade = [
   _SecaoDocumento(
     '1. Quem trata os dados',

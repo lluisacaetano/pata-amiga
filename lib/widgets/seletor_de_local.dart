@@ -1,20 +1,30 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote flutter_map: mapa interativo com os blocos do OpenStreetMap.
 import 'package:flutter_map/flutter_map.dart';
+// Pacote geocoding: converte coordenadas em endereço e endereço em coordenadas.
 import 'package:geocoding/geocoding.dart';
+// Pacote geolocator: lê a localização atual do aparelho e pede a permissão.
 import 'package:geolocator/geolocator.dart';
+// Pacote latlong2: coordenadas (latitude e longitude) e cálculo de distâncias.
 import 'package:latlong2/latlong.dart';
 
+// Arquivo bairros_formiga.dart: bairros de Formiga e o nome padronizado.
 import '../dados/bairros_formiga.dart';
+// Arquivo bairro_service.dart: bairro pelo CEP ou pela rua (ViaCEP).
 import '../services/bairro_service.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo mapa_de_local.dart: mapa pequeno com pino fixo no centro.
 import 'mapa_de_local.dart';
 
-// O lugar escolhido: o ponto do pino e o endereço que ele representa
+// Local escolhido: as coordenadas do pino e o endereço correspondente
 typedef LocalEscolhido = ({LatLng ponto, String rua, String bairro});
 
-// Marcar um lugar de três formas: escrevendo o endereço, tocando na mira para
-// usar a localização ou destravando e arrastando o mapa. Mexer no mapa preenche a busca com
-// o endereço do ponto. Avisa a tela a cada mudança
+// Seletor de local com três formas de marcar o ponto: digitar o endereço,
+// usar a localização do aparelho ou destravar e arrastar o mapa. Ao mover o
+// mapa, o campo de busca recebe o endereço do ponto. Cada mudança é
+// informada por [aoMudar]
 class SeletorDeLocal extends StatefulWidget {
   final LatLng inicio;
   final ValueChanged<LocalEscolhido> aoMudar;
@@ -53,13 +63,16 @@ class _SeletorDeLocalState extends State<SeletorDeLocal> {
     super.dispose();
   }
 
+  // Informa a tela sobre o ponto e o endereço atuais
   void _avisarATela() => widget.aoMudar((
     ponto: _ponto,
     rua: _endereco?.rua ?? '',
     bairro: _endereco?.bairro ?? '',
   ));
 
-  // O endereço do pino; sem bairro do Android, o ViaCEP completa
+  // Converte o ponto do pino em rua e bairro (geocodificação reversa). Se o
+  // aparelho não informar o bairro, consulta o ViaCEP pelo CEP ou pela rua.
+  // Descarta o resultado se o pino mudou durante a consulta
   Future<void> _lerEndereco() async {
     final ponto = _ponto;
     setState(() => _lendoEndereco = true);
@@ -96,6 +109,7 @@ class _SeletorDeLocalState extends State<SeletorDeLocal> {
     _avisarATela();
   }
 
+  // Centraliza o mapa no ponto e atualiza o endereço
   void _moverPara(LatLng ponto) {
     _ponto = ponto;
     _mapa.move(ponto, 17);
@@ -103,6 +117,7 @@ class _SeletorDeLocalState extends State<SeletorDeLocal> {
     _lerEndereco();
   }
 
+  // Procura o endereço digitado em Formiga e move o mapa para ele
   Future<void> _buscarNoMapa() async {
     final texto = _busca.text.trim();
     if (texto.isEmpty || _buscando) return;
@@ -133,6 +148,7 @@ class _SeletorDeLocalState extends State<SeletorDeLocal> {
     });
   }
 
+  // Usa a localização do aparelho, pedindo a permissão se necessário
   Future<void> _usarMinhaPosicao() async {
     if (_buscandoPosicao) return;
     setState(() => _buscandoPosicao = true);
@@ -176,6 +192,7 @@ class _SeletorDeLocalState extends State<SeletorDeLocal> {
       _endereco?.bairro ?? '',
     ].where((parte) => parte.isNotEmpty).join(', ');
 
+    // Borda arredondada do campo de busca
     OutlineInputBorder borda(Color cor, [double largura = 1]) =>
         OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -243,6 +260,7 @@ class _SeletorDeLocalState extends State<SeletorDeLocal> {
           },
         ),
         const SizedBox(height: 10),
+        // Endereço do ponto atual, ou o estado da consulta
         Row(
           children: [
             Icon(Icons.place_outlined, size: 16, color: context.cores.principal),

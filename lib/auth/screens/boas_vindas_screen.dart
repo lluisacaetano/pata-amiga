@@ -1,9 +1,15 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
 
+// Arquivo auth_components.dart: fundo, logotipo e botões das telas de entrada.
 import 'auth_components.dart';
+// Arquivo route_names.dart: nomes das rotas de navegação.
 import '../../routes/route_names.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../../tema/cores.dart';
 
+// Tela de boas-vindas de quem ainda não tem sessão: a marca, o slogan e os
+// caminhos para entrar ou criar conta
 class BoasVindasScreen extends StatelessWidget {
   const BoasVindasScreen({super.key});
 
@@ -20,7 +26,7 @@ class BoasVindasScreen extends StatelessWidget {
               child: Stack(
                 alignment: Alignment.topCenter,
                 children: [
-                  // Pata ATRÁS
+                  // A patinha fica atrás do nome e da ilustração dos animais
                   const Positioned(top: 0, child: AuthBrandMark(size: 68)),
 
                   Positioned(

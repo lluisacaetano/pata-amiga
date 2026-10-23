@@ -1,19 +1,31 @@
+// Biblioteca dart:io: File, para exibir a foto tirada pela câmera.
 import 'dart:io';
 
+// Pacote flutter/foundation: kIsWeb, para exibir a foto também na web.
 import 'package:flutter/foundation.dart';
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote image_picker: abre a câmera ou a galeria para escolher fotos.
 import 'package:image_picker/image_picker.dart';
+// Pacote provider: compartilha estado entre as telas e as reconstrói.
 import 'package:provider/provider.dart';
 
+// Arquivo estado_pata_amiga.dart: estado compartilhado do app.
 import '../estado/estado_pata_amiga.dart';
+// Arquivo ponto_de_alimentacao.dart: ponto de alimentação e suas regras.
 import '../modelos/ponto_de_alimentacao.dart';
+// Arquivo usuario_provider.dart: dados do usuário logado.
 import '../provider/usuario_provider.dart';
+// Arquivo alimentacao_service.dart: acesso à API dos pontos de alimentação.
 import '../services/alimentacao_service.dart';
+// Arquivo localizacao_service.dart: leitura da posição atual do aparelho.
 import '../services/localizacao_service.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
 
-// Confirmar que abasteceu um ponto. Só vale com a pessoa a até 150 m dele e
-// uma vez por dia; a foto é opcional e aparece no resumo do ponto
+// Tela para confirmar o abastecimento de um ponto de alimentação. O registro
+// só é aceito com a pessoa a até 150 m do ponto e uma vez por dia; a foto é
+// opcional e aparece no resumo do ponto
 class RegistrarAbastecimento extends StatefulWidget {
   final PontoDeAlimentacao ponto;
   final AlimentacaoService? servico;
@@ -38,6 +50,7 @@ class _RegistrarAbastecimentoState extends State<RegistrarAbastecimento> {
   bool _salvando = false;
   String? _recusa;
 
+  // Abre a câmera e guarda a foto escolhida para enviar com o registro
   Future<void> _tirarFoto() async {
     try {
       final foto = await _camera.pickImage(
@@ -50,6 +63,8 @@ class _RegistrarAbastecimentoState extends State<RegistrarAbastecimento> {
     }
   }
 
+  // Lê a posição atual, aplica as regras de distância e de um registro por
+  // dia e, se aprovado, grava o abastecimento na API e no estado do app
   Future<void> _confirmar() async {
     if (_salvando) return;
     setState(() {
@@ -299,7 +314,8 @@ class _RegistrarAbastecimentoState extends State<RegistrarAbastecimento> {
   }
 }
 
-// O mesmo cartão do cadastro de animal: branco, borda clara e título verde
+// Cartão de seção do formulário: fundo de cartão, borda e título com ícone
+// na cor principal, no mesmo padrão do cadastro de animal
 class _Cartao extends StatelessWidget {
   const _Cartao({
     required this.icone,

@@ -1,19 +1,34 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote provider: compartilha estado entre as telas e as reconstrói.
 import 'package:provider/provider.dart';
 
+// Arquivo auth_components.dart: fundo, campos e botões das telas de entrada.
 import 'auth_components.dart';
+// Arquivo route_names.dart: nomes das rotas de navegação.
 import '../../routes/route_names.dart';
+// Arquivo onboarding_screen.dart: navegação para o app depois do cadastro.
 import '../../telas/onboarding_screen.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../../tema/cores.dart';
+// Arquivo mascaras.dart: máscaras dos campos de e-mail e telefone.
 import '../../widgets/mascaras.dart';
+// Arquivo usuario_provider.dart: registro da conta nova.
 import '../../provider/usuario_provider.dart';
+// Arquivo estado_pata_amiga.dart: estado compartilhado das ONGs.
 import '../../estado/estado_pata_amiga.dart';
+// Arquivo ong.dart: modelo da ONG e da pessoa que pede para entrar.
 import '../../modelos/ong.dart';
+// Arquivo ong_service.dart: serviço que envia o pedido de entrada à ONG.
 import '../../services/ong_service.dart';
+// Arquivo escolha_de_ong.dart: campo de escolha da ONG.
 import '../../widgets/escolha_de_ong.dart';
 
+// Tela de criação de conta: nome, e-mail, telefone, senha, a ONG de que a
+// pessoa faz parte (opcional) e o aceite dos termos. O perfil é salvo no
+// aparelho; a senha é só validada, não é guardada
 class RegisterScreen extends StatefulWidget {
-  // Os testes passam um serviço de ONGs falso; o app usa o de verdade
+  // Serviço de ONGs; quando nulo, usa o padrão (os testes passam um falso)
   final OngService? ongs;
 
   const RegisterScreen({super.key, this.ongs});
@@ -34,17 +49,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _mostrarErroTermos = false;
   bool _mostrarSenha = false;
   bool _mostrarConfirmacao = false;
-  // A ONG de que a pessoa diz fazer parte: vira um pedido para entrar
+  // ONG escolhida no cadastro; ao criar a conta, vira um pedido de entrada
   Ong? _ong;
 
-  // O pedido vai para quem administra a ONG aprovar. Se a API não responder, a
-  // conta é criada mesmo assim, e o pedido pode ser refeito no Editar perfil
+  // Envia o pedido de entrada para o administrador da ONG aprovar e avisa o
+  // resultado. Se a API falhar, a conta é criada mesmo assim e o pedido
+  // pode ser refeito em Editar perfil
   Future<void> _pedirEntrada(Ong ong) async {
     final mensageiro = ScaffoldMessenger.of(context);
     final estado = PataAmigaScope.talvez(context);
     String aviso;
     try {
-      // O estado já sabe do pedido: a etiqueta "Aguardando" aparece logo
+      // Atualiza o estado com a ONG devolvida, para a etiqueta "Aguardando"
+      // aparecer sem recarregar
       estado?.salvarOng(
         await (widget.ongs ?? OngService()).pedirEntrada(
           ong,
@@ -179,7 +196,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     setState(() => _mostrarConfirmacao = !_mostrarConfirmacao),
               ),
               const SizedBox(height: 16),
-              // A mesma fonte Roboto dos outros campos desta tela
+              // Força a fonte Roboto, a mesma dos outros campos desta tela
               Theme(
                 data: Theme.of(context).copyWith(
                   textTheme: Theme.of(
@@ -256,6 +273,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 12),
               AuthButton(
                 label: 'Criar conta',
+                // Valida os campos e o aceite dos termos, salva o perfil,
+                // envia o pedido à ONG (se houver) e segue para o app
                 onPressed: () async {
                   final camposValidos = _formKey.currentState!.validate();
                   setState(() => _mostrarErroTermos = !_aceitouTermos);
@@ -288,6 +307,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+  // Texto sublinhado que abre os Termos de Uso ou a Política de Privacidade
   Widget _linkDocumento(BuildContext context, String texto, String rota) {
     return InkWell(
       onTap: () => Navigator.of(context).pushNamed(rota),

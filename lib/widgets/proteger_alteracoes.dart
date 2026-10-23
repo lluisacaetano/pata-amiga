@@ -1,12 +1,13 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
 
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
 
-// Protege um formulário: com algo mudado e não salvo, voltar (pela seta ou
-// pelo botão do aparelho) pergunta antes de sair. Salvar continua saindo
-// direto, porque as telas saem com Navigator.pop, que não passa por aqui.
-// A mudança é conferida na hora de voltar, porque digitar num campo não
-// redesenha a tela
+// Envolve um formulário e pede confirmação ao voltar (seta ou botão do
+// aparelho) quando há alterações não salvas. [alterado] é consultado no
+// momento da volta, pois digitar não reconstrói a tela. Salvar não passa por
+// aqui, porque a tela fecha com Navigator.pop
 class ProtegerAlteracoes extends StatelessWidget {
   final bool Function() alterado;
   final Widget child;
@@ -31,8 +32,9 @@ class ProtegerAlteracoes extends StatelessWidget {
   }
 }
 
-// O mesmo painel de baixo das outras confirmações do app. A ação segura é a
-// principal: o botão cheio continua editando, e sair fica em coral
+// Painel inferior "Sair sem salvar?". Devolve true se a pessoa confirmar a
+// saída. A ação segura (continuar editando) é o botão principal; sair fica
+// como botão de texto na cor de destaque
 Future<bool> confirmarSaida(BuildContext context) async =>
     await showModalBottomSheet<bool>(
       context: context,

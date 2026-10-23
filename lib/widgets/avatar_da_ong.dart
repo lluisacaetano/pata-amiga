@@ -1,14 +1,19 @@
+// Biblioteca dart:io: arquivos do aparelho, como a foto da ONG.
 import 'dart:io';
 
+// Pacote flutter/foundation: utilitários base, como kIsWeb.
 import 'package:flutter/foundation.dart';
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
 
+// Arquivo ong.dart: modelo da ONG.
 import '../modelos/ong.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
 
-// O rosto da ONG em todo lugar em que ela aparece: a foto em círculo, como a
-// do "Meu perfil", ou, sem foto, as iniciais do nome. Assim a ONG é
-// reconhecível na lista, no perfil e no cartão "Minha ONG" mesmo sem foto
+// Avatar circular da ONG, usado na lista de ONGs, no perfil da ONG e no
+// vínculo do perfil do usuário. Mostra a foto (internet, arquivo do aparelho
+// ou asset); sem foto, as iniciais do nome; sem nome, um ícone
 class AvatarDaOng extends StatelessWidget {
   final Ong ong;
   final double raio;
@@ -25,7 +30,7 @@ class AvatarDaOng extends StatelessWidget {
         : !kIsWeb && foto.startsWith('/')
         ? FileImage(File(foto))
         : AssetImage(foto);
-    // O anel claro destaca a foto do fundo, como no perfil da pessoa
+    // Anel claro em volta do avatar, para destacá-lo do fundo
     return Container(
       padding: EdgeInsets.all(raio > 30 ? 3 : 2),
       decoration: BoxDecoration(
@@ -58,9 +63,9 @@ class AvatarDaOng extends StatelessWidget {
   }
 }
 
-// As iniciais das duas primeiras palavras que contam: "Abrigo Focinhos
-// (exemplo)" vira "AF", sem os "de", "da" e o que estiver entre parênteses.
-// Sem nome ainda, volta vazio, e o avatar mostra o ícone
+// Iniciais das duas primeiras palavras significativas do nome, ignorando
+// preposições ("de", "da", "do"...) e trechos entre parênteses:
+// "Abrigo Focinhos (exemplo)" vira "AF". Nome vazio devolve texto vazio
 String iniciaisDa(String nome) {
   const ligacoes = {'de', 'da', 'do', 'das', 'dos', 'e'};
   final palavras = nome

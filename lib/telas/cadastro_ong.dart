@@ -1,25 +1,42 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote flutter/services: erro da galeria e formatadores de texto.
 import 'package:flutter/services.dart';
+// Pacote image_picker: abre a câmera ou a galeria para escolher fotos.
 import 'package:image_picker/image_picker.dart';
+// Pacote latlong2: coordenadas (latitude e longitude) e cálculo de distâncias.
 import 'package:latlong2/latlong.dart';
+// Pacote provider: compartilha estado entre as telas e as reconstrói.
 import 'package:provider/provider.dart';
 
+// Arquivo estado_pata_amiga.dart: estado compartilhado com as ONGs.
 import '../estado/estado_pata_amiga.dart';
+// Arquivo ong.dart: modelo da ONG.
 import '../modelos/ong.dart';
+// Arquivo usuario_provider.dart: usuário logado.
 import '../provider/usuario_provider.dart';
+// Arquivo ong_service.dart: leitura e gravação das ONGs na API.
 import '../services/ong_service.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo proteger_alteracoes.dart: confirmação ao sair sem salvar.
 import '../widgets/proteger_alteracoes.dart';
+// Arquivo avatar_da_ong.dart: avatar da ONG com foto ou iniciais.
 import '../widgets/avatar_da_ong.dart';
+// Arquivo mapa_de_local.dart: ponto central de Formiga no mapa.
 import '../widgets/mapa_de_local.dart';
+// Arquivo mascaras.dart: máscara e formatação do telefone.
 import '../widgets/mascaras.dart';
+// Arquivo seletor_de_local.dart: escolha do endereço no mapa.
 import '../widgets/seletor_de_local.dart';
 
-// Criar ou editar o perfil da ONG de quem está logado, no padrão do cadastro
-// de animal. Só a foto é opcional, porque as iniciais ficam no lugar dela;
-// porque nem todo abrigo quer receber doação pelo app
+// Formulário para criar ou editar o perfil da ONG do usuário logado. Todos
+// os campos são obrigatórios, exceto a foto (sem ela, o avatar mostra as
+// iniciais do nome). Só o administrador da ONG pode editar
 class CadastroOng extends StatefulWidget {
+  // ONG a editar; nula para criar uma nova
   final Ong? editando;
+  // Serviço opcional, para os testes injetarem uma versão falsa
   final OngService? servico;
 
   const CadastroOng({super.key, this.editando, this.servico});
@@ -41,8 +58,9 @@ class _CadastroOngState extends State<CadastroOng> {
   bool _tentou = false;
   bool _salvando = false;
   final _rolagem = ScrollController();
-  // O formulário como abriu, para saber se algo mudou
+  // Assinatura do formulário ao abrir, para detectar alterações não salvas
   String _inicial = '';
+  // Junta os valores do formulário numa única string comparável
   String get _assinatura => [
     _nome.text,
     _descricao.text,
@@ -50,21 +68,22 @@ class _CadastroOngState extends State<CadastroOng> {
     _chavePix.text,
     _politica.text,
     _foto,
-    // O pino do mapa conta: mexer nele sem querer também é uma mudança
+    // A posição do pino também conta como alteração
     _local.ponto.latitude.toStringAsFixed(5),
     _local.ponto.longitude.toStringAsFixed(5),
   ].map((parte) => parte.trim()).join('|');
 
-  // Outra ONG já usa o nome digitado
+  // Verdadeiro quando outra ONG já usa o nome digitado
   bool _nomeRepetido = false;
-  // A ONG que está sendo editada. Cada conta tem no máximo uma: quem já tem
-  // ONG e abre o cadastro edita a que existe, em vez de criar outra
+  // ONG em edição. Cada conta tem no máximo uma: se o usuário já tem ONG, o
+  // formulário edita a existente em vez de criar outra
   Ong? _editando;
 
   @override
   void initState() {
     super.initState();
-    // O ponto de partida é o formulário já preenchido, depois do initState
+    // A assinatura inicial é tirada após o primeiro quadro, com o formulário
+    // já preenchido
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _inicial = _assinatura;
     });
@@ -72,7 +91,7 @@ class _CadastroOngState extends State<CadastroOng> {
     _editando = widget.editando ?? PataAmigaScope.talvez(context)?.ongDe(email);
     final ong = _editando;
     if (ong == null) {
-      // A ONG costuma atender pelo telefone de quem cria o perfil
+      // Nova ONG: sugere o telefone de quem está criando o perfil
       final usuario = context.read<UsuarioProvider?>()?.usuario;
       _telefone.text = formatarTelefone(usuario?.telefone ?? '');
       return;
@@ -80,14 +99,14 @@ class _CadastroOngState extends State<CadastroOng> {
     _preencher(ong);
   }
 
-  // Só quem administra a ONG muda os dados dela, como a chave Pix: quem entrou
-  // por aprovação publica animais em nome da ONG, mas não edita o perfil
+  // Só o administrador edita os dados da ONG. Membros aprovados publicam
+  // animais em nome dela, mas não alteram o perfil
   bool get _podeEditar {
     final email = context.read<UsuarioProvider?>()?.usuario.email ?? '';
     return _editando == null || _editando!.eDoResponsavel(email);
   }
 
-  // O formulário com os dados da ONG que está sendo editada
+  // Preenche o formulário com os dados de uma ONG existente
   void _preencher(Ong ong) {
     _local = ong.temLocal
         ? (
@@ -113,9 +132,11 @@ class _CadastroOngState extends State<CadastroOng> {
     super.dispose();
   }
 
+  // Campo obrigatório vazio, depois de uma tentativa de salvar
   bool _faltando(TextEditingController campo) =>
       _tentou && campo.text.trim().isEmpty;
 
+  // Abre a galeria para escolher a foto de perfil da ONG
   Future<void> _escolherFoto() async {
     try {
       final foto = await _seletorDeFoto.pickImage(
@@ -129,6 +150,7 @@ class _CadastroOngState extends State<CadastroOng> {
     }
   }
 
+  // Mostra uma mensagem curta no rodapé, substituindo a anterior
   void _avisar(String mensagem) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
@@ -136,11 +158,12 @@ class _CadastroOngState extends State<CadastroOng> {
       ..showSnackBar(SnackBar(content: Text(mensagem)));
   }
 
-  // O telefone vira o WhatsApp do perfil: precisa do DDD
+  // O telefone é usado como WhatsApp da ONG, por isso exige o DDD
+  // (10 dígitos ou mais)
   bool get _telefoneValido =>
       _telefone.text.replaceAll(RegExp(r'\D'), '').length >= 10;
 
-  // Tudo o que o perfil mostra é obrigatório, menos a foto
+  // Todos os campos obrigatórios preenchidos, com endereço completo no mapa
   bool get _completo =>
       [
         _nome,
@@ -152,12 +175,14 @@ class _CadastroOngState extends State<CadastroOng> {
       _local.rua.trim().isNotEmpty &&
       _local.bairro.trim().isNotEmpty;
 
+  // Valida e grava a ONG na API. Antes de gravar, consulta a API para
+  // impedir nome repetido, ONG duplicada para a mesma conta e edição por quem
+  // deixou de ser administrador
   Future<void> _salvar() async {
     setState(() => _tentou = true);
     if (_salvando || !_podeEditar) return;
     if (!_completo) {
-      // O botão fica no fim e os campos em vermelho lá em cima: a tela sobe
-      // até eles
+      // Rola até o topo, onde estão os campos marcados em vermelho
       _rolagem.animateTo(
         0,
         duration: const Duration(milliseconds: 300),
@@ -170,10 +195,10 @@ class _CadastroOngState extends State<CadastroOng> {
     final email = context.read<UsuarioProvider?>()?.usuario.email ?? '';
     final antes = _editando;
     try {
-      // A ONG pode ter sido criada em outro aparelho: antes de criar, confere
-      // na API se o e-mail já tem uma
+      // Consulta a API, pois a ONG pode ter sido criada ou alterada em outro
+      // aparelho
       final ongs = await _servico.buscarOngs();
-      // Duas ONGs com o mesmo nome confundem quem quer doar
+      // Não permite duas ONGs com o mesmo nome
       if (ongs.any((ong) => ong.id != antes?.id && ong.temNome(_nome.text))) {
         if (!mounted) return;
         setState(() {
@@ -183,8 +208,8 @@ class _CadastroOngState extends State<CadastroOng> {
         return;
       }
       if (antes == null) {
-        // Quem espera resposta de uma ONG também não cria outra: aprovado
-        // depois, ficaria em duas
+        // Quem tem pedido de entrada pendente em outra ONG não pode criar
+        // uma, pois ficaria em duas se fosse aprovado
         final pedida = ongs.where((ong) => ong.pediuEntrada(email));
         if (pedida.isNotEmpty) {
           if (!mounted) return;
@@ -199,15 +224,14 @@ class _CadastroOngState extends State<CadastroOng> {
         if (existente.isNotEmpty) {
           estado.salvarOng(existente.first);
           if (!mounted) return;
-          // O formulário passa a mostrar a ONG que já existe, para o próximo
-          // salvar não a trocar pelo que foi digitado aqui
+          // A conta já participa de uma ONG: o formulário passa a editá-la,
+          // para não sobrescrevê-la com o que foi digitado
           setState(() {
             _salvando = false;
             _editando = existente.first;
             _preencher(existente.first);
           });
-          // O formulário passou a ser o da ONG que existe: é ele o ponto de
-          // partida do "sair sem salvar"
+          // Atualiza a assinatura inicial para a ONG carregada
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _inicial = _assinatura;
           });
@@ -218,13 +242,12 @@ class _CadastroOngState extends State<CadastroOng> {
           return;
         }
       }
-      // Na edição, quem faz parte e quem pediu para entrar vêm da API: um
-      // pedido pode ter chegado enquanto o formulário estava aberto
+      // Na edição, membros e pedidos são lidos da API, pois podem ter mudado
+      // com o formulário aberto
       final naApi = antes?.id == null
           ? null
           : await _servico.buscarOng(antes!.id!);
-      // A administração pode ter mudado em outro aparelho: quem não
-      // administra mais não grava por cima
+      // Impede a gravação se o usuário deixou de administrar a ONG
       if (naApi != null && !naApi.eDoResponsavel(email)) {
         if (!mounted) return;
         setState(() {
@@ -247,7 +270,7 @@ class _CadastroOngState extends State<CadastroOng> {
           bairro: _local.bairro,
           latitude: _local.ponto.latitude,
           longitude: _local.ponto.longitude,
-          // Na edição, a ONG continua de quem a administra
+          // Na edição, mantém o administrador registrado na API
           responsavelEmail: naApi?.responsavelEmail ?? email,
           criadaEm: antes?.criadaEm ?? DateTime.now(),
           membros: naApi?.membros ?? const [],
@@ -267,7 +290,7 @@ class _CadastroOngState extends State<CadastroOng> {
   @override
   Widget build(BuildContext context) {
     final editando = _editando != null;
-    // Com algo mudado e não salvo, voltar pergunta antes de sair
+    // Pede confirmação ao sair com alterações não salvas
     return ProtegerAlteracoes(
       alterado: () => _assinatura != _inicial && !_salvando,
       child: Scaffold(
@@ -319,8 +342,8 @@ class _CadastroOngState extends State<CadastroOng> {
                 controller: _rolagem,
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                 children: [
-                  // A foto como no "Editar perfil": o círculo com a câmera, que
-                  // mostra as iniciais do nome enquanto não há foto
+                  // Avatar tocável com ícone de câmera; sem foto, mostra as
+                  // iniciais do nome digitado
                   Center(
                     child: Semantics(
                       button: true,
@@ -457,15 +480,15 @@ class _CadastroOngState extends State<CadastroOng> {
                   _Cartao(
                     icone: Icons.location_on_outlined,
                     titulo: 'Onde fica',
-                    // A chave refaz o mapa quando a ONG editada muda
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        // A chave recria o mapa quando a ONG em edição muda
                         SeletorDeLocal(
                           key: ValueKey(_editando?.id),
                           inicio: _local.ponto,
-                          // O mapa relê o endereço do pino ao abrir; na edição, ele só
-                          // troca o endereço salvo se o pino tiver mudado
+                          // O mapa relê o endereço ao abrir. Na edição, o
+                          // endereço salvo só muda se o pino for movido
                           aoMudar: (local) {
                             final salva = _editando;
                             if (salva != null &&
@@ -523,7 +546,7 @@ class _CadastroOngState extends State<CadastroOng> {
   }
 }
 
-// O mesmo cartão do cadastro de animal: branco, borda clara e título verde
+// Cartão de seção do formulário, com ícone e título
 class _Cartao extends StatelessWidget {
   const _Cartao({
     required this.icone,
@@ -570,6 +593,7 @@ class _Cartao extends StatelessWidget {
   }
 }
 
+// Campo de texto com rótulo acima e mensagem de erro ou aviso abaixo
 class _Campo extends StatelessWidget {
   final String rotulo;
   final TextEditingController controlador;

@@ -1,6 +1,9 @@
+// Pacote flutter/services: serviços da plataforma, como TextInputFormatter.
 import 'package:flutter/services.dart';
 
-// Formata o telefone com DDD enquanto se digita: (37) 99999-0000
+// Formata o telefone com DDD durante a digitação: (37) 99999-0000 para
+// celular e (37) 9999-0000 para fixo. Aceita até 11 dígitos e descarta o
+// restante
 class MascaraDeTelefone extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
@@ -26,8 +29,9 @@ class MascaraDeTelefone extends TextInputFormatter {
   }
 }
 
-// O mesmo formato da máscara para telefones que chegam sem ela, como os da
-// API: "37999990000" vira "(37) 99999-0000". O 55 do país, se vier, sai
+// Aplica o formato da máscara a um telefone já gravado, como os que vêm da
+// API: "37999990000" vira "(37) 99999-0000". Remove o código do país (55)
+// quando presente. Sem dígitos, devolve o texto sem espaços nas pontas
 String formatarTelefone(String telefone) {
   var digitos = telefone.replaceAll(RegExp(r'\D'), '');
   if (digitos.length > 11 && digitos.startsWith('55')) {
@@ -39,8 +43,9 @@ String formatarTelefone(String telefone) {
       .text;
 }
 
-// E-mail não tem formato fixo, então a máscara só barra o que nunca cabe
-// num endereço: espaço, letra maiúscula e um segundo @
+// Máscara de e-mail: como o endereço não tem formato fixo, ela só impede o
+// que nunca é válido. Remove espaços, converte para minúsculas e rejeita um
+// segundo @
 class MascaraDeEmail extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(

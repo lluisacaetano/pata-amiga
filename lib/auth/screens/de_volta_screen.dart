@@ -1,14 +1,20 @@
+// Biblioteca dart:async: o Timer que encerra a recepção.
 import 'dart:async';
 
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote provider: compartilha estado entre as telas e as reconstrói.
 import 'package:provider/provider.dart';
 
+// Arquivo usuario_provider.dart: nome de quem está logado.
 import '../../provider/usuario_provider.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../../tema/cores.dart';
+// Arquivo auth_components.dart: fundo e logotipo das telas de entrada.
 import 'auth_components.dart';
 
-// Recepção rápida de quem reabre o app com a sessão salva. Fica poucos
-// segundos e segue sozinha para o feed; um toque pula a espera
+// Recepção de quem reabre o app com a sessão salva: cumprimenta pelo
+// primeiro nome e chama [aoTerminar] depois de 1,8 s ou ao primeiro toque
 class DeVoltaScreen extends StatefulWidget {
   final VoidCallback aoTerminar;
 
@@ -38,7 +44,7 @@ class _DeVoltaScreenState extends State<DeVoltaScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Quem desligou as animações no aparelho vê a tela já pronta
+    // Com animações desligadas no aparelho, a tela já aparece pronta
     if (MediaQuery.disableAnimationsOf(context)) {
       _entrada.value = 1;
     } else if (!_entrada.isAnimating && _entrada.value == 0) {
@@ -46,6 +52,8 @@ class _DeVoltaScreenState extends State<DeVoltaScreen>
     }
   }
 
+  // Garante que [aoTerminar] seja chamado uma única vez, pelo tempo ou pelo
+  // toque, o que vier primeiro
   void _terminar() {
     if (_terminou) return;
     _terminou = true;
@@ -68,7 +76,7 @@ class _DeVoltaScreenState extends State<DeVoltaScreen>
         ? 'Que bom te ver de volta!'
         : 'Que bom te ver de volta, $primeiroNome!';
 
-    // A patinha cresce de leve e a frase aparece logo depois dela
+    // A patinha cresce de leve e a saudação aparece em seguida
     final escala = Tween(begin: 0.82, end: 1.0).animate(
       CurvedAnimation(parent: _entrada, curve: Curves.easeOutBack),
     );

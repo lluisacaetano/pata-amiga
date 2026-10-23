@@ -1,11 +1,18 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
 
+// Arquivo estado_pata_amiga.dart: estado global com as curtidas.
 import '../estado/estado_pata_amiga.dart';
+// Arquivo animal.dart: modelo do animal e o tipo do registro.
 import '../modelos/animal.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo foto_animal.dart: foto do animal com a patinha de reserva.
 import 'foto_animal.dart';
 
-// Card de um animal no feed.
+// Cartão de um animal no feed: foto, nome, resumo, local e tempo desde a
+// publicação, seguidos das ações curtir, WhatsApp e compartilhar. O toque
+// no cartão executa [aoTocar] (abrir os detalhes)
 class CardAnimal extends StatelessWidget {
   final Animal animal;
   final VoidCallback aoCompartilhar;
@@ -69,14 +76,15 @@ class CardAnimal extends StatelessWidget {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                // Há quanto tempo foi publicado, na mesma linha do local
+                // Tempo desde a publicação, na mesma linha do local
                 Text(
                   ' · ${animal.publicadoHa(DateTime.now())}',
                   style: TextStyle(color: context.cores.textoFraco, fontSize: 13),
                 ),
               ],
             ),
-            // Em perdidos e resgates, onde e quando importa mais que o porte
+            // Em perdidos e resgates, mostra as observações (até duas
+            // linhas), que costumam dizer onde e quando o animal foi visto
             if (animal.tipo != TipoRegistro.adocao &&
                 animal.observacoes.isNotEmpty) ...[
               const SizedBox(height: 6),
@@ -87,7 +95,7 @@ class CardAnimal extends StatelessWidget {
                 style: TextStyle(color: context.cores.texto, fontSize: 13),
               ),
             ],
-            // Separa o que se lê do que se toca
+            // Divisória entre as informações e as ações
             Padding(
               padding: EdgeInsets.symmetric(vertical: 10),
               child: Divider(height: 1, thickness: 1, color: context.cores.borda),
@@ -120,6 +128,7 @@ class CardAnimal extends StatelessWidget {
   }
 }
 
+// Ação do rodapé do cartão: ícone com rótulo, na cor principal quando ativa
 class _Acao extends StatelessWidget {
   final IconData icone;
   final String rotulo;

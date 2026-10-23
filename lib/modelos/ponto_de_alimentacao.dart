@@ -1,25 +1,29 @@
+// Biblioteca dart:math: seno, cosseno e raiz, usados no cálculo de distância.
 import 'dart:math' as math;
 
 // Comedouros e bebedouros públicos da cidade e o registro de quem os
-// abasteceu, para saber qual está precisando de comida ou água
+// abasteceu, para indicar quais precisam de comida ou água
 
+// O que o ponto oferece
 enum TipoDePonto { comedouro, bebedouro, ambos }
 
 extension RotuloDoPonto on TipoDePonto {
+  // O nome do tipo como aparece na tela
   String get rotulo => switch (this) {
     TipoDePonto.comedouro => 'Comedouro',
     TipoDePonto.bebedouro => 'Bebedouro',
     TipoDePonto.ambos => 'Comedouro e bebedouro',
   };
 
-  // Na escolha do cadastro, o terceiro tipo aparece mais curto
+  // Versão curta do nome, usada na escolha do tipo no cadastro
   String get rotuloCurto => this == TipoDePonto.ambos ? 'Os dois' : rotulo;
 }
 
+// Um comedouro ou bebedouro público, com a localização e quem o cadastrou
 class PontoDeAlimentacao {
   final int? id;
   final TipoDePonto tipo;
-  // Como achar o ponto no lugar: "perto do banco da praça"
+  // Referência para achar o ponto no local, como "perto do banco da praça"
   final String referencia;
   final String rua;
   final String bairro;
@@ -65,18 +69,21 @@ class PontoDeAlimentacao {
     'cadastradoEm': cadastradoEm.toIso8601String(),
   };
 
+  // Rua e bairro separados por vírgula, omitindo o que estiver vazio
   String get lugar =>
       [rua, bairro].where((parte) => parte.trim().isNotEmpty).join(', ');
 }
 
+// O registro de que alguém abasteceu um ponto em uma data
 class Abastecimento {
   final int? id;
+  // O id do ponto abastecido
   final int ponto;
   final DateTime data;
   final String registradoPor;
-  // O e-mail identifica quem registrou: dois usuários podem ter o mesmo nome
+  // O e-mail de quem registrou; identifica a pessoa, já que nomes se repetem
   final String email;
-  // A foto do ponto abastecido, opcional, que todo mundo vê no resumo
+  // Foto opcional do ponto abastecido, exibida no resumo do ponto
   final String foto;
 
   Abastecimento({
@@ -126,12 +133,15 @@ double distanciaEmMetros(
   return 2 * raioDaTerra * math.asin(math.sqrt(a));
 }
 
-// A distância máxima entre a pessoa e o ponto para o abastecimento valer
+// Distância máxima, em metros, entre a pessoa e o ponto para registrar o
+// abastecimento
 const distanciaMaximaDoPonto = 150.0;
 
+// Por que um abastecimento não pode ser registrado
 enum MotivoDaRecusa { longeDoPonto, jaRegistrouHoje }
 
 extension TextoDoMotivo on MotivoDaRecusa {
+  // A mensagem exibida para a pessoa
   String get texto => switch (this) {
     MotivoDaRecusa.longeDoPonto =>
       'Você precisa estar no ponto para registrar o abastecimento.',
@@ -140,9 +150,9 @@ extension TextoDoMotivo on MotivoDaRecusa {
   };
 }
 
-// Se o abastecimento pode valer: com a pessoa a até 150 m do ponto e sem
-// outro registro dela no mesmo ponto no mesmo dia. Devolve null quando pode.
-// A foto é opcional e não entra na verificação
+// Verifica se o abastecimento pode ser registrado: a pessoa precisa estar a
+// até 150 m do ponto e não ter registrado o mesmo ponto no mesmo dia.
+// Devolve null quando pode, ou o motivo da recusa
 MotivoDaRecusa? verificarAbastecimento({
   required double latitudeDoPonto,
   required double longitudeDoPonto,
@@ -166,6 +176,7 @@ MotivoDaRecusa? verificarAbastecimento({
   return null;
 }
 
+// Se a pessoa já registrou o abastecimento deste ponto hoje
 bool jaAbasteceuHoje(
   int? idDoPonto,
   String email,
@@ -183,7 +194,7 @@ bool jaAbasteceuHoje(
   );
 }
 
-// O abastecimento mais recente de um ponto, ou null se nunca foi abastecido
+// O abastecimento mais recente do ponto, ou null se nunca foi abastecido
 Abastecimento? ultimoAbastecimento(
   PontoDeAlimentacao ponto,
   Iterable<Abastecimento> todos,
@@ -198,9 +209,11 @@ Abastecimento? ultimoAbastecimento(
   return ultimo;
 }
 
+// A situação do ponto conforme o tempo desde o último abastecimento
 enum SituacaoDoPonto { abastecido, abastecerLogo, precisa }
 
 extension RotuloDaSituacao on SituacaoDoPonto {
+  // O nome da situação como aparece na tela
   String get rotulo => switch (this) {
     SituacaoDoPonto.abastecido => 'Abastecido',
     SituacaoDoPonto.abastecerLogo => 'Abastecer logo',
@@ -208,8 +221,8 @@ extension RotuloDaSituacao on SituacaoDoPonto {
   };
 }
 
-// Até 2 dias, abastecido; de 3 a 6, abastecer logo; 7 ou mais, ou nunca,
-// precisa. Os limites foram uma proposta do squad, a confirmar com a PO
+// Classifica o ponto pelos dias desde o último abastecimento: até 2,
+// abastecido; de 3 a 6, abastecer logo; 7 ou mais, ou nunca, precisa
 SituacaoDoPonto situacaoDoPonto(Abastecimento? ultimo, DateTime agora) {
   if (ultimo == null) return SituacaoDoPonto.precisa;
   final hoje = DateTime(agora.year, agora.month, agora.day);
@@ -220,7 +233,7 @@ SituacaoDoPonto situacaoDoPonto(Abastecimento? ultimo, DateTime agora) {
   return SituacaoDoPonto.precisa;
 }
 
-// "hoje", "ontem" ou "há 3 dias", como no resto do app
+// Há quanto tempo foi a data: "hoje", "ontem" ou "há 3 dias"
 String haQuantoTempo(DateTime data, DateTime agora) {
   final hoje = DateTime(agora.year, agora.month, agora.day);
   final dia = DateTime(data.year, data.month, data.day);

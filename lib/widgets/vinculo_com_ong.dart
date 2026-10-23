@@ -1,18 +1,22 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
 
+// Arquivo ong.dart: modelo da ONG.
 import '../modelos/ong.dart';
+// Arquivo route_names.dart: nomes das rotas de navegação.
 import '../routes/route_names.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo avatar_da_ong.dart: avatar circular da ONG.
 import 'avatar_da_ong.dart';
 
-// O vínculo da pessoa com a ONG, no cabeçalho do "Meu perfil", logo abaixo
-// do contato: a ONG faz parte de quem a pessoa é, e não é um bloco à parte.
-// Tocar abre o perfil da ONG, onde quem a criou tem o editar. Quem pediu
-// para entrar vê a mesma etiqueta, aguardando. Sem ONG, nada aparece: criar
-// ou entrar numa ONG fica no "Editar perfil"
+// Etiqueta com a ONG do usuário, exibida no cabeçalho de "Meu perfil".
+// Membro aprovado vê o avatar e o nome da ONG; quem tem pedido pendente vê
+// "Aguardando <ONG>". O toque abre o perfil da ONG. Sem ONG nem pedido, não
+// ocupa espaço
 class VinculoComOng extends StatelessWidget {
   final Ong? ong;
-  // A ONG em que a pessoa pediu para entrar, enquanto não houver resposta
+  // ONG com pedido de entrada ainda não aprovado
   final Ong? pedida;
 
   const VinculoComOng({super.key, required this.ong, this.pedida});

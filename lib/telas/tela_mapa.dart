@@ -1,33 +1,54 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote flutter_map: mapa interativo com os blocos do OpenStreetMap.
 import 'package:flutter_map/flutter_map.dart';
+// Pacote geolocator: lê a localização atual do aparelho e pede a permissão.
 import 'package:geolocator/geolocator.dart';
+// Pacote latlong2: coordenadas (latitude e longitude) e cálculo de distâncias.
 import 'package:latlong2/latlong.dart';
+// Pacote provider: compartilha estado entre as telas e as reconstrói.
 import 'package:provider/provider.dart';
 
+// Arquivo estado_pata_amiga.dart: estado compartilhado do app.
 import '../estado/estado_pata_amiga.dart';
+// Arquivo animal.dart: modelo do animal e o tipo do registro.
 import '../modelos/animal.dart';
+// Arquivo avistamento.dart: modelo do avistamento de um animal.
 import '../modelos/avistamento.dart';
+// Arquivo camadas_do_mapa.dart: pinos do mapa e cálculo do que está por perto.
 import '../modelos/camadas_do_mapa.dart';
+// Arquivo ponto_de_alimentacao.dart: ponto de alimentação e sua situação.
 import '../modelos/ponto_de_alimentacao.dart';
+// Arquivo usuario_provider.dart: dados do usuário logado.
 import '../provider/usuario_provider.dart';
+// Arquivo route_names.dart: nomes das rotas de navegação.
 import '../routes/route_names.dart';
+// Arquivo alimentacao_service.dart: acesso à API dos pontos de alimentação.
 import '../services/alimentacao_service.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo barra_inferior.dart: barra de navegação inferior.
 import '../widgets/barra_inferior.dart';
+// Arquivo escolha_de_tipo.dart: estilo das abas de escolha (estiloDasAbas).
 import '../widgets/escolha_de_tipo.dart';
+// Arquivo etiqueta.dart: etiqueta com o tipo do registro.
 import '../widgets/etiqueta.dart';
+// Arquivo foto_animal.dart: exibição da foto do animal.
 import '../widgets/foto_animal.dart';
+// Arquivo icone_de_tigela.dart: ícone de osso dos comedouros.
 import '../widgets/icone_de_tigela.dart';
 
-// Uma cor por camada, a mesma no marcador e na legenda do filtro
+// Cor de cada tipo de animal no mapa, usada no pino e na legenda do filtro:
+// perdidos na cor de destaque, resgates na cor principal
 Color corDaCamada(BuildContext context, TipoRegistro tipo) => tipo == TipoRegistro.perdido
     ? context.cores.destaque
     : context.cores.principal;
 
-// As três camadas do filtro: os dois tipos de animal e os pontos de
-// alimentação, que não são animais
+// Camadas que o filtro do mapa liga e desliga: animais perdidos, animais
+// para resgate e pontos de alimentação
 enum CamadaDoFiltro { perdidos, resgate, alimentacao }
 
+// Rótulo e cor de cada camada, exibidos no filtro
 extension SobreACamada on CamadaDoFiltro {
   String get rotulo => switch (this) {
     CamadaDoFiltro.perdidos => 'Perdidos',
@@ -42,24 +63,25 @@ extension SobreACamada on CamadaDoFiltro {
   };
 }
 
-// Os pontos de alimentação: ocre de ração para comedouro (e para o que é os
-// dois), azul de água para bebedouro
+// Cor do pino de um ponto de alimentação: ocre para comedouro (e para o
+// ponto que é os dois), azul para bebedouro
 Color corDoPonto(BuildContext context, TipoDePonto tipo) =>
     tipo == TipoDePonto.bebedouro ? context.cores.agua : context.cores.alimentacao;
 
-// Cadastrar ponto e registrar abastecimento é só para quem está logado
+// Indica se há usuário logado; cadastrar ponto e registrar abastecimento
+// exigem login
 bool _logado(BuildContext context) =>
     (context.read<UsuarioProvider?>()?.usuario.email ?? '').isNotEmpty;
 
-// Bebedouro é uma gota d'água; comedouro, um osso; o ponto que é os dois,
-// o osso com uma gotinha
+// Ícone de um ponto de alimentação: gota para bebedouro, osso para
+// comedouro e os dois combinados para o ponto que é comedouro e bebedouro
 Widget iconeDoPonto(TipoDePonto tipo, {double tamanho = 20, Color? cor}) =>
     tipo == TipoDePonto.bebedouro
     ? Icon(Icons.water_drop, size: tamanho, color: cor ?? Colors.white)
     : tipo == TipoDePonto.comedouro
     ? IconeDeOsso(tamanho: tamanho, cor: cor ?? Colors.white)
-    // Os dois: o osso em cima e a gota embaixo, separados, para não embolar
-    // quando o ícone fica pequeno
+    // Osso no canto superior e gota no inferior, separados para continuarem
+    // legíveis em tamanhos pequenos
     : SizedBox(
         width: tamanho,
         height: tamanho,
@@ -86,13 +108,15 @@ Widget iconeDoPonto(TipoDePonto tipo, {double tamanho = 20, Color? cor}) =>
         ),
       );
 
-/// Página do mapa: o filtro das camadas em cima e o mapa embaixo.
+// Página do mapa: filtro de camadas no topo, mapa abaixo e a barra de
+// navegação inferior
 class PaginaMapa extends StatefulWidget {
   const PaginaMapa({super.key, this.comMapaDeFundo = true, this.focar});
 
-  // Os testes desligam o mapa de fundo, que baixaria imagens da internet
+  // Desliga as imagens de fundo do OpenStreetMap; usado nos testes, que não
+  // devem acessar a internet
   final bool comMapaDeFundo;
-  // Vindo da ficha: o mapa abre com zoom neste animal e o resumo dele aberto
+  // Animal em destaque: o mapa abre com zoom nele e com o resumo aberto
   final Animal? focar;
 
   @override
@@ -100,7 +124,7 @@ class PaginaMapa extends StatefulWidget {
 }
 
 class _PaginaMapaState extends State<PaginaMapa> {
-  // As duas camadas abrem ligadas
+  // Todas as camadas começam ligadas
   Set<CamadaDoFiltro> _ligadas = CamadaDoFiltro.values.toSet();
 
   Set<TipoRegistro> get _tiposLigados => {
@@ -213,6 +237,8 @@ class _PaginaMapaState extends State<PaginaMapa> {
   }
 }
 
+// O mapa em si: pinos dos animais e dos pontos de alimentação, posição do
+// usuário, painel "Perto de você" e botões de localização e de novo ponto
 class TelaMapa extends StatefulWidget {
   const TelaMapa({
     super.key,
@@ -236,7 +262,7 @@ class TelaMapa extends StatefulWidget {
 class _TelaMapaState extends State<TelaMapa> {
   final MapController _controller = MapController();
 
-  // Onde o mapa abre: no animal vindo da ficha, ou no centro de Formiga
+  // Pino do animal em destaque, se houver; define onde o mapa abre
   late final PinoDoMapa? _pinoEmFoco = _acharPinoEmFoco();
 
   PinoDoMapa? _acharPinoEmFoco() {
@@ -256,7 +282,7 @@ class _TelaMapaState extends State<TelaMapa> {
     super.initState();
     final pino = _pinoEmFoco;
     if (pino != null) {
-      // O resumo abre depois que o mapa aparece
+      // Abre o resumo só depois do primeiro quadro, quando o mapa já existe
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _mostrarResumo(pino.animal, pino.ultimo);
       });
@@ -272,7 +298,7 @@ class _TelaMapaState extends State<TelaMapa> {
   static const LatLng _centroInicial = LatLng(-20.4647, -45.4264); // Formiga-MG
 
   LatLng? _minhaPosicao;
-  // O painel "Perto de você" abre quando a pessoa toca na mira
+  // O painel "Perto de você" aparece depois que o usuário toca na mira
   bool _mostrarPerto = false;
   bool _buscandoLocalizacao = false;
 
@@ -283,6 +309,8 @@ class _TelaMapaState extends State<TelaMapa> {
       ..showSnackBar(SnackBar(content: Text(texto)));
   }
 
+  // Confere serviço e permissão de localização, centraliza o mapa na posição
+  // atual e abre o painel com o que está por perto
   Future<void> _irParaMinhaLocalizacao() async {
     if (_buscandoLocalizacao) return;
     setState(() => _buscandoLocalizacao = true);
@@ -326,6 +354,7 @@ class _TelaMapaState extends State<TelaMapa> {
 
   late final _servicoDeAlimentacao = widget.alimentacao ?? AlimentacaoService();
 
+  // Abre a folha inferior com o resumo do ponto de alimentação
   void _mostrarPonto(PontoDeAlimentacao ponto) {
     showModalBottomSheet(
       context: context,
@@ -336,6 +365,7 @@ class _TelaMapaState extends State<TelaMapa> {
     );
   }
 
+  // Abre a folha inferior com o resumo do animal
   void _mostrarResumo(Animal animal, Avistamento? ultimo) {
     showModalBottomSheet(
       context: context,
@@ -362,7 +392,7 @@ class _TelaMapaState extends State<TelaMapa> {
             pontos: widget.mostrarAlimentacao ? estado.pontos : const [],
           )
         : null;
-    // Com o painel aberto, os botões sobem para não ficarem atrás dele
+    // Distância dos botões ao rodapé: sobem quando o painel está aberto
     final base = perto == null ? 40.0 : 240.0;
 
     return Stack(
@@ -441,9 +471,8 @@ class _TelaMapaState extends State<TelaMapa> {
                   ),
                 ],
               ),
-            // O crédito do OpenStreetMap é obrigatório pela política de uso
-            // dos mapas dele. Fica num botão "i": aparece aberto ao entrar e
-            // se recolhe sozinho, sem ocupar o rodapé o tempo todo
+            // Crédito do OpenStreetMap, exigido pela política de uso dos
+            // mapas. Aparece aberto ao entrar e se recolhe num botão "i"
             if (widget.comMapaDeFundo)
               const RichAttributionWidget(
                 alignment: AttributionAlignment.bottomLeft,
@@ -455,7 +484,7 @@ class _TelaMapaState extends State<TelaMapa> {
               ),
           ],
         ),
-        // Sem nenhum ponto, o mapa vazio diria nada: o aviso explica por quê
+        // Aviso quando nenhuma camada ligada tem pontos para mostrar
         if (pinos.isEmpty &&
             !(widget.mostrarAlimentacao && estado.pontos.isNotEmpty))
           Positioned(
@@ -468,8 +497,8 @@ class _TelaMapaState extends State<TelaMapa> {
                   : 'Nada para mostrar nestas camadas ainda.',
             ),
           ),
-        // Quem está logado cadastra um ponto novo, com a camada ligada. O
-        // botão tem a mesma cara da mira, logo acima dela
+        // Botão de cadastrar ponto, visível para quem está logado e com a
+        // camada de alimentação ligada; fica logo acima do botão da mira
         if (widget.mostrarAlimentacao && _logado(context))
           Positioned(
             right: 16,
@@ -487,8 +516,8 @@ class _TelaMapaState extends State<TelaMapa> {
             ),
           ),
         if (perto != null)
-          // Preso à barra inferior, como uma gaveta. O crédito do mapa, que
-          // ficaria escondido atrás dele, vai para dentro do painel
+          // Painel fixo no rodapé. Ele cobre o crédito do mapa, por isso
+          // repete o crédito no próprio cabeçalho
           Positioned(
             left: 0,
             right: 0,
@@ -534,8 +563,7 @@ class _TelaMapaState extends State<TelaMapa> {
   }
 }
 
-// O pino do mapa: a patinha do Início num círculo da cor da camada, com uma
-// ponta embaixo que marca o lugar exato
+// Pino de um animal no mapa, com o nome do animal para leitores de tela
 class _Pino extends StatelessWidget {
   const _Pino({required this.cor, required this.rotulo});
 
@@ -552,6 +580,8 @@ class _Pino extends StatelessWidget {
   }
 }
 
+// Desenho do pino: círculo na cor da camada com um símbolo dentro e uma
+// ponta embaixo que marca o local exato
 class PinoDaPatinha extends StatelessWidget {
   const PinoDaPatinha({
     super.key,
@@ -562,7 +592,7 @@ class PinoDaPatinha extends StatelessWidget {
 
   final Color cor;
   final double tamanho;
-  // A patinha do Início nos animais; a tigela nos pontos de alimentação
+  // Símbolo dentro do círculo; sem ele, usa a patinha
   final Widget? simbolo;
 
   @override
@@ -573,7 +603,7 @@ class PinoDaPatinha extends StatelessWidget {
       child: Stack(
         alignment: Alignment.topCenter,
         children: [
-          // A ponta: um quadrado girado, metade escondida atrás do círculo
+          // Ponta: um quadrado girado 45 graus, metade escondida pelo círculo
           Positioned(
             bottom: 2,
             child: Transform.rotate(
@@ -607,6 +637,7 @@ class PinoDaPatinha extends StatelessWidget {
   }
 }
 
+// Caixa de aviso exibida sobre o mapa
 class _AvisoDoMapa extends StatelessWidget {
   const _AvisoDoMapa({required this.texto});
 
@@ -630,13 +661,13 @@ class _AvisoDoMapa extends StatelessWidget {
   }
 }
 
-// O resumo que sobe ao tocar no pino: foto, nome, onde e quando, e o
-// caminho para a ficha completa, de onde se chega ao contato
+// Resumo de um animal ao tocar no pino: foto, nome, tipo, local, último
+// avistamento e botão para a ficha completa
 class _ResumoDoAnimal extends StatelessWidget {
   const _ResumoDoAnimal({required this.animal, this.ultimo});
 
   final Animal animal;
-  // Com avistamento, o pino está onde o animal foi visto por último
+  // Último avistamento; quando existe, o pino fica no local dele
   final Avistamento? ultimo;
 
   @override
@@ -726,8 +757,8 @@ class _ResumoDoAnimal extends StatelessWidget {
             const SizedBox(height: 16),
             FilledButton(
               onPressed: () {
-                // O navegador é guardado antes de fechar o painel, porque o
-                // contexto dele deixa de existir assim que ele fecha
+                // Guarda o Navigator antes de fechar a folha, pois o context
+                // dela deixa de ser válido após o pop
                 final navegador = Navigator.of(context);
                 navegador.pop();
                 navegador.pushNamed(AppRoutes.details, arguments: animal);
@@ -751,8 +782,8 @@ class _ResumoDoAnimal extends StatelessWidget {
   }
 }
 
-// O resumo do ponto de alimentação: o tipo, onde fica, a situação e quando
-// foi abastecido pela última vez. Quem está logado registra que abasteceu
+// Resumo de um ponto de alimentação: tipo, local, situação e último
+// abastecimento. Quem está logado pode registrar um abastecimento
 class _ResumoDoPonto extends StatefulWidget {
   const _ResumoDoPonto({required this.ponto, required this.servico});
 
@@ -764,7 +795,7 @@ class _ResumoDoPonto extends StatefulWidget {
 }
 
 class _ResumoDoPontoState extends State<_ResumoDoPonto> {
-  // A confirmação confere se a pessoa está no ponto antes de gravar
+  // Abre a tela de registro, que confere a localização antes de gravar
   Future<void> _abasteci() async {
     await Navigator.pushNamed(
       context,
@@ -808,8 +839,8 @@ class _ResumoDoPontoState extends State<_ResumoDoPonto> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                // A etiqueta fica embaixo do título: "Precisa de
-                // abastecimento" ao lado de "Comedouro e bebedouro" não cabe
+                // Etiqueta abaixo do título, pois os textos longos não cabem
+                // lado a lado
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -920,7 +951,8 @@ class _ResumoDoPontoState extends State<_ResumoDoPonto> {
   }
 }
 
-// Verde quando está abastecido; coral quando precisa de atenção
+// Etiqueta da situação do ponto: cor principal quando abastecido e cor de
+// destaque (cheia quando urgente) quando precisa de atenção
 class _EtiquetaDaSituacao extends StatelessWidget {
   const _EtiquetaDaSituacao(this.situacao);
 
@@ -956,8 +988,8 @@ class _EtiquetaDaSituacao extends StatelessWidget {
   }
 }
 
-// O que está a até 1 km de quem tocou na mira, nas camadas ligadas, do mais
-// perto para o mais longe. Tocar num item leva o mapa até ele
+// Painel "Perto de você": o que está a até 1 km do usuário nas camadas
+// ligadas, do mais perto ao mais longe. Tocar num item leva o mapa até ele
 class _PertoDeVoce extends StatelessWidget {
   const _PertoDeVoce({
     required this.itens,
@@ -1001,7 +1033,7 @@ class _PertoDeVoce extends StatelessWidget {
                       ),
                     ),
                   ),
-                  // O crédito obrigatório do mapa, que o painel cobriria
+                  // Crédito obrigatório do mapa, coberto pelo painel
                   Text(
                     '© OpenStreetMap',
                     style: TextStyle(fontSize: 10, color: context.cores.textoFraco),
@@ -1050,6 +1082,7 @@ class _PertoDeVoce extends StatelessWidget {
   }
 }
 
+// Uma linha do painel: animal ou ponto, com local e distância
 class _LinhaPerto extends StatelessWidget {
   const _LinhaPerto({required this.item, required this.aoTocar});
 

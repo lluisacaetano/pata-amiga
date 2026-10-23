@@ -1,17 +1,28 @@
+// Biblioteca dart:async: unawaited, para carregar os curtidos sem esperar.
 import 'dart:async';
 
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote flutter_localizations: componentes do Flutter em português.
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+// Arquivo usuario_provider.dart: sessão e perfil da pessoa logada.
 import 'provider/usuario_provider.dart';
+// Arquivo preferencias_aplicativo_provider.dart: tema e tamanho do texto.
 import 'provider/preferencias_aplicativo_provider.dart';
 
+// Pacote provider: compartilha estado entre as telas e as reconstrói.
 import 'package:provider/provider.dart';
 
+// Arquivo app_router.dart: tabela de rotas e nomes das rotas.
 import 'routes/app_router.dart';
+// Arquivo estado_pata_amiga.dart: estado compartilhado do app.
 import 'estado/estado_pata_amiga.dart';
+// Arquivo cores.dart: tema claro e escuro do app.
 import 'tema/cores.dart';
 
+// Restaura a sessão e as preferências salvas antes do primeiro quadro, para
+// o app já abrir com a conta, o tema e o tamanho de texto certos
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final usuarioProvider = UsuarioProvider();
@@ -29,6 +40,8 @@ Future<void> main() async {
   );
 }
 
+// Raiz do app: cria o estado compartilhado (animais, curtidos, ONGs) e
+// aplica tema, idioma, rotas e a escala de texto escolhida pela pessoa
 class AplicativoPataAmiga extends StatefulWidget {
   const AplicativoPataAmiga({super.key});
 
@@ -73,6 +86,9 @@ class _AplicativoPataAmigaState extends State<AplicativoPataAmiga> {
         supportedLocales: const [Locale('pt', 'BR')],
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
         initialRoute: AppRoutes.welcome,
+        // Multiplica a escala de texto do sistema pela escolhida em
+        // Acessibilidade e limita a largura a 480, para o layout de celular
+        // não esticar em telas largas
         builder: (context, child) {
           final media = MediaQuery.of(context);
           return MediaQuery(

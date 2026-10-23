@@ -1,13 +1,22 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
 
+// Arquivo denuncia.dart: modelo da denúncia e data relativa.
 import '../modelos/denuncia.dart';
+// Arquivo route_names.dart: nomes das rotas de navegação.
 import '../routes/route_names.dart';
+// Arquivo denuncia_service.dart: busca as denúncias deste aparelho.
 import '../services/denuncia_service.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo foto_animal.dart: exibição da primeira foto da denúncia.
 import '../widgets/foto_animal.dart';
 
-// As denúncias feitas neste aparelho, inclusive as anônimas, com o protocolo
-// e a situação atual: recebida, em apuração ou encerrada
+// Lista das denúncias registradas neste aparelho (os protocolos ficam
+// salvos localmente), com a situação atual de cada uma buscada na API.
+// Permite buscar pelo protocolo e atualizar puxando a lista para baixo.
+//
+// [servico] permite injetar um serviço falso nos testes.
 class MinhasDenuncias extends StatefulWidget {
   final DenunciaService? servico;
 
@@ -30,10 +39,12 @@ class _MinhasDenunciasState extends State<MinhasDenuncias> {
     super.dispose();
   }
 
-  // O protocolo sem hífen nem espaço: "pa 2026" acha "PA-20261022-9204"
+  // Normaliza o protocolo para a busca: maiúsculas, sem hífen nem espaço.
+  // Assim, "pa 2026" encontra "PA-20261022-9204"
   static String _comparavel(String texto) =>
       texto.toUpperCase().replaceAll(RegExp('[^A-Z0-9]'), '');
 
+  // Se a denúncia corresponde ao texto da busca (busca vazia aceita todas)
   bool _combina(Denuncia denuncia) {
     final busca = _comparavel(_busca);
     return busca.isEmpty || _comparavel(denuncia.protocolo).contains(busca);
@@ -45,6 +56,8 @@ class _MinhasDenunciasState extends State<MinhasDenuncias> {
     _carregar();
   }
 
+  // Busca as denúncias. Sem conexão, mantém a lista anterior (ou uma vazia)
+  // e exibe o aviso
   Future<void> _carregar() async {
     try {
       final denuncias = await _servico.minhasDenuncias();
@@ -206,6 +219,8 @@ class _MinhasDenunciasState extends State<MinhasDenuncias> {
   }
 }
 
+// Cartão de uma denúncia na lista: primeira foto, tipo, situação, protocolo,
+// quando foi registrada e o bairro. Ao tocar, abre os detalhes
 class _CartaoDaDenuncia extends StatelessWidget {
   const _CartaoDaDenuncia({required this.denuncia});
 
@@ -214,7 +229,8 @@ class _CartaoDaDenuncia extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final situacao = denuncia.situacao;
-    // A cor da situação: clara enquanto espera, cheia quando encerrada
+    // Etiqueta da situação: fundo claro enquanto em aberto, cheio quando
+    // encerrada
     final encerrada = situacao == SituacaoDaDenuncia.encerrada;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -235,7 +251,7 @@ class _CartaoDaDenuncia extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             child: Row(
               children: [
-                // A primeira foto da denúncia; sem foto, a patinha
+                // Primeira foto da denúncia; sem foto, o ícone padrão
                 SizedBox(
                   width: 72,
                   child: FotoAnimal(

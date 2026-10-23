@@ -1,13 +1,19 @@
+// Biblioteca dart:convert: converte texto JSON em objetos e vice-versa.
 import 'dart:convert';
 
+// Pacote http: faz as requisições à API (GET, POST, PATCH, DELETE).
 import 'package:http/http.dart' as http;
 
+// Arquivo animal.dart: modelo do animal.
 import '../modelos/animal.dart';
+// Arquivo endereco_da_api.dart: endereço base da API.
 import 'endereco_da_api.dart';
 
+// Leitura e gravação dos animais na API
 class AnimalService {
   static final _baseUrl = enderecoDaApi;
 
+  // Todos os animais da API; lança exceção se a resposta não for 200
   Future<List<Animal>> buscarAnimais() async {
     final resp = await http
         .get(Uri.parse('$_baseUrl/animais'))
@@ -22,6 +28,7 @@ class AnimalService {
         .toList();
   }
 
+  // Publica um animal novo na API
   Future<void> criarAnimal(Animal animal) async {
     final resp = await http
         .post(
@@ -36,8 +43,8 @@ class AnimalService {
     }
   }
 
-  // Muda só o status na API. Animal que ainda não está na API (sem id) não
-  // tem o que atualizar lá
+  // Altera apenas o status do animal na API. Animal sem id existe só no
+  // aparelho e não é enviado
   Future<void> atualizarStatus(Animal animal, StatusAnimal novo) async {
     final id = animal.id;
     if (id == null) return;
@@ -53,8 +60,8 @@ class AnimalService {
     }
   }
 
-  // Grava o registro editado inteiro. Como no status, animal sem id ainda não
-  // está na API e fica só no aparelho
+  // Substitui o registro inteiro do animal na API depois de uma edição.
+  // Animal sem id existe só no aparelho e não é enviado
   Future<void> atualizarAnimal(Animal animal) async {
     final id = animal.id;
     if (id == null) return;

@@ -1,14 +1,19 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote provider: compartilha estado entre as telas e as reconstrói.
 import 'package:provider/provider.dart';
 
+// Arquivo preferencias_aplicativo_provider.dart: tema escolhido.
 import '../provider/preferencias_aplicativo_provider.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
 
-// Claro, escuro ou seguir o sistema. Cada opção é uma miniatura da tela no
-// tema que ela escolhe, para a pessoa ver o resultado antes de tocar
+// Tela de aparência: tema claro, escuro ou o do sistema. Cada opção mostra
+// uma miniatura da tela no tema correspondente
 class ConfiguracoesAparencia extends StatelessWidget {
   const ConfiguracoesAparencia({super.key});
 
+  // Executa a gravação e avisa com um SnackBar se ela falhar
   Future<void> _salvar(
     BuildContext context,
     Future<void> Function() salvar,
@@ -116,6 +121,7 @@ class ConfiguracoesAparencia extends StatelessWidget {
   }
 }
 
+// Uma opção de tema: a miniatura, o nome e a marca de escolhida
 class _OpcaoDeTema extends StatelessWidget {
   const _OpcaoDeTema({
     required this.opcao,
@@ -167,7 +173,7 @@ class _OpcaoDeTema extends StatelessWidget {
                         PreferenciaTema.escuro => const _Miniatura(
                           escura: true,
                         ),
-                        // Metade de cada, cortadas na diagonal
+                        // Metade clara e metade escura, cortadas na diagonal
                         PreferenciaTema.sistema => const Stack(
                           fit: StackFit.expand,
                           children: [
@@ -217,8 +223,8 @@ class _OpcaoDeTema extends StatelessWidget {
   }
 }
 
-// Uma tela do app em miniatura: o fundo, a barra verde, um cartão com a foto
-// e duas linhas de texto, nas cores do tema que a opção escolhe
+// Miniatura de uma tela do app (fundo, barra verde, cartão com foto e duas
+// linhas de texto) nas cores do tema claro ou escuro
 class _Miniatura extends StatelessWidget {
   const _Miniatura({required this.escura});
 
@@ -278,6 +284,7 @@ class _Miniatura extends StatelessWidget {
   }
 }
 
+// Recorte triangular da metade inferior direita, usado na opção "sistema"
 class _Diagonal extends CustomClipper<Path> {
   const _Diagonal();
 
