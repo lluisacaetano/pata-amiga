@@ -15,6 +15,8 @@ import '../modelos/denuncia.dart';
 import '../services/denuncia_service.dart';
 // Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo barra_inferior.dart: barra de navegação inferior.
+import '../widgets/barra_inferior.dart';
 // Arquivo foto_animal.dart: exibição das miniaturas das fotos escolhidas.
 import '../widgets/foto_animal.dart';
 // Arquivo mapa_de_local.dart: centro de Formiga, ponto inicial do mapa.
@@ -382,6 +384,9 @@ class _ReportarScreenState extends State<ReportarScreen> {
             ),
           ],
         ),
+        // Reportar é uma das abas da barra inferior, por isso a barra fica
+        // visível aqui como nas outras abas
+        bottomNavigationBar: const BarraInferior(atual: 2),
       ),
     );
   }
