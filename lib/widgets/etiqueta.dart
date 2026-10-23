@@ -1,10 +1,14 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
 
+// Arquivo animal.dart: comMaiuscula, para a inicial maiúscula.
 import '../modelos/animal.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
 
-// Etiqueta ao lado do nome do animal: o tipo do registro, e o adotado
-// quando for o caso. A cheia marca o desfecho, a clara só classifica
+// Etiqueta arredondada exibida ao lado do nome do animal. A versão clara
+// classifica (tipo do registro); a versão cheia ([cheia] = true) destaca o
+// desfecho, como "Adotado"
 class Etiqueta extends StatelessWidget {
   final String texto;
   final bool cheia;

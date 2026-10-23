@@ -1,39 +1,71 @@
-// Padronização de rotas da aplicação
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
 
+// Arquivo animal.dart: modelo do animal, argumento de várias rotas.
 import '../modelos/animal.dart';
+// Arquivo denuncia.dart: modelo da denúncia, argumento dos detalhes.
 import '../modelos/denuncia.dart';
+// Arquivo ong.dart: modelo da ONG, argumento do perfil e do cadastro.
 import '../modelos/ong.dart';
+// Arquivo ponto_de_alimentacao.dart: modelo do ponto de alimentação.
 import '../modelos/ponto_de_alimentacao.dart';
+// Arquivo auth_router.dart: escolhe entre boas-vindas e volta à conta.
 import '../auth/auth_router.dart';
+// Arquivo cadastro_screen.dart: tela de cadastro de conta.
 import '../auth/screens/cadastro_screen.dart';
+// Arquivo documento_legal_screen.dart: termos de uso e privacidade.
 import '../auth/screens/documento_legal_screen.dart';
+// Arquivo login_screen.dart: tela de login.
 import '../auth/screens/login_screen.dart';
+// Arquivo recuperar_senha.dart: tela de recuperação de senha.
 import '../auth/screens/recuperar_senha.dart';
-import '../telas/home_screen.dart';
+// Arquivo feed_adocao.dart: feed de animais.
 import '../telas/feed_adocao.dart';
+// Arquivo detalhes_animal.dart: ficha do animal.
 import '../telas/detalhes_animal.dart';
+// Arquivo cadastrar_ponto.dart: cadastro de ponto de alimentação.
 import '../telas/cadastrar_ponto.dart';
+// Arquivo cadastro_animal.dart: cadastro e edição de animal.
 import '../telas/cadastro_animal.dart';
+// Arquivo cadastro_ong.dart: cadastro e edição de ONG.
 import '../telas/cadastro_ong.dart';
+// Arquivo lista_ongs.dart: lista de ONGs.
 import '../telas/lista_ongs.dart';
+// Arquivo perfil_ong.dart: perfil público da ONG.
 import '../telas/perfil_ong.dart';
+// Arquivo acoes_do_registro.dart: EdicaoDoRegistro, argumento da edição.
 import '../widgets/acoes_do_registro.dart';
+// Arquivo onboarding_screen.dart: apresentação inicial do app.
 import '../telas/onboarding_screen.dart';
+// Arquivo editar_perfil.dart: edição do perfil.
 import '../telas/editar_perfil.dart';
+// Arquivo perfil_usuario.dart: perfil da pessoa logada.
 import '../telas/perfil_usuario.dart';
+// Arquivo configuracoes_aparencia.dart: configurações de aparência.
 import '../telas/configuracoes_aparencia.dart';
+// Arquivo configuracoes_acessibilidade.dart: configurações de acessibilidade.
 import '../telas/configuracoes_acessibilidade.dart';
+// Arquivo registrar_abastecimento.dart: registro de abastecimento de um ponto.
 import '../telas/registrar_abastecimento.dart';
+// Arquivo registrar_avistamento.dart: registro de avistamento.
 import '../telas/registrar_avistamento.dart';
-import '../telas/tela_mapa.dart'; // NOVO
+// Arquivo tela_mapa.dart: mapa com as camadas.
+import '../telas/tela_mapa.dart';
+// Arquivo reportar.dart: tela de denúncia.
 import '../telas/reportar.dart';
+// Arquivo minhas_denuncias.dart: lista das denúncias feitas neste aparelho.
 import '../telas/minhas_denuncias.dart';
+// Arquivo detalhes_denuncia.dart: detalhes de uma denúncia.
 import '../telas/detalhes_denuncia.dart';
+// Arquivo route_names.dart: nomes das rotas de navegação.
 import 'route_names.dart';
 
+// Arquivo route_names.dart: reexporta os nomes das rotas.
 export 'route_names.dart';
 
+// Tabela de rotas nomeadas do app. Rotas que dependem de um objeto (animal,
+// ONG, ponto, denúncia) leem o argumento da rota e falham com ArgumentError
+// se ele faltar ou for de outro tipo
 class AppRoutesConfig {
   static Map<String, WidgetBuilder> get routes => {
     AppRoutes.welcome: (_) => const AuthRouter(),
@@ -50,7 +82,6 @@ class AppRoutesConfig {
 
     AppRoutes.recoverPassword: (_) => const RecoverPasswordScreen(),
 
-    AppRoutes.home: (_) => const SuaTelaHome(),
 
     AppRoutes.feed: (_) => const FeedAdocao(),
 

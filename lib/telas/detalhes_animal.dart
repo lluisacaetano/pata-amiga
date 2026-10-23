@@ -1,37 +1,65 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote latlong2: coordenadas (latitude e longitude) e cálculo de distâncias.
 import 'package:latlong2/latlong.dart';
+// Pacote provider: compartilha estado entre as telas e as reconstrói.
 import 'package:provider/provider.dart';
+// Pacote url_launcher: abre WhatsApp, telefone e links no navegador.
 import 'package:url_launcher/url_launcher.dart';
 
+// Arquivo estado_pata_amiga.dart: estado compartilhado do app.
 import '../estado/estado_pata_amiga.dart';
+// Arquivo animal.dart: modelo do animal, tipo e status do registro.
 import '../modelos/animal.dart';
+// Arquivo avistamento.dart: avistamentos do animal e a mensagem para o tutor.
 import '../modelos/avistamento.dart';
+// Arquivo camadas_do_mapa.dart: camadas e pinos do mapa.
 import '../modelos/camadas_do_mapa.dart';
+// Arquivo dono.dart: número do responsável no formato do WhatsApp.
 import '../modelos/dono.dart';
+// Arquivo ong.dart: modelo da ONG.
 import '../modelos/ong.dart';
+// Arquivo usuario_provider.dart: e-mail da pessoa logada.
 import '../provider/usuario_provider.dart';
+// Arquivo route_names.dart: nomes das rotas de navegação.
 import '../routes/route_names.dart';
+// Arquivo animal_service.dart: serviço de animais da API.
 import '../services/animal_service.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo acoes_do_registro.dart: ações sobre um registro de animal.
 import '../widgets/acoes_do_registro.dart';
+// Arquivo barra_inferior.dart: barra de navegação inferior.
 import '../widgets/barra_inferior.dart';
+// Arquivo cuidado.dart: selo de cuidado (castrado, vacinado, vermifugado).
 import '../widgets/cuidado.dart';
+// Arquivo escolha_de_tipo.dart: nome do tipo do registro no singular.
 import '../widgets/escolha_de_tipo.dart';
+// Arquivo galeria_animal.dart: galeria de fotos do animal.
 import '../widgets/galeria_animal.dart';
+// Arquivo etiqueta.dart: etiqueta de tipo e status.
 import '../widgets/etiqueta.dart';
+// Arquivo foto_animal.dart: foto do animal ou do avistamento.
 import '../widgets/foto_animal.dart';
+// Arquivo mapa_de_local.dart: prévia do mapa da ficha.
 import '../widgets/mapa_de_local.dart';
+// Arquivo tela_mapa.dart: cor de cada camada do mapa.
 import 'tela_mapa.dart';
+// Arquivo mascaras.dart: formatação do telefone.
 import '../widgets/mascaras.dart';
 
+// Ficha completa de um animal: fotos, dados, local, contato e, para quem
+// cadastrou, os controles do registro. Em animal perdido, mostra também os
+// avistamentos e o botão para registrar um
 class DetalhesAnimal extends StatelessWidget {
   final Animal animal;
-  // Os testes passam uma API falsa; o app usa a de verdade
+  // Serviço injetável para os testes; sem ele, usa o AnimalService padrão
   final AnimalService? api;
 
   const DetalhesAnimal({super.key, required this.animal, this.api});
 
-  // monta o link do whatsApp e tenta abrir; se não conseguir, avisa na tela
+  // Abre a conversa no WhatsApp com o responsável, com uma mensagem pronta.
+  // Se o aparelho não conseguir abrir o link, avisa por SnackBar
   Future<void> _chamarNoWhatsApp(
     BuildContext context, {
     String? mensagem,
@@ -44,10 +72,13 @@ class DetalhesAnimal extends StatelessWidget {
       'https://wa.me/${animal.dono.numeroNoWhatsApp}?text=$texto',
     );
 
-    final abriu = await launchUrl(
-      endereco,
-      mode: LaunchMode.externalApplication,
-    );
+    bool abriu;
+    try {
+      abriu = await launchUrl(endereco, mode: LaunchMode.externalApplication);
+    } on Exception {
+      // Sem aplicativo que trate o link, a plataforma lança exceção
+      abriu = false;
+    }
     if (!abriu) {
       mensageiro
         ..hideCurrentSnackBar()
@@ -60,9 +91,9 @@ class DetalhesAnimal extends StatelessWidget {
     }
   }
 
-  // Abre o registro e, se a pessoa registrar, oferece avisar o tutor: sem um
-  // servidor de notificações, o aviso vai pelo WhatsApp, como todo contato
-  // do app
+  // Abre o registro de avistamento e, se ele for salvo, oferece avisar o
+  // tutor. Como o app não tem servidor de notificações, o aviso vai pelo
+  // WhatsApp, como os demais contatos
   Future<void> _registrarAvistamento(BuildContext context) async {
     final estado = PataAmigaScope.of(context);
     final novo = await Navigator.pushNamed(
@@ -92,12 +123,13 @@ class DetalhesAnimal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final estado = PataAmigaScope.of(context);
-    // A ficha pode ter recebido uma cópia antiga: vale a versão do estado
+    // A rota pode ter recebido uma cópia antiga; vale a versão do estado
     final animal = estado.atual(this.animal);
-    final email = context.read<UsuarioProvider?>()?.usuario.email ?? '';
+    // watch: a ficha se atualiza se a sessão mudar enquanto está aberta
+    final email = context.watch<UsuarioProvider?>()?.usuario.email ?? '';
     final ehResponsavel = estado.podeMudarStatus(animal, email);
     final minhaOng = estado.ongDe(email);
-    final estaCurtido = estado.estaCurtido(animal.nome);
+    final estaCurtido = estado.estaCurtido(animal.chave);
     final perdido = animal.tipo == TipoRegistro.perdido;
 
     return Scaffold(
@@ -128,7 +160,7 @@ class DetalhesAnimal extends StatelessWidget {
             tooltip: estaCurtido
                 ? 'Remover dos curtidos'
                 : 'Adicionar aos curtidos',
-            onPressed: () => estado.alternarCurtida(animal.nome),
+            onPressed: () => estado.alternarCurtida(animal.chave),
             icon: Icon(estaCurtido ? Icons.favorite : Icons.favorite_border),
           ),
         ],
@@ -147,9 +179,10 @@ class DetalhesAnimal extends StatelessWidget {
               _ControleDoStatus(
                 animal: animal,
                 aoMudar: () => mudarStatus(context, animal, api: api),
-                aoEditar: () => editarRegistro(context, animal, api: api),
+                aoEditar: () => editarRegistro(context, animal),
                 aoPublicar: () => publicarParaAdocao(context, animal, api: api),
-                // Quem faz parte de uma ONG leva o próprio cadastro para ela
+                // Quem faz parte de uma ONG pode transferir para ela um
+                // cadastro que ainda não é de nenhuma ONG
                 ongParaTransferir: animal.ongId == null ? minhaOng : null,
                 aoTransferir: minhaOng == null
                     ? null
@@ -223,7 +256,8 @@ class DetalhesAnimal extends StatelessWidget {
   }
 }
 
-// A ficha do animal: quem ele é, as medidas, onde está e quem responde por ele
+// Cartão principal da ficha: identificação, medidas, cuidados, local,
+// observações e contato do responsável
 class _Ficha extends StatelessWidget {
   final Animal animal;
 
@@ -231,7 +265,8 @@ class _Ficha extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // O mesmo ponto que o mapa usa: o último avistamento, ou o do cadastro
+    // Mesmo ponto usado no mapa: o último avistamento ou, sem ele, o do
+    // cadastro. Adoção não tem pino, então a lista pode vir vazia
     final pinos = pinosDoMapa(
       [animal],
       PataAmigaScope.of(context).avistamentos,
@@ -262,7 +297,7 @@ class _Ficha extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // o nome e o tipo do registro, que é o que muda a leitura da ficha
+          // Nome, tipo do registro e, se encerrado, o status final
           Row(
             children: [
               Expanded(
@@ -320,7 +355,7 @@ class _Ficha extends StatelessWidget {
           _Rotulo(animal.tipo.tituloDoLugar),
           const SizedBox(height: 4),
           _QuadroDoLugar(animal: animal),
-          // Perdido e resgate vão para o mapa; a prévia leva até ele
+          // Perdido e resgate aparecem no mapa; a prévia abre o mapa nele
           if (pino != null) ...[
             const SizedBox(height: 8),
             PreviaDoMapa(
@@ -342,14 +377,14 @@ class _Ficha extends StatelessWidget {
           const _Divisoria(),
           _Rotulo(animal.tipo.tituloDoContato),
           const SizedBox(height: 4),
-          // O mesmo quadro das medidas, com o telefone sempre formatado
+          // Mesmo quadro das medidas, com o telefone formatado
           _PainelDeMedidas(
             medidas: [
               ('Nome', animal.dono.nome),
               ('Telefone', formatarTelefone(animal.dono.telefone)),
             ],
           ),
-          // Publicado em nome de uma ONG: o atalho leva ao perfil dela
+          // Animal publicado por uma ONG: botão para o perfil dela
           if (PataAmigaScope.of(context).ongs
                   .where((ong) => ong.id != null && ong.id == animal.ongId)
                   .firstOrNull
@@ -379,7 +414,7 @@ class _Ficha extends StatelessWidget {
   }
 }
 
-// As medidas do animal em duas colunas
+// Pares de rótulo e valor em duas colunas, usado nas medidas e no contato
 class _PainelDeMedidas extends StatelessWidget {
   final List<(String, String)> medidas;
 
@@ -417,6 +452,7 @@ class _PainelDeMedidas extends StatelessWidget {
   }
 }
 
+// Um par do painel: rótulo pequeno em caixa alta e o valor abaixo
 class _Medida extends StatelessWidget {
   final (String, String) medida;
 
@@ -446,7 +482,7 @@ class _Medida extends StatelessWidget {
   }
 }
 
-// O título de um bloco: diz o que vem embaixo, e muda com o tipo do registro
+// Título discreto de um bloco da ficha; o texto varia com o tipo do registro
 class _Rotulo extends StatelessWidget {
   final String texto;
 
@@ -462,7 +498,7 @@ class _Rotulo extends StatelessWidget {
   );
 }
 
-// Separa os blocos da ficha, na mesma linha fina do card do feed
+// Linha fina que separa os blocos da ficha, igual à do card do feed
 class _Divisoria extends StatelessWidget {
   const _Divisoria();
 
@@ -473,8 +509,8 @@ class _Divisoria extends StatelessWidget {
   );
 }
 
-// O que este animal precisa e os outros não, logo abaixo dos selos de cuidado.
-// Sem rótulo em caixa alta, que na ficha é o que abre bloco novo
+// Necessidades especiais do animal, com ícone, logo abaixo dos selos de
+// cuidado. Não leva rótulo para não parecer o início de um bloco novo
 class _NecessidadesEspeciais extends StatelessWidget {
   final String texto;
 
@@ -486,7 +522,7 @@ class _NecessidadesEspeciais extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          // desce o ícone para ele sentar na primeira linha do texto
+          // Alinha o ícone com a primeira linha do texto
           padding: EdgeInsets.only(top: 2),
           child: Icon(
             Icons.medical_services_outlined,
@@ -507,7 +543,8 @@ class _NecessidadesEspeciais extends StatelessWidget {
   }
 }
 
-// Os avistamentos do animal perdido, do mais recente para o mais antigo
+// Avistamentos do animal perdido, do mais recente para o mais antigo,
+// limitados aos cinco últimos
 class _Avistamentos extends StatelessWidget {
   const _Avistamentos({required this.avistamentos});
 
@@ -529,7 +566,11 @@ class _Avistamentos extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.visibility_outlined, size: 18, color: context.cores.principal),
+              Icon(
+                Icons.visibility_outlined,
+                size: 18,
+                color: context.cores.principal,
+              ),
               SizedBox(width: 8),
               Text(
                 'Avistamentos',
@@ -561,8 +602,8 @@ class _Avistamentos extends StatelessWidget {
   }
 }
 
-// Um avistamento no mesmo quadro do endereço da ficha. O mais recente leva
-// a etiqueta, porque é ele que põe o pino no mapa
+// Um avistamento, no mesmo formato do quadro de endereço. O mais recente
+// recebe a etiqueta "Último", porque é ele que define o pino no mapa
 class _LinhaDeAvistamento extends StatelessWidget {
   const _LinhaDeAvistamento({
     required this.avistamento,
@@ -661,7 +702,8 @@ class _LinhaDeAvistamento extends StatelessWidget {
   }
 }
 
-// Depois de registrar: o convite para avisar quem está procurando
+// Painel exibido após registrar um avistamento, com o convite para avisar o
+// tutor pelo WhatsApp
 class _AvisarOTutor extends StatelessWidget {
   const _AvisarOTutor({required this.animal, required this.aoAvisar});
 
@@ -711,7 +753,9 @@ class _AvisarOTutor extends StatelessWidget {
             const SizedBox(height: 6),
             TextButton(
               onPressed: () => Navigator.pop(context),
-              style: TextButton.styleFrom(foregroundColor: context.cores.textoFraco),
+              style: TextButton.styleFrom(
+                foregroundColor: context.cores.textoFraco,
+              ),
               child: const Text('Agora não'),
             ),
           ],
@@ -721,9 +765,9 @@ class _AvisarOTutor extends StatelessWidget {
   }
 }
 
-// Onde o animal está, no mesmo quadro das medidas e do contato. A rua só
-// aparece em perdido e resgate, onde é um lugar público: na adoção ela seria
-// a casa do responsável
+// Onde o animal está e há quanto tempo foi publicado. A rua só aparece em
+// perdido e resgate, onde é um lugar público; na adoção ela seria o endereço
+// do responsável, por isso fica oculta
 class _QuadroDoLugar extends StatelessWidget {
   const _QuadroDoLugar({required this.animal});
 
@@ -776,12 +820,18 @@ class _QuadroDoLugar extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   secundario,
-                  style: TextStyle(fontSize: 13, color: context.cores.principal),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: context.cores.principal,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Publicado ${animal.publicadoHa(DateTime.now())}',
-                  style: TextStyle(fontSize: 12, color: context.cores.textoFraco),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: context.cores.textoFraco,
+                  ),
                 ),
               ],
             ),
@@ -792,8 +842,8 @@ class _QuadroDoLugar extends StatelessWidget {
   }
 }
 
-// As observações como um recado de quem cadastrou: a barra verde à esquerda
-// separa o que a pessoa escreveu dos dados da ficha
+// Observações livres de quem cadastrou. A barra à esquerda separa o texto
+// escrito pela pessoa dos dados estruturados da ficha
 class _Recado extends StatelessWidget {
   const _Recado(this.texto);
 
@@ -805,7 +855,9 @@ class _Recado extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(12, 2, 4, 2),
       decoration: BoxDecoration(
-        border: Border(left: BorderSide(color: context.cores.principal, width: 3)),
+        border: Border(
+          left: BorderSide(color: context.cores.principal, width: 3),
+        ),
       ),
       child: Text(
         texto,
@@ -815,7 +867,8 @@ class _Recado extends StatelessWidget {
   }
 }
 
-// Só para quem cadastrou: o desfecho do animal, e voltar atrás
+// Painel visível só para quem pode alterar o registro: muda o status (ou
+// desfaz), edita, transfere para a ONG e publica um resgatado para adoção
 class _ControleDoStatus extends StatelessWidget {
   const _ControleDoStatus({
     required this.animal,
@@ -859,7 +912,7 @@ class _ControleDoStatus extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                // Na ONG, quem cuida pode não ser quem cadastrou
+                // Em animal de ONG, quem cuida pode não ser quem cadastrou
                 animal.ongId != null
                     ? 'Animal da sua ONG'
                     : 'Você cadastrou este animal',

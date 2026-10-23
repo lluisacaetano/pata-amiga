@@ -1,25 +1,37 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
 
+// Arquivo estado_pata_amiga.dart: estado global com a lista de animais.
 import '../estado/estado_pata_amiga.dart';
+// Arquivo animal.dart: modelo do animal e o status do registro.
 import '../modelos/animal.dart';
+// Arquivo ong.dart: modelo da ONG.
 import '../modelos/ong.dart';
+// Arquivo route_names.dart: nomes das rotas de navegação.
 import '../routes/route_names.dart';
+// Arquivo animal_service.dart: serviço que grava os animais na API.
 import '../services/animal_service.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo painel_de_confirmacao.dart: painel inferior de confirmação.
+import 'painel_de_confirmacao.dart';
 
-// O que quem cadastrou faz com o próprio registro: encerrar (ou reabrir),
-// editar e, depois do resgate, publicar para adoção. A ficha e a lista de
-// "Meus registros" usam as mesmas ações
+// Ações do dono sobre o próprio registro: encerrar ou reabrir, editar,
+// transferir para uma ONG e, após um resgate, publicar para adoção. São
+// compartilhadas pela tela de detalhes e pela lista "Meus registros"
 
-// O argumento da rota de cadastro quando ela abre para editar um registro
+// Argumento da rota de cadastro que indica edição de um registro existente
+// (em vez de um cadastro novo)
 class EdicaoDoRegistro {
   final Animal animal;
 
   const EdicaoDoRegistro(this.animal);
 }
 
-// Marca o desfecho (adotado, encontrado ou resgatado) ou volta atrás.
-// Confirma antes, porque o animal sai do feed e do mapa
+// Alterna o status do animal entre disponível e o desfecho do tipo
+// (adotado, encontrado ou resgatado), após confirmação, porque a mudança tira
+// ou devolve o animal ao feed e ao mapa. Grava na API, atualiza o estado
+// local e, num resgate concluído, oferece publicar para adoção
 Future<void> mudarStatus(
   BuildContext context,
   Animal atual, {
@@ -28,12 +40,11 @@ Future<void> mudarStatus(
   final novo = atual.finalizado ? StatusAnimal.disponivel : atual.desfecho;
   final voltando = novo == StatusAnimal.disponivel;
   final textoNovo = atual.comStatus(novo).rotuloDoStatus;
-  // O mesmo painel de baixo das outras confirmações do app
   final confirmou = await showModalBottomSheet<bool>(
     context: context,
     backgroundColor: context.cores.cartao,
     showDragHandle: true,
-    builder: (painel) => _ConfirmarStatus(
+    builder: (painel) => PainelDeConfirmacao(
       titulo: voltando
           ? 'Retornar ${atual.nome} para "$textoNovo"?'
           : 'Marcar ${atual.nome} como $textoNovo?',
@@ -41,7 +52,10 @@ Future<void> mudarStatus(
           ? 'O animal voltará a ser exibido no feed e no mapa.'
           : 'O animal deixará de ser exibido no feed e no mapa. A alteração '
                 'pode ser revertida a qualquer momento.',
-      aoConfirmar: () => Navigator.pop(painel, true),
+      rotuloPrincipal: 'Confirmar',
+      aoPrincipal: () => Navigator.pop(painel, true),
+      rotuloSecundario: 'Cancelar',
+      aoSecundario: () => Navigator.pop(painel, false),
     ),
   );
   if (confirmou != true || !context.mounted) return;
@@ -66,9 +80,9 @@ Future<void> mudarStatus(
   }
 }
 
-// Quem entrou numa ONG leva para ela um animal que tinha publicado em nome
-// próprio: ele passa a sair com o contato da ONG e a aparecer no perfil dela,
-// e sai de "Meus registros". A partir daí, qualquer pessoa da ONG cuida dele
+// Transfere para a ONG um animal publicado em nome próprio, após
+// confirmação. O registro passa a ter o contato da ONG, aparece no perfil
+// dela e sai de "Meus registros"; qualquer membro da ONG pode atualizá-lo
 Future<void> enviarParaOng(
   BuildContext context,
   Animal atual,
@@ -79,13 +93,16 @@ Future<void> enviarParaOng(
     context: context,
     backgroundColor: context.cores.cartao,
     showDragHandle: true,
-    builder: (painel) => _ConfirmarStatus(
+    builder: (painel) => PainelDeConfirmacao(
       titulo: 'Transferir ${atual.nome} para ${ong.nome}?',
       texto:
           'O animal passa a aparecer no perfil da ONG, com o contato dela, e '
           'sai de Meus registros. Qualquer pessoa da ONG poderá atualizar o '
           'status e o registro dele.',
-      aoConfirmar: () => Navigator.pop(painel, true),
+      rotuloPrincipal: 'Confirmar',
+      aoPrincipal: () => Navigator.pop(painel, true),
+      rotuloSecundario: 'Cancelar',
+      aoSecundario: () => Navigator.pop(painel, false),
     ),
   );
   if (confirmou != true || !context.mounted) return;
@@ -119,13 +136,9 @@ Future<void> enviarParaOng(
     );
 }
 
-// Abre o cadastro com todos os dados do registro. O formulário grava na API
-// antes de fechar; aqui só falta atualizar o feed, a ficha e o perfil
-Future<void> editarRegistro(
-  BuildContext context,
-  Animal atual, {
-  AnimalService? api,
-}) async {
+// Abre o cadastro preenchido para edição. O formulário já grava na API antes
+// de fechar; aqui o estado local é atualizado com o registro devolvido
+Future<void> editarRegistro(BuildContext context, Animal atual) async {
   final estado = PataAmigaScope.of(context);
   final mensageiro = ScaffoldMessenger.of(context);
   final editado = await Navigator.pushNamed(
@@ -140,7 +153,7 @@ Future<void> editarRegistro(
     ..showSnackBar(const SnackBar(content: Text('Alterações salvas.')));
 }
 
-// Depois do resgate, o convite para publicar o animal para adoção
+// Após um resgate, pergunta se a pessoa quer publicar o animal para adoção
 Future<void> _oferecerAdocao(
   BuildContext context,
   Animal atual,
@@ -150,9 +163,17 @@ Future<void> _oferecerAdocao(
     context: context,
     backgroundColor: context.cores.cartao,
     showDragHandle: true,
-    builder: (painel) => _OfertaDeAdocao(
-      nome: atual.nome,
-      aoPublicar: () => Navigator.pop(painel, true),
+    builder: (painel) => PainelDeConfirmacao(
+      icone: Icons.check_circle,
+      titulo: 'Resgate concluído',
+      texto:
+          'Deseja publicar ${atual.nome} para adoção? O cadastro será aberto '
+          'com os dados e as fotos do resgate para você completar.',
+      rotuloPrincipal: 'Publicar para adoção',
+      iconeDoPrincipal: Icons.favorite_border,
+      aoPrincipal: () => Navigator.pop(painel, true),
+      rotuloSecundario: 'Agora não',
+      aoSecundario: () => Navigator.pop(painel, false),
     ),
   );
   if (publicar == true && context.mounted) {
@@ -160,7 +181,8 @@ Future<void> _oferecerAdocao(
   }
 }
 
-// Abre o cadastro já preenchido com os dados do resgate e o tipo Adoção
+// Abre o cadastro preenchido com os dados do resgate e o tipo Adoção. Se a
+// API falhar, o registro fica salvo apenas no aparelho e o aviso informa isso
 Future<void> publicarParaAdocao(
   BuildContext context,
   Animal atual, {
@@ -194,125 +216,4 @@ Future<void> publicarParaAdocao(
         ),
       ),
     );
-}
-
-// Antes de mudar o status: o que vai acontecer e a confirmação
-class _ConfirmarStatus extends StatelessWidget {
-  const _ConfirmarStatus({
-    required this.titulo,
-    required this.texto,
-    required this.aoConfirmar,
-  });
-
-  final String titulo;
-  final String texto;
-  final VoidCallback aoConfirmar;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              titulo,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              texto,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: context.cores.textoFraco,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: aoConfirmar,
-              style: FilledButton.styleFrom(
-                backgroundColor: context.cores.principal,
-                minimumSize: const Size.fromHeight(48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              child: const Text('Confirmar'),
-            ),
-            const SizedBox(height: 6),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              style: TextButton.styleFrom(foregroundColor: context.cores.textoFraco),
-              child: const Text('Cancelar'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// Depois de marcar como resgatado: o convite para publicar para adoção
-class _OfertaDeAdocao extends StatelessWidget {
-  const _OfertaDeAdocao({required this.nome, required this.aoPublicar});
-
-  final String nome;
-  final VoidCallback aoPublicar;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Icon(Icons.check_circle, size: 40, color: context.cores.principal),
-            const SizedBox(height: 10),
-            const Text(
-              'Resgate concluído',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Deseja publicar $nome para adoção? O cadastro será aberto com '
-              'os dados e as fotos do resgate para você completar.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: context.cores.textoFraco,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: aoPublicar,
-              icon: const Icon(Icons.favorite_border, size: 18),
-              label: const Text('Publicar para adoção'),
-              style: FilledButton.styleFrom(
-                backgroundColor: context.cores.principal,
-                minimumSize: const Size.fromHeight(48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-            ),
-            const SizedBox(height: 6),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              style: TextButton.styleFrom(foregroundColor: context.cores.textoFraco),
-              child: const Text('Agora não'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

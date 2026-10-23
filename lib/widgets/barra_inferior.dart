@@ -1,38 +1,28 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
 
+// Arquivo route_names.dart: nomes das rotas de navegação.
 import '../routes/route_names.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
 
-// O aviso que as telas ainda não construídas dão quando alguém toca nelas.
-// Enquanto a funcionalidade não existe, o toque avisa em vez de não fazer
-// nada, para o usuário saber que o botão não está quebrado
-void avisarProximaSprint(BuildContext context) {
-  ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar()
-    ..showSnackBar(
-      const SnackBar(
-        content: Text('Esta tela entra em uma próxima sprint.'),
-        duration: Duration(seconds: 2),
-      ),
-    );
-}
-
-// O que cada item da barra faz, igual em todas as telas. Fica aqui, num
-// lugar só, para que uma tela nova entre na barra já funcionando: foi por
-// cada tela ter a própria cópia que o Mapa ficou "em próxima sprint" fora
-// do feed depois de pronto
+// Navegação da barra inferior, centralizada para que todas as telas tenham o
+// mesmo comportamento. [indice] é o item tocado e [atual], o item da tela
+// aberta. Tocar no item atual não faz nada, exceto Início, que sempre volta
+// ao feed
 void navegarPelaBarra(
   BuildContext context,
   int indice, {
   required int atual,
   VoidCallback? aoIrParaInicio,
 }) {
-  // Início sempre volta ao feed: detalhes e cadastro também o marcam
+  // Telas como detalhes e cadastro também marcam Início como atual, por isso
+  // o índice 0 nunca é ignorado
   if (indice == atual && indice != 0) return;
   final navegador = Navigator.of(context);
   switch (indice) {
     case 0:
-      // O feed é sempre a primeira tela depois do login
+      // O feed é a base da pilha; a tela pode fornecer a própria volta
       if (aoIrParaInicio != null) {
         aoIrParaInicio();
       } else {
@@ -46,15 +36,14 @@ void navegarPelaBarra(
       navegador.pushNamed(AppRoutes.ongs);
     case 4:
       navegador.pushNamed(AppRoutes.perfilUsuario);
-    default:
-      avisarProximaSprint(context);
   }
 }
 
-// Volta tela por tela até o feed com maybePop, e não com popUntil, para um
-// formulário com algo não salvo poder perguntar antes de sair. Se uma tela
-// segurar a volta (abrindo a pergunta), para ali
+// Desempilha as telas uma a uma com maybePop (e não popUntil) para que um
+// formulário com alterações não salvas possa pedir confirmação. Para quando
+// uma tela bloqueia a volta ou abre um diálogo
 Future<void> _voltarAoInicio(NavigatorState navegador) async {
+  // Rota do topo da pilha, lida sem desempilhar nada
   Route<dynamic>? topo() {
     Route<dynamic>? atual;
     navegador.popUntil((rota) {
@@ -72,10 +61,12 @@ Future<void> _voltarAoInicio(NavigatorState navegador) async {
   }
 }
 
+// Barra de navegação inferior com Início, Mapa, Reportar, ONGs e Perfil.
+// [atual] indica o item destacado
 class BarraInferior extends StatelessWidget {
   final int atual;
-  // Só para quem precisa voltar ao feed de outro jeito, como os detalhes,
-  // que devolvem o animal ao sair
+  // Substitui a volta padrão ao feed, para telas que precisam devolver um
+  // resultado ao sair (como os detalhes do animal)
   final VoidCallback? aoIrParaInicio;
 
   const BarraInferior({super.key, this.atual = 0, this.aoIrParaInicio});

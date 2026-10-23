@@ -1,18 +1,32 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote provider: compartilha estado entre as telas e as reconstrói.
 import 'package:provider/provider.dart';
 
+// Arquivo estado_pata_amiga.dart: estado compartilhado do app.
 import '../estado/estado_pata_amiga.dart';
+// Arquivo ponto_de_alimentacao.dart: ponto de alimentação e suas regras.
 import '../modelos/ponto_de_alimentacao.dart';
+// Arquivo usuario_provider.dart: dados do usuário logado.
 import '../provider/usuario_provider.dart';
+// Arquivo alimentacao_service.dart: acesso à API dos pontos de alimentação.
 import '../services/alimentacao_service.dart';
+// Arquivo localizacao_service.dart: leitura da posição atual do aparelho.
 import '../services/localizacao_service.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo cartao_de_secao.dart: cartão com título de seção do formulário.
+import '../widgets/cartao_de_secao.dart';
+// Arquivo escolha_de_tipo.dart: estilo das abas de escolha (estiloDasAbas).
 import '../widgets/escolha_de_tipo.dart';
+// Arquivo mapa_de_local.dart: coordenada do centro de Formiga.
 import '../widgets/mapa_de_local.dart';
+// Arquivo seletor_de_local.dart: seletor de local com busca, mira e mapa.
 import '../widgets/seletor_de_local.dart';
 
-// Qualquer pessoa logada cadastra um comedouro ou bebedouro público e, se
-// acabou de abastecê-lo, já registra o abastecimento junto
+// Tela de cadastro de um comedouro ou bebedouro público. Quem está logado
+// marca o tipo e o local no mapa e, se acabou de abastecer o ponto, registra
+// o primeiro abastecimento junto com o cadastro
 class CadastrarPonto extends StatefulWidget {
   final AlimentacaoService? servico;
   final LocalizacaoService? localizacao;
@@ -40,10 +54,12 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
     super.dispose();
   }
 
+  // Valida o tipo e o endereço, confere a localização de quem diz ter
+  // abastecido e grava o ponto (e o abastecimento) na API e no estado do app
   Future<void> _cadastrar() async {
     setState(() => _tentou = true);
     if (_tipo == null || _salvando) return;
-    // O endereço é obrigatório: é por ele que os outros acham o ponto
+    // Rua e bairro são obrigatórios: é por eles que o ponto é encontrado
     if (_local.rua.trim().isEmpty || _local.bairro.trim().isEmpty) {
       setState(
         () => _recusa =
@@ -61,7 +77,8 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
     final nome = usuario?.nome.trim() ?? '';
     final email = usuario?.email ?? '';
     final agora = DateTime.now();
-    // Quem diz que abasteceu precisa estar no ponto que acabou de marcar
+    // Para registrar o abastecimento, a pessoa precisa estar perto do ponto
+    // marcado; sem isso, só o ponto pode ser cadastrado
     if (_abasteciHoje) {
       try {
         final onde = await _localizacao.posicaoAtual();
@@ -76,6 +93,7 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
           agora: agora,
         );
         if (motivo != null) {
+          if (!mounted) return;
           setState(() {
             _salvando = false;
             _recusa =
@@ -93,8 +111,9 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
       }
     }
     if (!mounted) return;
+    final PontoDeAlimentacao ponto;
     try {
-      final ponto = await _servico.cadastrarPonto(
+      ponto = await _servico.cadastrarPonto(
         PontoDeAlimentacao(
           tipo: _tipo!,
           referencia: _referencia.text.trim(),
@@ -106,8 +125,18 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
           cadastradoEm: agora,
         ),
       );
-      estado.adicionarPonto(ponto);
-      if (_abasteciHoje && ponto.id != null) {
+    } on Exception {
+      if (!mounted) return;
+      setState(() => _salvando = false);
+      _avisar('Não foi possível cadastrar agora. Tente de novo.');
+      return;
+    }
+    estado.adicionarPonto(ponto);
+    // O ponto já está gravado: se só o abastecimento falhar, a tela fecha
+    // com o ponto, para que tentar de novo não crie um ponto repetido
+    var abastecimentoFalhou = false;
+    if (_abasteciHoje && ponto.id != null) {
+      try {
         estado.adicionarAbastecimento(
           await _servico.registrarAbastecimento(
             Abastecimento(
@@ -118,20 +147,25 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
             ),
           ),
         );
+      } on Exception {
+        abastecimentoFalhou = true;
       }
-      if (!mounted) return;
-      Navigator.pop(context, ponto);
-    } on Exception {
-      if (!mounted) return;
-      setState(() => _salvando = false);
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(
-            content: Text('Não foi possível cadastrar agora. Tente de novo.'),
-          ),
-        );
     }
+    if (!mounted) return;
+    if (abastecimentoFalhou) {
+      _avisar(
+        'Ponto cadastrado, mas o abastecimento não foi registrado. '
+        'Registre pelo ponto no mapa.',
+      );
+    }
+    Navigator.pop(context, ponto);
+  }
+
+  // Mostra um aviso curto na parte de baixo da tela
+  void _avisar(String texto) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(texto)));
   }
 
   @override
@@ -164,7 +198,7 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
-          _Cartao(
+          CartaoDeSecao(
             icone: Icons.place_outlined,
             titulo: 'O ponto',
             child: Column(
@@ -194,7 +228,10 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
                     padding: EdgeInsets.only(top: 5, left: 2),
                     child: Text(
                       'Escolha se é comedouro, bebedouro ou os dois.',
-                      style: TextStyle(fontSize: 12, color: context.cores.destaque),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.cores.destaque,
+                      ),
                     ),
                   ),
                 const SizedBox(height: 14),
@@ -231,12 +268,12 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
               ],
             ),
           ),
-          _Cartao(
+          CartaoDeSecao(
             icone: Icons.location_on_outlined,
             titulo: 'Onde fica',
             child: SeletorDeLocal(aoMudar: (local) => _local = local),
           ),
-          // Material, e não Container com cor, para o toque aparecer
+          // Material em vez de Container para o efeito de toque aparecer
           Padding(
             padding: const EdgeInsets.only(bottom: 14),
             child: Material(
@@ -259,8 +296,12 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                 ),
                 subtitle: Text(
-                  'Conferimos se você está no ponto, a até 150 m.',
-                  style: TextStyle(fontSize: 13, color: context.cores.textoFraco),
+                  'Conferimos se você está no ponto, a até '
+                  '${distanciaMaximaDoPonto.round()} m.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: context.cores.textoFraco,
+                  ),
                 ),
               ),
             ),
@@ -299,53 +340,6 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-// O mesmo cartão do cadastro de animal: branco, borda clara e título verde
-class _Cartao extends StatelessWidget {
-  const _Cartao({
-    required this.icone,
-    required this.titulo,
-    required this.child,
-  });
-
-  final IconData icone;
-  final String titulo;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.cores.cartao,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.cores.borda),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Icon(icone, size: 18, color: context.cores.principal),
-              const SizedBox(width: 8),
-              Text(
-                titulo,
-                style: TextStyle(
-                  color: context.cores.principal,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          child,
         ],
       ),
     );

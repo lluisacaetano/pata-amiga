@@ -1,13 +1,24 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote provider: compartilha estado entre as telas e as reconstrói.
 import 'package:provider/provider.dart';
 
+// Arquivo auth_components.dart: fundo, campos e botões das telas de entrada.
 import 'auth_components.dart';
+// Arquivo onboarding_screen.dart: navegação para o app depois do login.
 import '../../telas/onboarding_screen.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../../tema/cores.dart';
+// Arquivo route_names.dart: nomes das rotas de navegação.
 import '../../routes/route_names.dart';
+// Arquivo mascaras.dart: máscara e validador do campo de e-mail.
 import '../../widgets/mascaras.dart';
+// Arquivo usuario_provider.dart: conferência da conta e início da sessão.
 import '../../provider/usuario_provider.dart';
 
+// Tela de login. Confere o e-mail e a senha com a conta salva neste
+// aparelho; o erro aparece no próprio campo (conta inexistente no e-mail,
+// senha incorreta na senha). Com tudo certo, segue para o app
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -20,6 +31,35 @@ class _LoginScreenState extends State<LoginScreen> {
   final _senhaController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _mostrarSenha = false;
+  bool _entrando = false;
+  // Erros que só se sabe depois de consultar a conta salva
+  String? _erroDoEmail;
+  String? _erroDaSenha;
+
+  Future<void> _entrar() async {
+    setState(() {
+      _erroDoEmail = null;
+      _erroDaSenha = null;
+    });
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _entrando = true);
+    final resultado = await context.read<UsuarioProvider>().entrar(
+      _emailController.text,
+      _senhaController.text,
+    );
+    if (!mounted) return;
+    switch (resultado) {
+      case ResultadoDoLogin.semConta:
+        _erroDoEmail = 'Nenhuma conta com este e-mail neste aparelho.';
+      case ResultadoDoLogin.senhaIncorreta:
+        _erroDaSenha = 'Senha incorreta.';
+      case ResultadoDoLogin.entrou:
+        await navegarAposAutenticacao(context);
+        return;
+    }
+    setState(() => _entrando = false);
+    _formKey.currentState!.validate();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,14 +98,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 keyboardType: TextInputType.emailAddress,
                 inputFormatters: [MascaraDeEmail()],
                 prefixIcon: Icons.mail_outline,
-                validator: (value) {
-                  final email = value?.trim() ?? '';
-                  if (email.isEmpty) return 'Informe seu e-mail.';
-                  if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
-                    return 'Digite um e-mail válido.';
-                  }
-                  return null;
-                },
+                validator: (value) => validarEmail(value) ?? _erroDoEmail,
               ),
               const SizedBox(height: 16),
               AuthField(
@@ -75,7 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 prefixIcon: Icons.lock_outline,
                 validator: (value) => value == null || value.isEmpty
                     ? 'Informe sua senha.'
-                    : null,
+                    : _erroDaSenha,
                 obscureText: !_mostrarSenha,
                 suffixIcon: _mostrarSenha
                     ? Icons.visibility_off
@@ -95,22 +128,9 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 10),
               AuthButton(
-                label: 'Entrar',
-                onPressed: () async {
-                  if (!_formKey.currentState!.validate()) return;
-                  await context.read<UsuarioProvider>().iniciarSessao(
-                    _emailController.text,
-                  );
-                  if (!context.mounted) return;
-                  await navegarAposAutenticacao(context);
-                },
-              ),
-              const SizedBox(height: 12),
-              AuthButton(
-                label: '',
-                primary: false,
-                leading: const GoogleWordmark(),
-                onPressed: () {},
+                label: _entrando ? 'Entrando…' : 'Entrar',
+                carregando: _entrando,
+                onPressed: _entrando ? null : _entrar,
               ),
               const SizedBox(height: 18),
               Center(

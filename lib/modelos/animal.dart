@@ -1,12 +1,18 @@
+// Arquivo dono.dart: modelo do responsável pelo animal.
 import 'dono.dart';
+// Arquivo json_da_api.dart: leitura e gravação do id da API.
+import 'json_da_api.dart';
+// Arquivo texto.dart: primeira letra maiúscula e "há N dias".
+import 'texto.dart';
 
-// Os dados chegam em caixa baixa; primeira letra maiúscula
-String comMaiuscula(String texto) =>
-    texto.isEmpty ? texto : texto[0].toUpperCase() + texto.substring(1);
+// Quem importa o modelo do animal também recebe comMaiuscula
+export 'texto.dart' show comMaiuscula;
 
+// O tipo de publicação: animal para adoção, perdido ou que precisa de resgate
 enum TipoRegistro { adocao, perdido, resgate }
 
 extension RotuloTipo on TipoRegistro {
+  // O nome do tipo como aparece nas abas e etiquetas
   String get rotulo {
     switch (this) {
       case TipoRegistro.adocao:
@@ -18,24 +24,27 @@ extension RotuloTipo on TipoRegistro {
     }
   }
 
-  // Titulo do contato
+  // O título da seção de contato na ficha do animal
   String get tituloDoContato => switch (this) {
     TipoRegistro.adocao => 'Quem responde por ele',
     TipoRegistro.perdido => 'Quem está procurando',
     TipoRegistro.resgate => 'Quem encontrou',
   };
 
-  // Em perdidos o lugar é a última pista, nos outros é onde o animal está
+  // O título da seção de endereço: no perdido, o lugar é onde foi visto pela
+  // última vez; nos outros tipos, é onde o animal está
   String get tituloDoLugar => this == TipoRegistro.perdido
       ? 'Onde foi visto pela última vez'
       : 'Onde ele está';
 }
 
-// Cada tipo tem o seu desfecho: adoção termina em adotado, perdido em
-// encontrado e resgate em resgatado. Com desfecho, o animal sai do feed e do mapa
+// A situação do animal. Cada tipo tem um desfecho próprio: adoção termina em
+// adotado, perdido em encontrado e resgate em resgatado. Com o desfecho
+// marcado, o animal deixa de aparecer no feed e no mapa
 enum StatusAnimal { disponivel, adotado, encontrado, resgatado }
 
 extension RotuloStatus on StatusAnimal {
+  // O nome da situação como aparece na tela
   String get rotulo => switch (this) {
     StatusAnimal.disponivel => 'disponível',
     StatusAnimal.adotado => 'adotado',
@@ -44,9 +53,12 @@ extension RotuloStatus on StatusAnimal {
   };
 }
 
+// Um animal publicado no feed, com os dados do cadastro, o responsável e a
+// localização. É o mesmo formato usado pela API e pelo cache do aparelho
 class Animal {
-  // O id que a API dá; animal cadastrado só no aparelho não tem
-  final int? id;
+  // O id gerado pela API, sempre em texto; fica nulo enquanto o animal
+  // existe só no aparelho
+  final String? id;
   final String nome;
   final String especie;
   final String raca;
@@ -55,8 +67,8 @@ class Animal {
   final String idade;
   final String peso;
   final String cor;
-  // Fica guardada para o mapa e para o responsável; o feed e a ficha
-  // mostram só bairro e cidade
+  // A rua é guardada para o mapa e para o responsável; o feed e a ficha
+  // mostram só o bairro e a cidade
   final String rua;
   final String bairro;
   final String cidade;
@@ -66,19 +78,19 @@ class Animal {
   final bool vacinado;
   final bool vermifugado;
   final String observacoes;
-  // O que esse animal precisa e os outros não: remédio contínuo, dieta, deficiência
+  // Cuidados particulares do animal: remédio contínuo, dieta, deficiência
   final String necessidadesEspeciais;
   final Dono dono;
-  // A conta de quem cadastrou: só ela muda o status do animal. Os animais de
-  // exemplo da API não têm, então ninguém muda o deles
+  // O e-mail da conta que cadastrou o animal; só ela pode editar e mudar o
+  // status. Vazio nos animais de exemplo, que ninguém pode alterar
   final String responsavelEmail;
-  // A ONG em nome de quem o animal foi publicado; null quando foi em nome da
-  // própria pessoa. É por ele que o perfil da ONG lista os animais dela
-  final int? ongId;
+  // A ONG em nome da qual o animal foi publicado; nulo quando a publicação é
+  // da própria pessoa. O perfil da ONG lista os animais por este campo
+  final String? ongId;
   final List<String> fotos;
   final DateTime publicadoEm;
-  // Salva a localização do aparelho quando a pessoa tocou no botão de localização
-  // Fica vazio quando o endereço foi digitado à mão
+  // As coordenadas do animal, preenchidas quando o cadastro usou a
+  // localização ou o mapa. Ficam nulas quando o endereço foi só digitado
   final double? latitude;
   final double? longitude;
 
@@ -111,97 +123,100 @@ class Animal {
     this.longitude,
   });
 
-  // [SPRINT 3 - NOVO] Cria um Animal a partir do JSON da API ou do cache local.
-  // Usado por AnimalService (lê a API) e CacheService (lê o cache offline).
-  // Campos com `?? ''` ou `?? false` são opcionais: JSON incompleto não quebra.
-  // Se um campo novo for criado no model, lembrar de incluir aqui e no toJson.
+  // Cria o animal a partir do JSON da API ou do cache do aparelho. Os campos
+  // de texto ausentes ficam vazios e o status ausente vale "disponível". Só o
+  // tipo e a data de publicação são obrigatórios: sem eles, ou com um tipo
+  // desconhecido, gera erro. Campo novo no modelo precisa entrar aqui e no
+  // toJson
   factory Animal.fromJson(Map<String, dynamic> json) => Animal(
-        id: (json['id'] as num?)?.toInt(),
-        nome: json['nome'] as String,
-        especie: json['especie'] as String,
-        raca: json['raca'] as String? ?? '',
-        sexo: json['sexo'] as String,
-        porte: json['porte'] as String,
-        idade: json['idade'] as String,
-        peso: json['peso'] as String? ?? '',
-        cor: json['cor'] as String? ?? '',
-        rua: json['rua'] as String? ?? '',
-        bairro: json['bairro'] as String,
-        cidade: json['cidade'] as String,
-        // Enums chegam como texto com o nome do valor ("adocao", "disponivel")
-        tipo: TipoRegistro.values.byName(json['tipo'] as String),
-        status: StatusAnimal.values
-            .byName(json['status'] as String? ?? 'disponivel'),
-        castrado: json['castrado'] as bool? ?? false,
-        vacinado: json['vacinado'] as bool? ?? false,
-        vermifugado: json['vermifugado'] as bool? ?? false,
-        observacoes: json['observacoes'] as String? ?? '',
-        necessidadesEspeciais: json['necessidadesEspeciais'] as String? ?? '',
-        // O dono é um objeto aninhado: usa o Dono.fromJson (dono.dart)
-        dono: Dono.fromJson(json['dono'] as Map<String, dynamic>),
-        responsavelEmail: json['responsavelEmail'] as String? ?? '',
-        ongId: (json['ongId'] as num?)?.toInt(),
-        fotos: List<String>.from(json['fotos'] as List? ?? []),
-        // A data chega como texto ISO 8601 (ex.: 2026-10-14T12:00:00.000)
-        publicadoEm: DateTime.parse(json['publicadoEm'] as String),
-        // `num?` porque o JSON pode trazer inteiro ou decimal, ou null
-        latitude: (json['latitude'] as num?)?.toDouble(),
-        longitude: (json['longitude'] as num?)?.toDouble(),
-      );
+    id: idDaApi(json['id']),
+    nome: json['nome'] as String? ?? '',
+    especie: json['especie'] as String? ?? '',
+    raca: json['raca'] as String? ?? '',
+    sexo: json['sexo'] as String? ?? '',
+    porte: json['porte'] as String? ?? '',
+    idade: json['idade'] as String? ?? '',
+    peso: json['peso'] as String? ?? '',
+    cor: json['cor'] as String? ?? '',
+    rua: json['rua'] as String? ?? '',
+    bairro: json['bairro'] as String? ?? '',
+    cidade: json['cidade'] as String? ?? '',
+    // Os enums são gravados pelo nome do valor ("adocao", "disponivel")
+    tipo: TipoRegistro.values.byName(json['tipo'] as String),
+    status:
+        StatusAnimal.values
+            .where((status) => status.name == json['status'])
+            .firstOrNull ??
+        StatusAnimal.disponivel,
+    castrado: json['castrado'] as bool? ?? false,
+    vacinado: json['vacinado'] as bool? ?? false,
+    vermifugado: json['vermifugado'] as bool? ?? false,
+    observacoes: json['observacoes'] as String? ?? '',
+    necessidadesEspeciais: json['necessidadesEspeciais'] as String? ?? '',
+    // O dono vem como objeto aninhado dentro do animal
+    dono: Dono.fromJson(json['dono'] as Map<String, dynamic>? ?? const {}),
+    responsavelEmail: json['responsavelEmail'] as String? ?? '',
+    ongId: idDaApi(json['ongId']),
+    fotos: List<String>.from(json['fotos'] as List? ?? []),
+    // A data é gravada como texto no formato ISO 8601
+    publicadoEm: DateTime.parse(json['publicadoEm'] as String),
+    // `num?` aceita inteiro, decimal ou nulo
+    latitude: (json['latitude'] as num?)?.toDouble(),
+    longitude: (json['longitude'] as num?)?.toDouble(),
+  );
 
-  // [SPRINT 3 - NOVO] Converte o Animal em Map para o CacheService salvar
-  // no SharedPreferences. Tem que espelhar o fromJson: se um campo faltar
-  // aqui, ele some quando o app ler do cache em modo avião.
+  // Converte o animal no JSON enviado à API e gravado no cache. Precisa
+  // espelhar o fromJson: campo que faltar aqui se perde ao salvar
   Map<String, dynamic> toJson() => {
-        if (id != null) 'id': id,
-        'nome': nome,
-        'especie': especie,
-        'raca': raca,
-        'sexo': sexo,
-        'porte': porte,
-        'idade': idade,
-        'peso': peso,
-        'cor': cor,
-        'rua': rua,
-        'bairro': bairro,
-        'cidade': cidade,
-        'tipo': tipo.name,
-        'status': status.name,
-        'castrado': castrado,
-        'vacinado': vacinado,
-        'vermifugado': vermifugado,
-        'observacoes': observacoes,
-        'necessidadesEspeciais': necessidadesEspeciais,
-        'dono': dono.toJson(),
-        'responsavelEmail': responsavelEmail,
-        if (ongId != null) 'ongId': ongId,
-        'fotos': fotos,
-        'publicadoEm': publicadoEm.toIso8601String(),
-        'latitude': latitude,
-        'longitude': longitude,
-      };
+    if (id != null) 'id': idParaApi(id!),
+    'nome': nome,
+    'especie': especie,
+    'raca': raca,
+    'sexo': sexo,
+    'porte': porte,
+    'idade': idade,
+    'peso': peso,
+    'cor': cor,
+    'rua': rua,
+    'bairro': bairro,
+    'cidade': cidade,
+    'tipo': tipo.name,
+    'status': status.name,
+    'castrado': castrado,
+    'vacinado': vacinado,
+    'vermifugado': vermifugado,
+    'observacoes': observacoes,
+    'necessidadesEspeciais': necessidadesEspeciais,
+    'dono': dono.toJson(),
+    'responsavelEmail': responsavelEmail,
+    if (ongId != null) 'ongId': idParaApi(ongId!),
+    'fotos': fotos,
+    'publicadoEm': publicadoEm.toIso8601String(),
+    'latitude': latitude,
+    'longitude': longitude,
+  };
 
-  // A capa do animal é a primeira foto
+  // A foto de capa, que é a primeira da lista; vazia quando não há fotos
   String get foto => fotos.isEmpty ? '' : fotos.first;
 
-  // Os mapas só conseguem desenhar o animal quando as duas coordenadas existem
+  // Se o animal tem as duas coordenadas e pode ser desenhado no mapa
   bool get temPonto => latitude != null && longitude != null;
 
-  // Como o avistamento acha o animal: pelo id da API, ou pelo nome quando o
-  // animal ainda só existe no aparelho
-  String get chave => id?.toString() ?? nome;
+  // O identificador usado pelos avistamentos: o id da API ou, quando o
+  // animal existe só no aparelho, o nome
+  String get chave => id ?? nome;
 
-  // Já teve desfecho: foi adotado, encontrado ou resgatado
+  // Se o animal já teve desfecho (adotado, encontrado ou resgatado)
   bool get finalizado => status != StatusAnimal.disponivel;
 
-  // O desfecho que este tipo de registro pode ter
+  // O status final possível para o tipo deste registro
   StatusAnimal get desfecho => switch (tipo) {
     TipoRegistro.adocao => StatusAnimal.adotado,
     TipoRegistro.perdido => StatusAnimal.encontrado,
     TipoRegistro.resgate => StatusAnimal.resgatado,
   };
 
-  // Como o status aparece: enquanto não há desfecho, cada tipo diz o seu
+  // O status como aparece na tela. Sem desfecho, cada tipo tem o seu texto
   String get rotuloDoStatus => finalizado
       ? status.rotulo
       : switch (tipo) {
@@ -210,37 +225,29 @@ class Animal {
           TipoRegistro.resgate => 'precisa de ajuda',
         };
 
-  // Se quem está logado é quem cadastrou o animal
+  // Se o e-mail informado é o de quem cadastrou o animal, sem diferenciar
+  // maiúsculas nem espaços nas pontas
   bool eDoResponsavel(String email) =>
       email.trim().isNotEmpty &&
       responsavelEmail.trim().toLowerCase() == email.trim().toLowerCase();
 
-  // O mesmo animal com outro status, para a mudança não alterar o original
+  // Uma cópia do animal com outro status; o objeto original não muda
   Animal comStatus(StatusAnimal novo) =>
       Animal.fromJson({...toJson(), 'status': novo.name});
 
-  // Descrição curta do animal, exibida embaixo do nome no card do feed.
+  // Sexo, porte e idade, exibidos abaixo do nome no card do feed
   String get resumo =>
       [sexo, 'porte $porte', idade].map(comMaiuscula).join(' · ');
 
-  // Quem é o animal, na linha embaixo do nome na ficha de detalhes
-  String get identidade => [especie, raca, sexo]
-      .where((campo) => campo.trim().isNotEmpty)
-      .map(comMaiuscula)
-      .join(' · ');
+  // Espécie, raça e sexo, exibidos abaixo do nome na ficha do animal. Os
+  // campos vazios ficam de fora
+  String get identidade => [
+    especie,
+    raca,
+    sexo,
+  ].where((campo) => campo.trim().isNotEmpty).map(comMaiuscula).join(' · ');
 
-  // Há quanto tempo o animal foi publicado, no formato que vai no card.
-  // Compara só o dia, porque a hora não interessa a quem lê o feed.
-  String publicadoHa(DateTime agora) {
-    final hoje = DateTime(agora.year, agora.month, agora.day);
-    final dia = DateTime(publicadoEm.year, publicadoEm.month, publicadoEm.day);
-    final dias = hoje.difference(dia).inDays;
-
-    if (dias <= 0) return 'hoje';
-    if (dias == 1) return 'ontem';
-    if (dias <= 30) return 'há $dias dias';
-
-    final meses = dias ~/ 30;
-    return meses == 1 ? 'há 1 mês' : 'há $meses meses';
-  }
+  // Há quanto tempo o animal foi publicado ("hoje", "ontem", "há 3 dias",
+  // "há 2 meses")
+  String publicadoHa(DateTime agora) => haQuantosDias(publicadoEm, agora);
 }

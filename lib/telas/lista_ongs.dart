@@ -1,16 +1,29 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
 
+// Arquivo estado_pata_amiga.dart: ONGs e animais compartilhados.
 import '../estado/estado_pata_amiga.dart';
+// Arquivo animal.dart: modelo do animal.
 import '../modelos/animal.dart';
+// Arquivo ong.dart: modelo da ONG e a comparação de nomes.
 import '../modelos/ong.dart';
+// Arquivo route_names.dart: nomes das rotas de navegação.
 import '../routes/route_names.dart';
+// Arquivo ong_service.dart: busca das ONGs na API.
 import '../services/ong_service.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo barra_inferior.dart: barra de navegação inferior.
 import '../widgets/barra_inferior.dart';
+// Arquivo avatar_da_ong.dart: avatar da ONG com foto ou iniciais.
 import '../widgets/avatar_da_ong.dart';
+// Arquivo aviso_no_centro.dart: aviso centralizado de lista vazia ou erro.
+import '../widgets/aviso_no_centro.dart';
+// Arquivo campo_de_busca.dart: campo de busca arredondado do topo da lista.
+import '../widgets/campo_de_busca.dart';
 
-// As ONGs e abrigos de Formiga, pelo item "ONGs" do menu: para quem quer
-// adotar, ajudar ou doar chegar à ONG sem precisar passar antes por um animal
+// Lista das ONGs e abrigos, aberta pelo item "ONGs" da barra inferior. Dá
+// acesso ao perfil de cada ONG sem passar por um animal do feed
 class ListaOngs extends StatefulWidget {
   final OngService? servico;
 
@@ -39,7 +52,8 @@ class _ListaOngsState extends State<ListaOngs> {
     super.dispose();
   }
 
-  // Busca de novo ao abrir: uma ONG pode ter sido criada depois do feed
+  // Recarrega as ONGs da API ao abrir, pois uma ONG pode ter sido criada
+  // depois do carregamento do feed. Sem conexão, mantém a lista em memória
   Future<void> _carregar() async {
     try {
       final ongs = await _servico.buscarOngs();
@@ -64,11 +78,42 @@ class _ListaOngsState extends State<ListaOngs> {
     return busca.isEmpty || Ong.nomeComparavel(ong.nome).contains(busca);
   }
 
+  // Aviso no lugar da lista: sem conexão, busca sem resultado ou nenhuma ONG
+  Widget _avisoDaListaVazia({
+    required bool buscando,
+    required bool semConexao,
+  }) {
+    if (semConexao) {
+      return AvisoNoCentro(
+        icone: Icons.wifi_off,
+        titulo: 'Não foi possível carregar as ONGs.',
+        texto: 'Confira a conexão com a internet e tente de novo.',
+        acao: 'Tentar de novo',
+        aoAgir: _carregar,
+        acaoEmDestaque: true,
+      );
+    }
+    if (buscando) {
+      return const AvisoNoCentro(
+        icone: Icons.search_off,
+        titulo: 'Nenhuma ONG com esse nome.',
+        texto: 'Confira a escrita ou busque por outra palavra do nome.',
+      );
+    }
+    return const AvisoNoCentro(
+      icone: Icons.volunteer_activism_outlined,
+      titulo: 'Nenhuma ONG cadastrada ainda.',
+      texto:
+          'Representa uma ONG ou abrigo? Crie o perfil dela em Editar '
+          'perfil.',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final estado = PataAmigaScope.of(context);
     final ongs = estado.ongs.where(_combina).toList()
-      // Sempre em ordem alfabética, com "Órfãos" junto do "O", e não no fim
+      // Ordem alfabética ignorando acentos, para "Órfãos" ficar junto do "O"
       ..sort(
         (a, b) =>
             Ong.nomeComparavel(a.nome).compareTo(Ong.nomeComparavel(b.nome)),
@@ -92,70 +137,62 @@ class _ListaOngsState extends State<ListaOngs> {
       body: RefreshIndicator(
         color: context.cores.principal,
         onRefresh: _carregar,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          children: [
-            TextField(
+        child: ListaComAviso(
+          topo: [
+            CampoDeBusca(
               controller: _pesquisa,
-              onChanged: (texto) => setState(() => _busca = texto),
-              style: const TextStyle(fontSize: 15),
-              decoration: InputDecoration(
-                isDense: true,
-                filled: true,
-                fillColor: context.cores.cartao,
-                hintText: 'Buscar pelo nome da ONG',
-                hintStyle: TextStyle(
-                  fontSize: 14,
-                  color: context.cores.textoFraco,
-                ),
-                prefixIcon: Icon(Icons.search, color: context.cores.textoFraco),
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide(color: context.cores.borda),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide(
-                    color: context.cores.principal,
-                    width: 1.5,
-                  ),
-                ),
-              ),
+              dica: 'Buscar pelo nome da ONG',
+              aoMudar: (texto) => setState(() => _busca = texto),
             ),
             const SizedBox(height: 16),
-            if (_semConexao)
+            // Sem conexão mas com ONGs em memória: avisa que a lista pode
+            // estar desatualizada. Sem nenhuma, o aviso vem no lugar da lista
+            if (_semConexao && estado.ongs.isNotEmpty)
               Padding(
-                padding: EdgeInsets.only(bottom: 12),
-                child: Text(
-                  'Sem conexão: a lista pode estar desatualizada. Puxe para '
-                  'baixo para tentar de novo.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: context.cores.textoFraco,
-                  ),
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Sem conexão: a lista pode estar desatualizada.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: context.cores.textoFraco,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: _carregar,
+                      style: TextButton.styleFrom(
+                        foregroundColor: context.cores.principal,
+                      ),
+                      child: const Text('Tentar de novo'),
+                    ),
+                  ],
                 ),
               ),
-            if (_carregando && estado.ongs.isEmpty)
-              Padding(
-                padding: EdgeInsets.only(top: 40),
-                child: Center(
+          ],
+          aviso: _carregando && estado.ongs.isEmpty
+              ? Center(
                   child: CircularProgressIndicator(
                     color: context.cores.principal,
                   ),
-                ),
-              )
-            else if (ongs.isEmpty)
-              _ListaVazia(buscando: _busca.trim().isNotEmpty)
-            else
-              for (final ong in ongs)
-                _CartaoDaOng(
-                  ong: ong,
-                  emAberto: estado
-                      .animaisDa(ong)
-                      .where((animal) => !animal.finalizado)
-                      .toList(),
-                ),
+                )
+              : ongs.isEmpty
+              ? _avisoDaListaVazia(
+                  buscando: _busca.trim().isNotEmpty,
+                  semConexao: _semConexao && estado.ongs.isEmpty,
+                )
+              : null,
+          itens: [
+            for (final ong in ongs)
+              _CartaoDaOng(
+                ong: ong,
+                emAberto: estado
+                    .animaisDa(ong)
+                    .where((animal) => !animal.finalizado)
+                    .toList(),
+              ),
           ],
         ),
       ),
@@ -164,8 +201,8 @@ class _ListaOngsState extends State<ListaOngs> {
   }
 }
 
-// O card da ONG, no padrão dos cards do feed, com a foto de perfil dela em
-// círculo, como um perfil; sem foto, as iniciais
+// Card de uma ONG: avatar (foto ou iniciais), nome, bairro e quantos animais
+// dela estão em aberto. O toque abre o perfil da ONG
 class _CartaoDaOng extends StatelessWidget {
   const _CartaoDaOng({required this.ong, required this.emAberto});
 
@@ -267,45 +304,6 @@ class _CartaoDaOng extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _ListaVazia extends StatelessWidget {
-  const _ListaVazia({required this.buscando});
-
-  final bool buscando;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 32),
-      child: Column(
-        children: [
-          Icon(
-            Icons.volunteer_activism_outlined,
-            size: 44,
-            color: context.cores.principal,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            buscando
-                ? 'Nenhuma ONG com esse nome.'
-                : 'Nenhuma ONG cadastrada ainda.',
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-          if (!buscando) ...[
-            const SizedBox(height: 6),
-            Text(
-              'Representa uma ONG ou abrigo? Crie o perfil dela em Editar '
-              'perfil.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: context.cores.textoFraco),
-            ),
-          ],
-        ],
       ),
     );
   }

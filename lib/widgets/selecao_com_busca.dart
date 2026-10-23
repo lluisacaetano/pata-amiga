@@ -1,35 +1,37 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
 
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
 
-// Uma opção fixa no rodapé da lista, em verde: o valor que ela escolhe e o
-// texto que aparece
+// Opção fixa exibida em destaque no rodapé da lista: [valor] é o que se
+// escolhe e [texto], o que aparece
 typedef OpcaoFixa = ({String valor, String texto});
 
-// O select com busca do bairro e da raça, no cadastro e nos filtros do feed:
-// a caixa é a mesma dos outros campos, e digitar filtra a lista. As opções
-// fixas ("Outro bairro", "Sem raça definida", "Todas as raças") ficam sempre
-// no rodapé, mesmo quando nada combina com o que foi digitado. Nos filtros, um
-// X limpa a escolha
+// Campo de seleção com busca (autocomplete), usado para bairro, raça e ONG
+// no cadastro e nos filtros do feed. Digitar filtra as opções. As opções
+// fixas do [rodape] ("Outro bairro", "Sem raça definida" etc.) aparecem
+// sempre, mesmo sem resultado na busca. Funciona com escolha única ou, com
+// [marcadas], com várias escolhas
 class SelecaoComBusca extends StatefulWidget {
   final String rotulo;
   final String dica;
   final bool habilitada;
   final TextEditingController controlador;
   final Iterable<String> Function(String digitado) opcoes;
-  // A opção da lista que corresponde ao texto, ou null
+  // Devolve a opção da lista correspondente ao texto digitado, ou null
   final String? Function(String texto) daLista;
   final List<OpcaoFixa> rodape;
-  // O X para limpar, nos filtros; no cadastro fica a seta
+  // Mostra um X para limpar o campo em vez da seta de lista
   final bool limpavel;
   final bool comErro;
-  // Nos filtros dá para escolher várias: as escolhidas viram etiquetas abaixo
-  // do campo, ganham um ✓ na lista, e aoEscolher passa a marcar ou desmarcar.
-  // Sem elas, o campo guarda uma escolha só, como no cadastro
+  // Ativa a escolha múltipla: as opções marcadas viram etiquetas abaixo do
+  // campo e recebem um check na lista, e aoEscolher passa a alternar a
+  // marcação. Nulo mantém escolha única
   final Set<String>? marcadas;
   final ValueChanged<String?> aoEscolher;
-  // Telas com outro padrão de rótulo, como o "Criar conta": o rótulo sai
-  // como está escrito, com este estilo, e o texto do campo também
+  // Estilos opcionais para telas com outro padrão de rótulo. Com
+  // [estiloDoRotulo], o rótulo é exibido como escrito, sem maiúsculas
   final TextStyle? estiloDoRotulo;
   final TextStyle? estiloDoTexto;
 
@@ -65,9 +67,10 @@ class _SelecaoComBuscaState extends State<SelecaoComBusca> {
 
   bool get _varias => widget.marcadas != null;
 
+  // Limpa o campo. Na escolha múltipla, apaga só a busca; as marcadas são
+  // removidas pelas etiquetas
   void _limpar() {
     widget.controlador.clear();
-    // Com várias, o X só apaga a busca; as escolhidas saem nas etiquetas
     if (!_varias) widget.aoEscolher(null);
     setState(() {});
   }
@@ -96,8 +99,8 @@ class _SelecaoComBuscaState extends State<SelecaoComBusca> {
           builder: (context, restricoes) => RawAutocomplete<String>(
             textEditingController: widget.controlador,
             focusNode: _foco,
-            // Sem nenhuma opção achada a lista sumiria, e com ela o
-            // rodapé; o marcador mantém as opções fixas aparecendo
+            // Sem resultados a lista fecharia junto com o rodapé; devolver
+            // uma opção fixa mantém a lista aberta com as opções fixas
             optionsBuilder: (digitado) {
               if (!widget.habilitada) return const [];
               final achados = widget
@@ -110,8 +113,9 @@ class _SelecaoComBuscaState extends State<SelecaoComBusca> {
             onSelected: (opcao) {
               FocusScope.of(context).unfocus();
               widget.aoEscolher(opcao);
-              // Com várias, o campo volta vazio para buscar a próxima. Só
-              // depois da seleção, senão o campo não refaz a lista
+              // Na escolha múltipla, limpa o campo para a próxima busca. A
+              // limpeza fica para o quadro seguinte, senão a lista não é
+              // refeita
               if (_varias) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (!mounted) return;
@@ -128,7 +132,8 @@ class _SelecaoComBuscaState extends State<SelecaoComBusca> {
                   enabled: widget.habilitada,
                   style: widget.estiloDoTexto ?? const TextStyle(fontSize: 15),
                   textCapitalization: TextCapitalization.words,
-                  // Só conta como escolhido o que bate com a lista
+                  // Na escolha única, só conta como escolhido o texto que
+                  // corresponde a uma opção da lista
                   onChanged: (texto) {
                     if (!_varias) widget.aoEscolher(widget.daLista(texto));
                     if (widget.limpavel) setState(() {});
@@ -154,8 +159,8 @@ class _SelecaoComBuscaState extends State<SelecaoComBusca> {
                   ),
                 ),
             optionsViewBuilder: (context, escolher, opcoes) {
-              // A lista sai na hora do que está escrito: as opções podem ter
-              // mudado por fora, como as raças quando a espécie muda
+              // Recalcula a lista a partir do texto atual, pois as opções
+              // podem mudar por fora (as raças mudam com a espécie)
               final daLista = widget
                   .opcoes(widget.controlador.text)
                   .where((opcao) => !fixas.contains(opcao))
@@ -191,8 +196,7 @@ class _SelecaoComBuscaState extends State<SelecaoComBusca> {
                             },
                           ),
                         ),
-                        // Fica fixo no rodapé: quem não acha a opção não
-                        // precisa rolar a lista inteira para descobrir a saída
+                        // Opções fixas fora da rolagem, sempre visíveis
                         if (widget.rodape.isNotEmpty)
                           Divider(height: 1, color: context.cores.borda),
                         for (final fixa in widget.rodape)
@@ -211,8 +215,7 @@ class _SelecaoComBuscaState extends State<SelecaoComBusca> {
             },
           ),
         ),
-        // As escolhidas numa linha só; se não couberem, a linha rola para o
-        // lado, como a faixa de filtros do feed
+        // Etiquetas das opções marcadas, numa linha com rolagem horizontal
         if (widget.marcadas?.isNotEmpty ?? false)
           Padding(
             padding: const EdgeInsets.only(top: 8),
@@ -255,7 +258,7 @@ class _SelecaoComBuscaState extends State<SelecaoComBusca> {
   }
 }
 
-// A mesma caixa dos campos do cadastro
+// Decoração do campo, igual à dos campos do cadastro, com borda de erro
 InputDecoration _caixa(
   BuildContext context,
   String dica, {
@@ -289,6 +292,7 @@ InputDecoration _caixa(
       ),
     );
 
+// Item da lista de opções. Opções fixas e marcadas ficam na cor principal
 class _Opcao extends StatelessWidget {
   final String texto;
   final bool destaque;

@@ -1,27 +1,17 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote provider: compartilha estado entre as telas e as reconstrói.
 import 'package:provider/provider.dart';
 
+// Arquivo preferencias_aplicativo_provider.dart: tema escolhido.
 import '../provider/preferencias_aplicativo_provider.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
 
-// Claro, escuro ou seguir o sistema. Cada opção é uma miniatura da tela no
-// tema que ela escolhe, para a pessoa ver o resultado antes de tocar
+// Tela de aparência: tema claro, escuro ou o do sistema. Cada opção mostra
+// uma miniatura da tela no tema correspondente
 class ConfiguracoesAparencia extends StatelessWidget {
   const ConfiguracoesAparencia({super.key});
-
-  Future<void> _salvar(
-    BuildContext context,
-    Future<void> Function() salvar,
-  ) async {
-    try {
-      await salvar();
-    } on Exception catch (_) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível salvar a aparência.')),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -82,11 +72,13 @@ class ConfiguracoesAparencia extends StatelessWidget {
                         child: _OpcaoDeTema(
                           opcao: opcao,
                           escolhida: opcao == escolhido,
-                          aoTocar: () => _salvar(
+                          aoTocar: () => salvarPreferencia(
                             context,
                             () => context
                                 .read<PreferenciasAplicativoProvider>()
                                 .definirTema(opcao),
+                            mensagemDeErro:
+                                'Não foi possível salvar a aparência.',
                           ),
                         ),
                       ),
@@ -116,6 +108,7 @@ class ConfiguracoesAparencia extends StatelessWidget {
   }
 }
 
+// Uma opção de tema: a miniatura, o nome e a marca de escolhida
 class _OpcaoDeTema extends StatelessWidget {
   const _OpcaoDeTema({
     required this.opcao,
@@ -167,7 +160,7 @@ class _OpcaoDeTema extends StatelessWidget {
                         PreferenciaTema.escuro => const _Miniatura(
                           escura: true,
                         ),
-                        // Metade de cada, cortadas na diagonal
+                        // Metade clara e metade escura, cortadas na diagonal
                         PreferenciaTema.sistema => const Stack(
                           fit: StackFit.expand,
                           children: [
@@ -217,8 +210,8 @@ class _OpcaoDeTema extends StatelessWidget {
   }
 }
 
-// Uma tela do app em miniatura: o fundo, a barra verde, um cartão com a foto
-// e duas linhas de texto, nas cores do tema que a opção escolhe
+// Miniatura de uma tela do app (fundo, barra verde, cartão com foto e duas
+// linhas de texto) nas cores do tema claro ou escuro
 class _Miniatura extends StatelessWidget {
   const _Miniatura({required this.escura});
 
@@ -226,10 +219,14 @@ class _Miniatura extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fundo = escura ? const Color(0xFF101510) : Cores.fundo;
-    final cartao = escura ? const Color(0xFF1C241E) : Cores.cartao;
-    final principal = escura ? const Color(0xFF8DCEA0) : Cores.principal;
-    final linha = escura ? const Color(0xFF59645B) : Cores.borda;
+    // Lê a paleta do próprio tema, para a miniatura nunca divergir dele
+    final paleta = temaPataAmiga(
+      brilho: escura ? Brightness.dark : Brightness.light,
+    ).extension<PaletaPataAmiga>()!;
+    final fundo = paleta.fundo;
+    final cartao = paleta.cartao;
+    final principal = paleta.principal;
+    final linha = paleta.borda;
     return Container(
       color: fundo,
       padding: const EdgeInsets.all(8),
@@ -278,6 +275,7 @@ class _Miniatura extends StatelessWidget {
   }
 }
 
+// Recorte triangular da metade inferior direita, usado na opção "sistema"
 class _Diagonal extends CustomClipper<Path> {
   const _Diagonal();
 

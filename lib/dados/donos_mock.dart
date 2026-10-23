@@ -1,7 +1,7 @@
+// Arquivo dono.dart: modelo do responsável pelo animal.
 import '../modelos/dono.dart';
 
-// Responsáveis de exemplo. Cada um é escrito uma vez e reaproveitado pelos
-// animais que estão sob os seus cuidados
+// Responsáveis de exemplo, reaproveitados pelos animais de animais_mock.dart
 const associacaoProtetora = Dono(
   nome: 'Associação Protetora dos Animais',
   telefone: '(37) 99999-0000',

@@ -1,30 +1,19 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote provider: compartilha estado entre as telas e as reconstrói.
 import 'package:provider/provider.dart';
 
+// Arquivo preferencias_aplicativo_provider.dart: tamanho do texto.
 import '../provider/preferencias_aplicativo_provider.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo escolha_de_tipo.dart: estilo das abas de escolha usado no seletor.
 import '../widgets/escolha_de_tipo.dart';
 
-// O tamanho do texto do app inteiro, nas abas do app, com um exemplo logo
-// abaixo que já sai no tamanho escolhido
+// Tela de acessibilidade: escolha do tamanho do texto do app inteiro, com
+// um exemplo que já aparece no tamanho escolhido
 class ConfiguracoesAcessibilidade extends StatelessWidget {
   const ConfiguracoesAcessibilidade({super.key});
-
-  Future<void> _salvar(
-    BuildContext context,
-    Future<void> Function() salvar,
-  ) async {
-    try {
-      await salvar();
-    } on Exception catch (_) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Não foi possível salvar a configuração.'),
-        ),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -113,18 +102,19 @@ class ConfiguracoesAcessibilidade extends StatelessWidget {
                     ],
                     selected: {preferencias.tamanhoTexto},
                     showSelectedIcon: false,
-                    onSelectionChanged: (escolha) => _salvar(
+                    onSelectionChanged: (escolha) => salvarPreferencia(
                       context,
                       () => context
                           .read<PreferenciasAplicativoProvider>()
                           .definirTamanhoTexto(escolha.first),
+                      mensagemDeErro: 'Não foi possível salvar a configuração.',
                     ),
                     style: estiloDasAbas(context, context.cores.fundo),
                   ),
                 ),
                 const SizedBox(height: 16),
-                // O exemplo já sai no tamanho escolhido, porque a escala vale
-                // para o app inteiro
+                // A escala vale para o app inteiro, então o exemplo já
+                // aparece no tamanho escolhido
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(

@@ -1,14 +1,19 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote shared_preferences: guarda dados simples no aparelho (chave e valor).
 import 'package:shared_preferences/shared_preferences.dart';
 
+// Arquivo route_names.dart: nomes das rotas de navegação.
 import '../routes/route_names.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
 
-/// Modelo de cada página do carrossel.
+/// Conteúdo de uma página do carrossel de apresentação.
 class OnboardingPage {
   final String title;
   final String description;
-  final IconData icon; // usado se não houver imagem
+  // Ícone exibido quando não há imagem ou ela falha ao carregar
+  final IconData icon;
   final String? imageAsset;
 
   const OnboardingPage({
@@ -19,7 +24,8 @@ class OnboardingPage {
   });
 }
 
-/// Controle de "primeira vez": salva no aparelho que o onboarding já foi visto.
+/// Guarda no aparelho se a apresentação já foi vista, para exibi-la só na
+/// primeira entrada.
 class OnboardingStorage {
   static const _key = 'onboarding_visto';
 
@@ -34,8 +40,8 @@ class OnboardingStorage {
   }
 }
 
-/// Chame depois de um login/cadastro bem-sucedido.
-/// 1ª vez -> onboarding; depois -> feed.
+/// Destino depois do login ou do cadastro: a apresentação na primeira vez e o
+/// feed nas seguintes. Limpa a pilha para que o voltar não retorne ao login.
 Future<void> navegarAposAutenticacao(BuildContext context) async {
   final jaViu = await OnboardingStorage.jaViu();
   if (!context.mounted) return;
@@ -44,8 +50,9 @@ Future<void> navegarAposAutenticacao(BuildContext context) async {
   Navigator.of(context).pushNamedAndRemoveUntil(destino, (_) => false);
 }
 
+/// Carrossel de apresentação do app, com indicador de página e opção de pular.
 class OnboardingScreen extends StatefulWidget {
-  /// Chamado ao terminar ou pular (ex: ir para o feed).
+  /// Chamado ao concluir ou pular a apresentação.
   final VoidCallback onFinish;
 
   const OnboardingScreen({super.key, required this.onFinish});
@@ -70,7 +77,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
     OnboardingPage(
       title: 'Adote com carinho',
-      description: 'Converse com os responsáveis e encontre seu novo amigo.',
+      description:
+          'Fale com os responsáveis pelo WhatsApp e encontre seu novo amigo.',
       icon: Icons.favorite_border,
       imageAsset: 'assets/desenhos/carrosel_boas.png',
     ),
@@ -81,11 +89,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   bool get _ehUltima => _paginaAtual == _paginas.length - 1;
 
+  // Registra que a apresentação foi vista antes de seguir adiante
   Future<void> _finalizar() async {
     await OnboardingStorage.marcarComoVisto();
     if (mounted) widget.onFinish();
   }
 
+  // Avança uma página ou conclui na última; sem animação quando o sistema
+  // pede movimento reduzido
   void _proxima() {
     if (_ehUltima) {
       _finalizar();
@@ -156,6 +167,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   itemBuilder: (_, i) => _PaginaView(pagina: _paginas[i]),
                 ),
               ),
+              // Indicador de página: a atual aparece alongada
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(_paginas.length, (i) {
@@ -202,6 +214,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
+// Uma página do carrossel: ilustração, título e descrição
 class _PaginaView extends StatelessWidget {
   final OnboardingPage pagina;
   const _PaginaView({required this.pagina});
@@ -222,7 +235,7 @@ class _PaginaView extends StatelessWidget {
                 pagina.imageAsset!,
                 height: 240,
                 fit: BoxFit.contain,
-                // Se o arquivo não existir, mostra o ícone em vez de quebrar.
+                // Sem o arquivo da imagem, mostra o ícone da página
                 errorBuilder: (_, _, _) => Icon(
                   pagina.icon,
                   size: 140,
@@ -235,9 +248,12 @@ class _PaginaView extends StatelessWidget {
             Text(
               pagina.title,
               textAlign: TextAlign.center,
+              // Tamanho que mantém o título em até duas linhas num celular
+              // estreito
               style: const TextStyle(
                 fontFamily: 'Nunito',
-                fontSize: 50,
+                fontSize: 34,
+                height: 1.15,
                 fontWeight: FontWeight.w800,
               ),
             ),

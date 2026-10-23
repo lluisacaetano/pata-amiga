@@ -1,3 +1,5 @@
+// Nomes de todas as rotas do app, para não espalhar strings pelo código.
+// A tabela que liga cada nome à sua tela fica em app_router.dart
 abstract final class AppRoutes {
   static const welcome = '/';
   static const login = '/login';
@@ -6,7 +8,6 @@ abstract final class AppRoutes {
   static const privacy = '/politica-de-privacidade';
   static const recoverPassword = '/recuperacao';
   static const feed = '/feed';
-  static const home = '/home';
   static const details = '/detalhes-animal';
   static const registerAnimal = '/cadastro-animal';
   static const onboarding = '/onboarding';

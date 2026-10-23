@@ -1,20 +1,32 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote flutter/services: vibração do aparelho (HapticFeedback).
 import 'package:flutter/services.dart';
+// Pacote url_launcher: abre WhatsApp, telefone e links no navegador.
 import 'package:url_launcher/url_launcher.dart';
 
+// Arquivo estado_pata_amiga.dart: estado global com ONGs, pedidos e avisos.
 import '../estado/estado_pata_amiga.dart';
+// Arquivo dono.dart: número do WhatsApp a partir do telefone.
 import '../modelos/dono.dart';
+// Arquivo ong.dart: modelo da ONG, dos membros, pedidos e avisos.
 import '../modelos/ong.dart';
+// Arquivo ong_service.dart: serviço da API das ONGs (pedidos e avisos).
 import '../services/ong_service.dart';
+// Arquivo route_names.dart: nomes das rotas de navegação.
 import '../routes/route_names.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo avatar_da_ong.dart: foto da ONG e iniciais de um nome.
 import 'avatar_da_ong.dart';
+// Arquivo foto_animal.dart: miniaturas dos animais publicados.
 import 'foto_animal.dart';
+// Arquivo mascaras.dart: formatação do telefone para exibição.
 import 'mascaras.dart';
 
-// As notificações que a pessoa ainda não resolveu: os pedidos das ONGs que
-// ela administra e os avisos de que foi removida de uma ONG. Serve para
-// saber quando chegou uma nova
+// Identificadores das notificações pendentes de um usuário: pedidos de
+// entrada nas ONGs que ele administra e avisos recebidos de ONGs. Comparar
+// dois conjuntos revela quando chegou uma notificação nova
 Set<String> notificacoesPara(Iterable<Ong> ongs, String email) => {
   for (final ong in ongs) ...[
     if (ong.eDoResponsavel(email))
@@ -24,14 +36,15 @@ Set<String> notificacoesPara(Iterable<Ong> ongs, String email) => {
   ],
 };
 
-// Avisa que chegou notificação com o app aberto: uma vibração curta, além
-// do contador do sino. As notificações ficam só dentro do app
+// Vibração curta que sinaliza notificação nova com o app aberto. Não há
+// notificação push: os avisos existem apenas dentro do app
 Future<void> avisarNovaNotificacao() => HapticFeedback.vibrate();
 
-// O sino do "Meu perfil", ao lado do sair: as notificações das ONGs. Quem
-// criou uma ONG vê os pedidos para entrar, com aprovar e recusar, e o aviso
-// quando a pessoa já faz parte de outra ONG. Quem pediu para entrar vê que o
-// pedido aguarda resposta. Os avisos ficam aqui, e não em mensagens que somem
+// Sino de notificações do perfil, com contador. Reúne:
+// - para o responsável por uma ONG, os pedidos de entrada (aprovar/recusar);
+// - para quem pediu para entrar, o pedido aguardando resposta;
+// - os avisos de aprovação, recusa ou remoção, até serem dispensados.
+// Sem nenhuma notificação possível, o sino não é exibido.
 class SinoDeNotificacoes extends StatefulWidget {
   final String email;
   final OngService? servico;
@@ -51,24 +64,26 @@ class _SinoDeNotificacoesState extends State<SinoDeNotificacoes> {
     _atualizar();
   }
 
-  // Os pedidos chegam de outros aparelhos: ao abrir o perfil, busca de novo
+  // Busca as ONGs na API ao montar o sino, pois os pedidos chegam de outros
+  // aparelhos. Em caso de falha, mantém os dados já carregados
   Future<void> _atualizar() async {
     try {
       final ongs = await _servico.buscarOngs();
       if (!mounted) return;
       PataAmigaScope.of(context).atualizarOngs(ongs);
     } on Exception {
-      // fica com o que o app já tinha
+      // Mantém os dados já carregados
     }
   }
 
+  // A ONG da qual o usuário é responsável, se houver
   Ong? _minhaOng(EstadoPataAmiga estado) {
     final ong = estado.ongDe(widget.email);
     return ong != null && ong.eDoResponsavel(widget.email) ? ong : null;
   }
 
-  // Desce do topo, logo abaixo do sino, como as notificações de qualquer
-  // app; tocar fora fecha
+  // Abre o painel de notificações no topo da tela, com animação de descida.
+  // Tocar fora fecha o painel
   Future<void> _abrir() => showGeneralDialog<void>(
     context: context,
     barrierDismissible: true,
@@ -122,6 +137,7 @@ class _SinoDeNotificacoesState extends State<SinoDeNotificacoes> {
   }
 }
 
+// Painel com a lista de notificações, da mais recente para a mais antiga
 class _ListaDePedidos extends StatefulWidget {
   const _ListaDePedidos({
     required this.email,
@@ -138,19 +154,27 @@ class _ListaDePedidos extends StatefulWidget {
 }
 
 class _ListaDePedidosState extends State<_ListaDePedidos> {
-  // O e-mail do pedido que está sendo respondido, para travar os botões
+  // E-mail do pedido em resposta; enquanto não for nulo, os botões ficam
+  // desabilitados para evitar respostas duplicadas
   String? _respondendo;
 
-  // O aviso de remoção some do sino de quem o viu
+  // Resultado da última resposta a um pedido, exibido no topo do painel.
+  // Um SnackBar ficaria atrás do véu do painel, quase invisível
+  String? _resultado;
+
+  // Marca o aviso como visto na API, removendo-o do sino. Em caso de falha,
+  // o aviso continua e pode ser dispensado depois
   Future<void> _dispensar(Ong ong) async {
     final estado = PataAmigaScope.of(context);
     try {
       estado.salvarOng(await widget.servico.dispensarAviso(ong, widget.email));
     } on Exception {
-      // fica para a próxima vez
+      // O aviso permanece no sino
     }
   }
 
+  // Aprova ou recusa um pedido de entrada e informa o resultado. Trata o
+  // pedido já respondido e a pessoa que já pertence a outra ONG
   Future<void> _responder(
     Ong ong,
     PessoaDaOng pessoa, {
@@ -180,12 +204,20 @@ class _ListaDePedidosState extends State<_ListaDePedidos> {
     } on Exception {
       aviso = 'Não foi possível responder agora. Tente de novo.';
     }
-    if (mounted) setState(() => _respondendo = null);
+    if (mounted) {
+      setState(() {
+        _respondendo = null;
+        _resultado = aviso;
+      });
+      return;
+    }
+    // Painel já fechado: o resultado vai para a tela de baixo
     mensageiro
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(aviso)));
   }
 
+  // Abre o perfil de quem pediu, onde também é possível responder
   void _verPerfil(Ong ong, PessoaDaOng pessoa, Ong? outra) =>
       showModalBottomSheet<void>(
         context: context,
@@ -195,7 +227,7 @@ class _ListaDePedidosState extends State<_ListaDePedidos> {
           pessoa: pessoa,
           ong: ong,
           outra: outra,
-          // Decidir no perfil fecha o perfil e responde
+          // Responder pelo perfil fecha a folha e envia a resposta
           aoResponder: (aprovar) {
             Navigator.pop(painel);
             _responder(ong, pessoa, aprovar: aprovar);
@@ -208,11 +240,12 @@ class _ListaDePedidosState extends State<_ListaDePedidos> {
     final estado = PataAmigaScope.of(context);
     final ong = widget.minhaOng(estado);
     final pedida = estado.ongPedidaPor(widget.email);
-    // A outra ONG de que a pessoa do pedido já faz parte, se houver
+    // Outra ONG da qual a pessoa do pedido já faz parte; se existir, o
+    // pedido não pode ser aprovado (cada conta tem uma única ONG)
     Ong? outraDe(PessoaDaOng pessoa) => estado.ongs
         .where((outra) => outra.id != ong?.id && outra.fazParte(pessoa.email))
         .firstOrNull;
-    // O próprio pedido, para saber quando foi feito
+    // Pedido do próprio usuário, usado para mostrar quando foi feito
     final meuPedido = pedida?.pedidos
         .where(
           (pessoa) =>
@@ -221,11 +254,15 @@ class _ListaDePedidosState extends State<_ListaDePedidos> {
         )
         .firstOrNull;
     final agora = DateTime.now();
-    // Tudo numa lista só, da mais nova para a mais antiga
+    // Monta pares (data, widget) e ordena da mais recente para a mais
+    // antiga; notificações sem data ficam no fim
     final notificacoes =
         <(DateTime?, Widget)>[
           if (ong != null)
-            for (final pessoa in ong.pedidos)
+            // A outra ONG de cada pessoa é calculada uma vez por pedido
+            for (final (pessoa, outra) in [
+              for (final pessoa in ong.pedidos) (pessoa, outraDe(pessoa)),
+            ])
               (
                 pessoa.em,
                 _Notificacao(
@@ -243,14 +280,14 @@ class _ListaDePedidosState extends State<_ListaDePedidos> {
                       ],
                     ),
                   ),
-                  aviso: switch (outraDe(pessoa)) {
+                  aviso: switch (outra) {
                     final outra? =>
                       'Já faz parte de ${outra.nome}. Cada conta pode ter só '
                           'uma ONG, então não dá para aprovar.',
                     null => null,
                   },
                   detalhe: 'Toque para ver o perfil.',
-                  aoTocar: () => _verPerfil(ong, pessoa, outraDe(pessoa)),
+                  aoTocar: () => _verPerfil(ong, pessoa, outra),
                   acoes: [
                     const Spacer(),
                     TextButton(
@@ -262,7 +299,7 @@ class _ListaDePedidosState extends State<_ListaDePedidos> {
                     ),
                     const SizedBox(width: 4),
                     FilledButton(
-                      onPressed: _respondendo != null || outraDe(pessoa) != null
+                      onPressed: _respondendo != null || outra != null
                           ? null
                           : () => _responder(ong, pessoa, aprovar: true),
                       style: FilledButton.styleFrom(
@@ -277,7 +314,7 @@ class _ListaDePedidosState extends State<_ListaDePedidos> {
                   ],
                 ),
               ),
-          // Os avisos das ONGs, com a foto da ONG, até a pessoa dispensar
+          // Avisos recebidos de ONGs, exibidos até serem dispensados
           for (final (deOng, aviso) in estado.avisosPara(widget.email))
             (
               aviso.em,
@@ -304,7 +341,7 @@ class _ListaDePedidosState extends State<_ListaDePedidos> {
                     'Os animais que você publicou por ela continuam no '
                         'perfil da ONG.',
                 },
-                // O aprovado leva ao perfil da ONG
+                // O aviso de aprovação abre o perfil da ONG ao ser tocado
                 aoTocar: aviso.tipo == TipoDeAviso.aprovado
                     ? () {
                         final navegador = Navigator.of(context);
@@ -384,12 +421,37 @@ class _ListaDePedidosState extends State<_ListaDePedidos> {
                       ),
                     ),
                   ),
+                  if (_resultado case final resultado?)
+                    Container(
+                      margin: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: context.cores.principalClara,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Semantics(
+                        liveRegion: true,
+                        child: Text(
+                          resultado,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: context.cores.texto,
+                          ),
+                        ),
+                      ),
+                    ),
                   if (notificacoes.isEmpty)
                     Padding(
                       padding: EdgeInsets.fromLTRB(18, 4, 18, 20),
                       child: Text(
-                        'Nenhuma notificação. Quando alguém disser que faz '
-                        'parte da sua ONG, o pedido aparece aqui.',
+                        // Só quem administra uma ONG recebe pedidos de entrada
+                        ong != null
+                            ? 'Nenhuma notificação. Quando alguém disser que '
+                                  'faz parte da sua ONG, o pedido aparece aqui.'
+                            : 'Nenhuma notificação no momento.',
                         style: TextStyle(
                           fontSize: 14,
                           color: context.cores.textoFraco,
@@ -419,6 +481,7 @@ class _ListaDePedidosState extends State<_ListaDePedidos> {
     );
   }
 
+  // Estilo compacto dos botões de texto das notificações
   static ButtonStyle _estiloDoTexto(Color cor) => TextButton.styleFrom(
     foregroundColor: cor,
     visualDensity: VisualDensity.compact,
@@ -426,7 +489,8 @@ class _ListaDePedidosState extends State<_ListaDePedidos> {
   );
 }
 
-// Há quanto tempo, como nas notificações do celular
+// Tempo decorrido em formato curto ("agora", "há 5 min", "ontem"). Retorna
+// vazio quando a data é desconhecida
 String haQuantoTempo(DateTime? quando, DateTime agora) {
   if (quando == null) return '';
   final passou = agora.difference(quando);
@@ -437,8 +501,8 @@ String haQuantoTempo(DateTime? quando, DateTime agora) {
   return 'há ${passou.inDays} dias';
 }
 
-// Uma notificação: quem (as iniciais, ou um ícone), o que aconteceu, há
-// quanto tempo e, embaixo, o aviso e as ações
+// Item de notificação: avatar (foto, iniciais ou ícone), texto, tempo
+// decorrido, detalhe opcional, alerta opcional e botões de ação
 class _Notificacao extends StatelessWidget {
   const _Notificacao({
     this.avatar,
@@ -453,7 +517,7 @@ class _Notificacao extends StatelessWidget {
     this.acoes = const [],
   });
 
-  // A foto da ONG, quando a notificação é sobre ela
+  // Avatar personalizado; quando nulo, usa [icone] ou [iniciais]
   final Widget? avatar;
   final String? iniciais;
   final IconData? icone;
@@ -462,7 +526,7 @@ class _Notificacao extends StatelessWidget {
   final Widget texto;
   final String? detalhe;
   final String? aviso;
-  // Tocar na notificação abre o que ela fala, como o perfil de quem pediu
+  // Ação ao tocar no item, como abrir o perfil de quem pediu
   final VoidCallback? aoTocar;
   final List<Widget> acoes;
 
@@ -569,10 +633,10 @@ class _Notificacao extends StatelessWidget {
   }
 }
 
-// O perfil de quem pediu para entrar, que é também onde se decide: quem é
-// a pessoa, um jeito de conversar com ela antes e, no fim, recusar ou
-// aprovar. A foto não aparece porque as contas ficam no aparelho de cada
-// pessoa, e o e-mail fica de fora por não ajudar a decidir
+// Folha com o perfil de quem pediu para entrar na ONG: iniciais, nome,
+// contato pelo WhatsApp, animais já publicados e os botões de recusar e
+// aprovar. Não há foto porque as contas ficam salvas no aparelho de cada
+// pessoa, e a ONG guarda apenas o nome e o telefone
 class PerfilDeQuemPediu extends StatelessWidget {
   const PerfilDeQuemPediu({
     super.key,
@@ -585,9 +649,11 @@ class PerfilDeQuemPediu extends StatelessWidget {
   final PessoaDaOng pessoa;
   final Ong ong;
   final void Function(bool aprovar) aoResponder;
-  // A outra ONG de que a pessoa já faz parte: aí não dá para aprovar
+  // Outra ONG da qual a pessoa já faz parte; se houver, aprovar fica
+  // desabilitado
   final Ong? outra;
 
+  // Abre uma conversa no WhatsApp com quem pediu, com mensagem inicial
   Future<void> _conversar(BuildContext context) async {
     final mensageiro = ScaffoldMessenger.of(context);
     final numero = Dono(
@@ -631,7 +697,7 @@ class PerfilDeQuemPediu extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Quem é, centralizado como no "Editar perfil"
+            // Identificação centralizada: iniciais e nome
             Center(
               child: Container(
                 padding: const EdgeInsets.all(4),
@@ -708,8 +774,8 @@ class PerfilDeQuemPediu extends StatelessWidget {
                 style: TextStyle(fontSize: 13, color: context.cores.textoFraco),
               ),
             ],
-            // Os animais que a pessoa já publicou, em miniatura; sem nenhum,
-            // a seção não aparece
+            // Miniaturas dos animais já publicados pela pessoa; a seção só
+            // aparece se houver algum
             if (animais.isNotEmpty) ...[
               const SizedBox(height: 18),
               Text(

@@ -1,24 +1,42 @@
+// Biblioteca dart:io: acesso a arquivos do aparelho, como a foto de perfil.
 import 'dart:io';
 
+// Pacote flutter/foundation: kIsWeb e Uint8List, para a prévia da foto.
 import 'package:flutter/foundation.dart';
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote flutter/services: PlatformException e TextInputFormatter.
 import 'package:flutter/services.dart';
+// Pacote image_picker: abre a câmera ou a galeria para escolher fotos.
 import 'package:image_picker/image_picker.dart';
+// Pacote provider: compartilha estado entre as telas e as reconstrói.
 import 'package:provider/provider.dart';
 
+// Arquivo estado_pata_amiga.dart: estado compartilhado do app.
 import '../estado/estado_pata_amiga.dart';
+// Arquivo ong.dart: modelo da ONG, membros e erros de vínculo.
 import '../modelos/ong.dart';
+// Arquivo usuario_provider.dart: sessão e perfil da pessoa logada.
 import '../provider/usuario_provider.dart';
+// Arquivo route_names.dart: nomes das rotas de navegação.
 import '../routes/route_names.dart';
+// Arquivo ong_service.dart: serviço de ONGs da API.
 import '../services/ong_service.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo avatar_da_ong.dart: avatar da ONG e iniciais de um nome.
 import '../widgets/avatar_da_ong.dart';
+// Arquivo escolha_de_ong.dart: seletor de ONG.
 import '../widgets/escolha_de_ong.dart';
+// Arquivo mascaras.dart: máscara e formatação do telefone.
 import '../widgets/mascaras.dart';
+// Arquivo proteger_alteracoes.dart: confirma a saída sem salvar.
 import '../widgets/proteger_alteracoes.dart';
 
+// Edição do perfil: foto, nome e telefone, além do vínculo com ONG (pedir
+// entrada, cancelar o pedido, sair ou passar a administração)
 class EditarPerfil extends StatefulWidget {
-  // Os testes passam um serviço de ONGs falso; o app usa o de verdade
+  // Serviço injetável para os testes; sem ele, usa o OngService padrão
   final OngService? ongs;
 
   const EditarPerfil({super.key, this.ongs});
@@ -38,7 +56,8 @@ class _EditarPerfilState extends State<EditarPerfil> {
   Uint8List? _fotoBytes;
   bool _selecionandoFoto = false;
   bool _salvando = false;
-  // A ONG escolhida em "Você faz parte de alguma ONG?": vira um pedido
+  // ONG escolhida em "Você faz parte de alguma ONG?"; ao salvar, vira um
+  // pedido de entrada
   Ong? _ong;
 
   @override
@@ -62,13 +81,14 @@ class _EditarPerfilState extends State<EditarPerfil> {
 
   void _aoMudar() => setState(() {});
 
-  // O botão de salvar só acende quando há o que salvar
+  // O botão de salvar só fica ativo quando algo mudou
   bool get _houveMudanca =>
       _fotoSelecionada != null ||
       _ong != null ||
       _nomeController.text.trim() != _nomeOriginal.trim() ||
       _telefoneController.text.trim() != _telefoneOriginal.trim();
 
+  // Abre a galeria e guarda a foto escolhida e seus bytes para a prévia
   Future<void> _selecionarFoto() async {
     if (_selecionandoFoto) return;
     setState(() => _selecionandoFoto = true);
@@ -95,21 +115,39 @@ class _EditarPerfilState extends State<EditarPerfil> {
     }
   }
 
+  // Imagem do avatar: a recém-escolhida tem prioridade sobre a já salva
   ImageProvider<Object>? _imagemAtual(String? caminho) {
     if (_fotoBytes != null) return MemoryImage(_fotoBytes!);
     if (caminho == null || caminho.isEmpty) return null;
     return kIsWeb ? NetworkImage(caminho) : FileImage(File(caminho));
   }
 
+  // Salva nome, telefone e foto e, se uma ONG foi escolhida, envia o pedido
+  // de entrada. Volta ao perfil mostrando o resultado
   Future<void> _salvar() async {
     if (!_formulario.currentState!.validate()) return;
     setState(() => _salvando = true);
     final provider = context.read<UsuarioProvider>();
-    await provider.atualizarUsuario(
-      nome: _nomeController.text.trim(),
-      telefone: _telefoneController.text.trim(),
-      foto: _fotoSelecionada?.path ?? provider.usuario.foto,
-    );
+    try {
+      await provider.atualizarUsuario(
+        nome: _nomeController.text.trim(),
+        telefone: _telefoneController.text.trim(),
+        foto: _fotoSelecionada?.path ?? provider.usuario.foto,
+      );
+    } catch (_) {
+      // Falha ao gravar no aparelho: destrava o botão e mantém a tela aberta
+      // com o que foi digitado, para a pessoa tentar de novo
+      if (!mounted) return;
+      setState(() => _salvando = false);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Não foi possível salvar agora. Tente de novo.'),
+          ),
+        );
+      return;
+    }
     if (!mounted) return;
     var aviso = 'Alterações salvas.';
     final ong = _ong;
@@ -135,7 +173,7 @@ class _EditarPerfilState extends State<EditarPerfil> {
       }
       if (!mounted) return;
     }
-    // O aviso aparece já no perfil, onde a pessoa vê o resultado
+    // O aviso é mostrado já no perfil, depois de fechar esta tela
     final mensageiro = ScaffoldMessenger.of(context);
     Navigator.pop(context);
     mensageiro
@@ -143,8 +181,8 @@ class _EditarPerfilState extends State<EditarPerfil> {
       ..showSnackBar(SnackBar(content: Text(aviso)));
   }
 
-  // A admin só sai passando a ONG para um membro: a ONG não fica sem quem
-  // cuida do perfil, da chave Pix e dos pedidos
+  // Quem administra só sai passando a administração para um membro, para a
+  // ONG não ficar sem responsável pelo perfil, pela chave Pix e pelos pedidos
   Future<void> _passarESair(Ong ong) async {
     final escolhido = await showModalBottomSheet<String>(
       context: context,
@@ -178,7 +216,7 @@ class _EditarPerfilState extends State<EditarPerfil> {
       ..showSnackBar(SnackBar(content: Text(aviso)));
   }
 
-  // Sair da ONG, ou desistir do pedido, depois de confirmar
+  // Sai da ONG ou cancela o pedido de entrada, depois de confirmar
   Future<void> _sairDaOng(Ong ong, String email) async {
     final membro = ong.fazParte(email);
     final confirmou = await showModalBottomSheet<bool>(
@@ -260,8 +298,9 @@ class _EditarPerfilState extends State<EditarPerfil> {
       ..showSnackBar(SnackBar(content: Text(aviso)));
   }
 
-  // Quem já faz parte de uma ONG, ou já pediu para entrar, vê a situação;
-  // os outros veem a pergunta. Cada conta tem no máximo uma ONG
+  // Seção de ONG: quem já faz parte ou já pediu entrada vê a situação e a
+  // saída; os demais escolhem uma ONG ou criam uma. Cada conta tem no máximo
+  // uma ONG
   Widget _secaoDaOng(String email) {
     final estado = PataAmigaScope.of(context);
     final minha = estado.ongDe(email);
@@ -269,8 +308,7 @@ class _EditarPerfilState extends State<EditarPerfil> {
     if (minha != null || pedida != null) {
       final criou = minha?.eDoResponsavel(email) ?? false;
       final ong = (minha ?? pedida)!;
-      // Uma linha só, como os campos de cima: quem é a ONG, o papel da pessoa
-      // nela e, à direita, a saída
+      // Uma linha com a ONG, o papel da pessoa nela e, à direita, a saída
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -279,6 +317,8 @@ class _EditarPerfilState extends State<EditarPerfil> {
           Row(
             children: [
               if (minha != null)
+                // Raio 22 mais o anel de 2 do AvatarDaOng dá 48 de diâmetro,
+                // o mesmo do círculo de "aguardando" (raio 24)
                 AvatarDaOng(ong: minha, raio: 22)
               else
                 CircleAvatar(
@@ -335,7 +375,7 @@ class _EditarPerfilState extends State<EditarPerfil> {
           escolhida: _ong,
           aoEscolher: (ong) => setState(() => _ong = ong),
         ),
-        // Quem representa uma ONG que ainda não está no app cria o perfil
+        // Para quem representa uma ONG que ainda não está no app
         Divider(height: 28, color: context.cores.borda),
         TextButton.icon(
           onPressed: () => Navigator.pushNamed(context, AppRoutes.cadastroOng),
@@ -355,7 +395,7 @@ class _EditarPerfilState extends State<EditarPerfil> {
     final usuario = context.watch<UsuarioProvider>().usuario;
     final imagem = _imagemAtual(usuario.foto);
 
-    // Com algo mudado e não salvo, voltar pergunta antes de sair
+    // Com alterações não salvas, voltar pede confirmação antes de sair
     return ProtegerAlteracoes(
       alterado: () => _houveMudanca && !_salvando,
       child: Scaffold(
@@ -493,6 +533,7 @@ class _EditarPerfilState extends State<EditarPerfil> {
   }
 }
 
+// Avatar grande tocável, com o selo de câmera (ou o carregamento) no canto
 class _FotoEditavel extends StatelessWidget {
   const _FotoEditavel({
     required this.imagem,
@@ -570,6 +611,7 @@ class _FotoEditavel extends StatelessWidget {
   }
 }
 
+// Moldura de cartão que agrupa os campos do formulário
 class _Cartao extends StatelessWidget {
   const _Cartao({required this.child});
 
@@ -589,7 +631,7 @@ class _Cartao extends StatelessWidget {
   }
 }
 
-// Rótulo em caixa alta acima do campo, como no cadastro de animal
+// Rótulo em caixa alta acima do campo, no padrão do cadastro de animal
 class _Rotulo extends StatelessWidget {
   const _Rotulo(this.texto);
 
@@ -609,6 +651,7 @@ class _Rotulo extends StatelessWidget {
   }
 }
 
+// Campo de texto com rótulo, ícone, máscara opcional e validação
 class _Campo extends StatelessWidget {
   const _Campo({
     required this.rotulo,
@@ -674,8 +717,8 @@ class _Campo extends StatelessWidget {
   }
 }
 
-// O e-mail aparece como texto, não como campo desabilitado: não é algo que a
-// pessoa possa mudar, então não deve parecer um campo à espera de digitação
+// Valor somente leitura exibido como texto, e não como campo desabilitado,
+// para não parecer algo à espera de digitação. Usado no e-mail
 class _CampoFixo extends StatelessWidget {
   const _CampoFixo({
     required this.rotulo,
@@ -721,6 +764,7 @@ class _CampoFixo extends StatelessWidget {
   }
 }
 
+// Explica por que ainda não há troca de senha
 class _AvisoDeSenha extends StatelessWidget {
   const _AvisoDeSenha();
 
@@ -750,8 +794,9 @@ class _AvisoDeSenha extends StatelessWidget {
   }
 }
 
-// A admin escolhe entre os membros quem vai administrar a ONG. Sem membros,
-// explica que é preciso aprovar alguém antes
+// Painel em que quem administra escolhe, entre os membros, o novo
+// responsável pela ONG. Sem membros, explica que é preciso aprovar alguém
+// antes; devolve o e-mail escolhido ou null
 class _EscolherNovaAdmin extends StatefulWidget {
   const _EscolherNovaAdmin({required this.ong});
 

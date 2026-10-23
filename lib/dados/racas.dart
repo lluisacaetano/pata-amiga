@@ -1,8 +1,11 @@
-// As raças do select do cadastro, separadas por espécie, com "Sem raça
+// Arquivo texto.dart: comparação de nomes sem acentos.
+import '../modelos/texto.dart';
+
+// As raças oferecidas no cadastro, separadas por espécie, com "Sem raça
 // definida" primeiro por ser a mais comum entre os animais para adoção. A raça
-// que faltar entra por "Outra".
+// ausente é informada pela opção "Outra".
 //
-// Fontes, consultadas em 20/10/2026:
+// Fontes:
 // - cachorros: guia de raças da Cobasi (cobasi.com.br/racas/cachorro), com o
 //   "Vira-lata" como "Sem raça definida";
 // - gatos: raças reconhecidas pela FIFe (fifeweb.org/cats/breeds), federação
@@ -182,11 +185,11 @@ const racasDeGato = [
   'Van Turco',
 ];
 
-// A opção para a raça que não está na lista
+// A opção para informar uma raça que não está na lista
 const outraRaca = 'Outra';
 
-// Os outros nomes que as pessoas dão às raças da lista. Assim os animais já
-// cadastrados com "labrador" ou "vira-lata" caem na raça certa
+// Nomes populares das raças da lista, sem acentos, ligados ao nome oficial.
+// Assim "labrador" ou "vira-lata" são reconhecidos como a raça correta
 const _apelidos = {
   'vira-lata': semRacaDefinida,
   'vira lata': semRacaDefinida,
@@ -211,6 +214,7 @@ const _apelidos = {
   'birman': 'Sagrado da Birmânia',
 };
 
+// As raças da espécie (cachorro ou gato); outra espécie não tem lista
 List<String> racasDa(String? especie) => switch (especie?.toLowerCase()) {
   'cachorro' => racasDeCachorro,
   'gato' => racasDeGato,
@@ -220,12 +224,12 @@ List<String> racasDa(String? especie) => switch (especie?.toLowerCase()) {
 // O nome oficial da raça, de qualquer espécie, sem ligar para maiúsculas e
 // acentos e aceitando os apelidos; null se não for nenhuma raça da lista
 String? racaConhecida(String nome) {
-  final busca = _semAcento(nome);
+  final busca = semAcento(nome);
   if (busca.isEmpty) return null;
   final apelido = _apelidos[busca];
   if (apelido != null) return apelido;
   for (final raca in [...racasDeCachorro, ...racasDeGato]) {
-    if (_semAcento(raca) == busca) return raca;
+    if (semAcento(raca) == busca) return raca;
   }
   return null;
 }
@@ -243,19 +247,7 @@ Iterable<String> filtrarRacas(String? especie, String digitado) =>
 // As raças da lista cujo nome contém o que foi digitado, sem ligar para
 // maiúsculas e acentos
 Iterable<String> buscarNaLista(Iterable<String> racas, String digitado) {
-  final busca = _semAcento(digitado);
+  final busca = semAcento(digitado);
   if (busca.isEmpty) return racas;
-  return racas.where((raca) => _semAcento(raca).contains(busca));
-}
-
-String _semAcento(String texto) {
-  const de = 'áàâãäéèêëíìîïóòôõöúùûüç';
-  const para = 'aaaaaeeeeiiiiooooouuuuc';
-  final saida = StringBuffer();
-  final limpo = texto.toLowerCase().trim().replaceAll(RegExp(r'\s+'), ' ');
-  for (final letra in limpo.split('')) {
-    final i = de.indexOf(letra);
-    saida.write(i < 0 ? letra : para[i]);
-  }
-  return saida.toString();
+  return racas.where((raca) => semAcento(raca).contains(busca));
 }

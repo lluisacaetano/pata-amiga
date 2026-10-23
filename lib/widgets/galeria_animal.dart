@@ -1,9 +1,12 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
 
+// Arquivo foto_animal.dart: foto do animal com a patinha de reserva.
 import 'foto_animal.dart';
 
-// As fotos do animal, uma de cada vez, com setas nos cantos e bolinhas dizendo
-// em qual se está. As setas aparecem sempre, e apagam quando não há para onde ir.
+// Carrossel das fotos do animal, uma por vez, com setas laterais e
+// indicadores de posição. As setas ficam desabilitadas (esmaecidas) quando
+// não há foto anterior ou seguinte
 class GaleriaAnimal extends StatefulWidget {
   final List<String> fotos;
   final double altura;
@@ -21,6 +24,7 @@ class _GaleriaAnimalState extends State<GaleriaAnimal> {
   bool get _temAnterior => _atual > 0;
   bool get _temProxima => _atual < widget.fotos.length - 1;
 
+  // Vai para a foto [indice]; sem animação se o sistema pedir menos movimento
   void _irPara(BuildContext context, int indice) {
     if (MediaQuery.disableAnimationsOf(context)) {
       _paginas.jumpToPage(indice);
@@ -74,6 +78,7 @@ class _GaleriaAnimalState extends State<GaleriaAnimal> {
               ),
             ),
           ),
+          // Indicadores de posição, só quando há mais de uma foto
           if (widget.fotos.length > 1)
             Positioned(
               left: 0,
@@ -104,7 +109,7 @@ class _GaleriaAnimalState extends State<GaleriaAnimal> {
     );
   }
 
-  // Com uma foto só, ou nenhuma, não há o que deslizar
+  // Com nenhuma ou uma foto, exibe a imagem fixa; com mais, um PageView
   Widget _fotos() {
     if (widget.fotos.length <= 1) {
       return FotoAnimal(
@@ -123,7 +128,8 @@ class _GaleriaAnimalState extends State<GaleriaAnimal> {
   }
 }
 
-// Seta sobre a foto, sem fundo: a sombra é o que a segura em foto clara
+// Seta de navegação sobre a foto. Não tem fundo: a sombra garante contraste
+// em fotos claras
 class _Seta extends StatelessWidget {
   final IconData icone;
   final String dica;

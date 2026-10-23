@@ -1,12 +1,16 @@
+// Biblioteca dart:io: arquivos do aparelho, como as fotos salvas.
 import 'dart:io';
 
+// Pacote flutter/foundation: utilitários base, como kIsWeb.
 import 'package:flutter/foundation.dart';
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
 
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
 
-// Área da foto do animal. Enquanto não há imagem cadastrada, mostra um fundo
-// neutro com o ícone de patinha.
+// Exibe a foto do animal com altura e cantos configuráveis. Sem caminho, ou
+// se a imagem não puder ser carregada, mostra um fundo claro com uma patinha
 class FotoAnimal extends StatelessWidget {
   final String caminho;
   final double altura;
@@ -31,8 +35,9 @@ class FotoAnimal extends StatelessWidget {
     );
   }
 
-  // A foto pode estar dentro do app (os animais de exemplo), na internet ou
-  // no próprio celular (a que a pessoa escolheu da galeria no cadastro)
+  // Escolhe a origem da imagem pelo formato do caminho: endereço "http" vem
+  // da internet, caminho absoluto é um arquivo do aparelho (foto escolhida na
+  // galeria) e o restante é tratado como asset do app
   Widget _imagem(BuildContext context) {
     Widget erro(BuildContext _, Object _, StackTrace? _) => _patinha(context);
     if (caminho.startsWith('http')) {
@@ -41,11 +46,11 @@ class FotoAnimal extends StatelessWidget {
     if (!kIsWeb && caminho.startsWith('/')) {
       return Image.file(File(caminho), fit: BoxFit.cover, errorBuilder: erro);
     }
-    // Enquanto a foto nao tiver sido adicionada na pasta assets,
-    // a tela mostra a patinha em vez de quebrar.
+    // Asset ausente cai no errorBuilder e mostra a patinha
     return Image.asset(caminho, fit: BoxFit.cover, errorBuilder: erro);
   }
 
+  // Marcador usado quando não há foto
   Widget _patinha(BuildContext context) => Container(
     color: context.cores.principalClara,
     alignment: Alignment.center,

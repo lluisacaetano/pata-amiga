@@ -1,6 +1,8 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
 
-// Paleta do Pata Amiga.
+// Cores fixas da paleta clara. As telas devem usar context.cores, que
+// acompanha o tema claro ou escuro; estas constantes servem de base
 class Cores {
   static const Color principal = Color(0xFF3F7D58);
   static const Color principalClara = Color(0xFFE3F0E7);
@@ -10,13 +12,14 @@ class Cores {
   static const Color textoFraco = Color(0xFF6E6E6E);
   static const Color borda = Color(0xFFDCD8D2);
   static const Color destaque = Color(0xFFD35D4E);
-  // Os pontos de alimentação no mapa: um ocre de ração, que convive com o
-  // verde e o coral sem se confundir com eles
+  // Ocre dos pontos de alimentação no mapa, distinto do verde e do coral
   static const Color alimentacao = Color(0xFFC98A2E);
-  // Os bebedouros: um azul de água, suave como o resto da paleta
+  // Azul dos bebedouros no mapa
   static const Color agua = Color(0xFF4A86B4);
 }
 
+// Paleta do app registrada no tema como extensão, com uma versão para o
+// tema claro e outra para o escuro (ver [temaPataAmiga])
 @immutable
 class PaletaPataAmiga extends ThemeExtension<PaletaPataAmiga> {
   const PaletaPataAmiga({
@@ -43,6 +46,8 @@ class PaletaPataAmiga extends ThemeExtension<PaletaPataAmiga> {
   final Color alimentacao;
   final Color agua;
 
+  // Paleta do tema atual. Se o tema não tiver a extensão (por exemplo, em
+  // testes com um MaterialApp simples), deriva as cores do ColorScheme
   static PaletaPataAmiga de(BuildContext context) {
     final tema = Theme.of(context);
     return tema.extension<PaletaPataAmiga>() ??
@@ -85,6 +90,7 @@ class PaletaPataAmiga extends ThemeExtension<PaletaPataAmiga> {
     agua: agua ?? this.agua,
   );
 
+  // Interpola as cores na transição animada entre os temas
   @override
   PaletaPataAmiga lerp(
     covariant ThemeExtension<PaletaPataAmiga>? other,
@@ -106,15 +112,18 @@ class PaletaPataAmiga extends ThemeExtension<PaletaPataAmiga> {
   }
 }
 
+// Atalhos para ler as cores do tema a partir do BuildContext
 extension CoresContexto on BuildContext {
   PaletaPataAmiga get cores => PaletaPataAmiga.de(this);
 
-  // A cor do que fica sobre o verde principal (texto de botão, etiqueta
-  // cheia, aba escolhida): branco no claro e verde-escuro no noturno, onde
-  // o principal é claro e o branco sumiria
+  // Cor do conteúdo sobre o verde principal (texto de botão, etiqueta
+  // preenchida, aba escolhida): branco no tema claro e verde-escuro no
+  // escuro, onde o principal é claro e o branco perderia contraste
   Color get sobrePrincipal => Theme.of(this).colorScheme.onPrimary;
 }
 
+// Monta o ThemeData do app para o brilho pedido, com a paleta como
+// extensão e o ColorScheme ajustado às mesmas cores
 ThemeData temaPataAmiga({Brightness brilho = Brightness.light}) {
   final escuro = brilho == Brightness.dark;
   final paleta = PaletaPataAmiga(
@@ -123,14 +132,16 @@ ThemeData temaPataAmiga({Brightness brilho = Brightness.light}) {
     fundo: escuro ? const Color(0xFF101510) : Cores.fundo,
     cartao: escuro ? const Color(0xFF1C241E) : Cores.cartao,
     texto: escuro ? const Color(0xFFF3F5F3) : Cores.texto,
-    // No noturno, o texto secundário precisa ser mais apagado que o principal,
-    // ou os dois se confundem
+    // No escuro, o texto secundário é mais apagado que o principal para os
+    // dois não se confundirem
     textoFraco: escuro ? const Color(0xFFA7B3AA) : Cores.textoFraco,
     borda: escuro ? const Color(0xFF59645B) : Cores.borda,
     destaque: escuro ? const Color(0xFFFF9387) : Cores.destaque,
     alimentacao: escuro ? const Color(0xFFFFCB72) : Cores.alimentacao,
     agua: escuro ? const Color(0xFF91C8F0) : Cores.agua,
   );
+  // Conteúdo sobre o verde principal: o mesmo em botões, etiquetas e abas
+  final sobrePrincipal = escuro ? const Color(0xFF102016) : Colors.white;
   final base = ThemeData(
     brightness: brilho,
     useMaterial3: true,
@@ -145,7 +156,7 @@ ThemeData temaPataAmiga({Brightness brilho = Brightness.light}) {
     scaffoldBackgroundColor: paleta.fundo,
     colorScheme: base.colorScheme.copyWith(
       primary: paleta.principal,
-      onPrimary: escuro ? const Color(0xFF102016) : Colors.white,
+      onPrimary: sobrePrincipal,
       surface: paleta.cartao,
       onSurface: paleta.texto,
       outline: paleta.borda,
@@ -167,7 +178,7 @@ ThemeData temaPataAmiga({Brightness brilho = Brightness.light}) {
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: paleta.principal,
-        foregroundColor: base.colorScheme.onPrimary,
+        foregroundColor: sobrePrincipal,
       ),
     ),
   );

@@ -1,11 +1,19 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote flutter/services: formatação de teclado (TextInputFormatter).
 import 'package:flutter/services.dart';
 
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../../tema/cores.dart';
 
+// Componentes visuais comuns às telas de entrada (boas-vindas, login,
+// cadastro, recuperação de senha e recepção)
+
+// Fundo em degradê das telas de entrada, com o conteúdo centralizado,
+// rolável e limitado a 420 de largura. Adapta as cores ao tema escuro
 class AuthBackground extends StatelessWidget {
   final Widget child;
-  // A mesma seta de voltar do cadastro do animal, no canto de cima
+  // Mostra a seta de voltar no canto superior esquerdo
   final bool comVoltar;
 
   const AuthBackground({
@@ -66,6 +74,7 @@ class AuthBackground extends StatelessWidget {
   }
 }
 
+// A patinha da marca, usada como logotipo nas telas de entrada
 class AuthBrandMark extends StatelessWidget {
   final double size;
 
@@ -83,6 +92,8 @@ class AuthBrandMark extends StatelessWidget {
   }
 }
 
+// Campo de formulário das telas de entrada: rótulo acima, ícone à esquerda
+// e, opcionalmente, um botão à direita (como o de mostrar a senha)
 class AuthField extends StatelessWidget {
   final String label;
   final String hint;
@@ -143,13 +154,21 @@ class AuthField extends StatelessWidget {
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(color: context.cores.textoFraco),
-            prefixIcon: Icon(prefixIcon, size: 20, color: context.cores.textoFraco),
+            prefixIcon: Icon(
+              prefixIcon,
+              size: 20,
+              color: context.cores.textoFraco,
+            ),
             suffixIcon: suffixIcon == null
                 ? null
                 : IconButton(
                     tooltip: obscureText ? 'Mostrar senha' : 'Ocultar senha',
                     onPressed: onSuffixPressed,
-                    icon: Icon(suffixIcon, size: 20, color: context.cores.textoFraco),
+                    icon: Icon(
+                      suffixIcon,
+                      size: 20,
+                      color: context.cores.textoFraco,
+                    ),
                   ),
             filled: true,
             fillColor: context.cores.cartao.withValues(alpha: 0.9),
@@ -160,7 +179,10 @@ class AuthField extends StatelessWidget {
             border: outline,
             enabledBorder: outline,
             focusedBorder: outline.copyWith(
-              borderSide: BorderSide(color: context.cores.principal, width: 1.5),
+              borderSide: BorderSide(
+                color: context.cores.principal,
+                width: 1.5,
+              ),
             ),
           ),
         ),
@@ -169,11 +191,15 @@ class AuthField extends StatelessWidget {
   }
 }
 
+// Botão de largura total das telas de entrada. O principal é preenchido de
+// verde; o secundário é contornado. [leading] aparece antes do rótulo e,
+// com [carregando], dá lugar a um indicador de progresso
 class AuthButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
   final bool primary;
   final Widget? leading;
+  final bool carregando;
 
   const AuthButton({
     super.key,
@@ -181,6 +207,7 @@ class AuthButton extends StatelessWidget {
     required this.onPressed,
     this.primary = true,
     this.leading,
+    this.carregando = false,
   });
 
   @override
@@ -206,7 +233,19 @@ class AuthButton extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (leading != null) ...[leading!, const SizedBox(width: 10)],
+        if (carregando) ...[
+          SizedBox.square(
+            dimension: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.2,
+              color: primary ? context.sobrePrincipal : context.cores.principal,
+            ),
+          ),
+          const SizedBox(width: 10),
+        ] else if (leading != null) ...[
+          leading!,
+          const SizedBox(width: 10),
+        ],
         Text(label),
       ],
     );
@@ -237,45 +276,6 @@ class AuthButton extends StatelessWidget {
           backgroundColor: WidgetStatePropertyAll(context.cores.cartao),
         ),
         child: contents,
-      ),
-    );
-  }
-}
-
-class GoogleWordmark extends StatelessWidget {
-  const GoogleWordmark({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Text.rich(
-      TextSpan(
-        style: TextStyle(fontFamily: 'Roboto', fontWeight: FontWeight.w700),
-        children: [
-          TextSpan(
-            text: 'G',
-            style: TextStyle(color: Color(0xFF4285F4)),
-          ),
-          TextSpan(
-            text: 'o',
-            style: TextStyle(color: Color(0xFFEA4335)),
-          ),
-          TextSpan(
-            text: 'o',
-            style: TextStyle(color: Color(0xFFFBBC05)),
-          ),
-          TextSpan(
-            text: 'g',
-            style: TextStyle(color: Color(0xFF4285F4)),
-          ),
-          TextSpan(
-            text: 'l',
-            style: TextStyle(color: Color(0xFF34A853)),
-          ),
-          TextSpan(
-            text: 'e',
-            style: TextStyle(color: Color(0xFFEA4335)),
-          ),
-        ],
       ),
     );
   }

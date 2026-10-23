@@ -1,31 +1,40 @@
-// Quem responde por um animal: o tutor, o protetor independente ou a ONG
+// Quem responde por um animal (tutor, protetor independente ou ONG), com o
+// telefone de contato
 class Dono {
   final String nome;
   final String telefone;
 
   const Dono({required this.nome, required this.telefone});
 
-  // [SPRINT 3 - NOVO] Cria um Dono a partir de um Map (JSON).
-  // Usado pelo Animal.fromJson, porque o dono vem aninhado dentro do animal:
-  // "dono": { "nome": "Maria", "telefone": "13999990000" }
+  // Cria o responsável a partir do JSON aninhado no animal:
+  // "dono": {"nome": "...", "telefone": "..."}. Campo ausente fica vazio
   factory Dono.fromJson(Map<String, dynamic> json) => Dono(
-        nome: json['nome'] as String,
-        telefone: json['telefone'] as String,
-      );
+    nome: json['nome'] as String? ?? '',
+    telefone: json['telefone'] as String? ?? '',
+  );
 
-  // [SPRINT 3 - NOVO] Converte o Dono em Map para ser salvo no cache.
-  // Usado pelo Animal.toJson. Se criarem um campo novo no Dono, incluam aqui
-  // e no fromJson acima, senão ele some quando o app ler do cache offline.
-  Map<String, dynamic> toJson() => {
-        'nome': nome,
-        'telefone': telefone,
-      };
+  // Converte o responsável no JSON aninhado no animal. Precisa espelhar o
+  // fromJson
+  Map<String, dynamic> toJson() => {'nome': nome, 'telefone': telefone};
 }
 
 extension ContatoNoWhatsApp on Dono {
-  // O wa.me só aceita dígitos com o código do país; com DDD são 10 ou 11
+  // O número no formato do link wa.me: só dígitos e com o código do país 55.
+  // Retira o 55 e o 0 de operadora digitados a mais e, no celular escrito
+  // com 8 dígitos (começando de 6 a 9), acrescenta o 9 depois do DDD.
+  // Vazio quando não há telefone
   String get numeroNoWhatsApp {
-    final digitos = telefone.replaceAll(RegExp(r'\D'), '');
-    return digitos.length <= 11 ? '55$digitos' : digitos;
+    var digitos = telefone.replaceAll(RegExp(r'\D'), '');
+    if (digitos.isEmpty) return '';
+    if (digitos.length > 11 && digitos.startsWith('55')) {
+      digitos = digitos.substring(2);
+    }
+    if (digitos.length > 10 && digitos.startsWith('0')) {
+      digitos = digitos.substring(1);
+    }
+    if (digitos.length == 10 && '6789'.contains(digitos[2])) {
+      digitos = '${digitos.substring(0, 2)}9${digitos.substring(2)}';
+    }
+    return '55$digitos';
   }
 }

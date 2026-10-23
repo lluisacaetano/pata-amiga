@@ -1,30 +1,37 @@
+// Biblioteca dart:io: Platform, para detectar a execução em teste.
 import 'dart:io';
 
+// Pacote flutter/foundation: utilitários base, como kIsWeb.
 import 'package:flutter/foundation.dart';
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote flutter_map: mapa interativo com os blocos do OpenStreetMap.
 import 'package:flutter_map/flutter_map.dart';
+// Pacote latlong2: coordenadas (latitude e longitude) e cálculo de distâncias.
 import 'package:latlong2/latlong.dart';
 
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
-import '../telas/tela_mapa.dart';
+// Arquivo pino_da_patinha.dart: pino com patinha usado nos mapas.
+import 'pino_da_patinha.dart';
 
-// Nos testes o mapa de fundo fica desligado, porque baixaria imagens da
-// internet; no aparelho ele sempre aparece
+// Indica execução em teste: nesse caso os blocos do mapa não são baixados
+// da internet
 final bool _emTeste =
     !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
 
+// Centro de Formiga (MG), ponto inicial padrão dos mapas
 const centroDeFormiga = LatLng(-20.4647, -45.4264);
 
-// Um mapa pequeno com o pino parado no meio: quem se move é o mapa, e o
-// ponto escolhido é sempre o centro. Usado em todo lugar em que se marca um
-// local: cadastro de animal, ONG, ponto de alimentação e avistamento.
-// Começa travado, porque rolar a tela por cima dele mudava o local sem
-// querer; a pessoa destrava para mover o pino. A mira funciona travada,
-// porque tocar nela é de propósito
+// Mapa pequeno para marcar um local: o pino fica fixo no centro e o ponto
+// escolhido é o centro do mapa. Usado nos cadastros de animal, ONG, ponto
+// de alimentação e avistamento. Começa travado para que rolar a tela não
+// mova o mapa por engano; o botão do topo destrava. O botão de localização
+// funciona mesmo travado
 class MapaDeLocal extends StatefulWidget {
   final MapController controlador;
   final LatLng inicio;
-  // Chamado quando a pessoa termina de arrastar o mapa, com o novo centro
+  // Chamado com o novo centro quando a pessoa termina de mover o mapa
   final ValueChanged<LatLng> aoArrastar;
   final VoidCallback aoUsarMinhaLocalizacao;
   final bool buscandoPosicao;
@@ -48,8 +55,8 @@ class _MapaDeLocalState extends State<MapaDeLocal> {
   bool _travado = true;
 
   void _aoMover(MapEvent evento) {
-    // Só o fim de um gesto da pessoa conta; o mapa movido pelo app (a busca
-    // ou a mira) já avisa por conta própria
+    // Considera só o fim de um gesto da pessoa; movimentos feitos pelo
+    // controlador (busca ou localização) são tratados por quem os fez
     final fimDeGesto =
         evento is MapEventMoveEnd ||
         evento is MapEventFlingAnimationEnd ||
@@ -67,8 +74,7 @@ class _MapaDeLocalState extends State<MapaDeLocal> {
         height: widget.altura,
         child: Stack(
           children: [
-            // Travado, o mapa ignora o toque: o dedo que rola a tela passa
-            // por cima sem mexer no pino
+            // Travado, o mapa ignora toques e a rolagem da tela passa direto
             IgnorePointer(
               ignoring: _travado,
               child: FlutterMap(
@@ -96,7 +102,7 @@ class _MapaDeLocalState extends State<MapaDeLocal> {
                 ],
               ),
             ),
-            // A ponta do pino marca o centro do mapa
+            // Pino fixo; o recuo inferior faz a ponta coincidir com o centro
             IgnorePointer(
               child: Center(
                 child: Padding(
@@ -127,8 +133,8 @@ class _MapaDeLocalState extends State<MapaDeLocal> {
                 ),
               ),
             ),
-            // Um botão só, no alto e longe do pino: branco enquanto travado,
-            // verde cheio enquanto o mapa pode ser mexido
+            // Botão de travar e destravar: claro quando travado, na cor
+            // principal quando o mapa pode ser movido
             Positioned(
               top: 10,
               left: 0,
@@ -177,8 +183,8 @@ class _MapaDeLocalState extends State<MapaDeLocal> {
   }
 }
 
-// Uma prévia do mapa, parada, com o pino no ponto do animal. Serve de botão:
-// tocar leva ao mapa grande com zoom nele
+// Prévia estática do mapa com o pino no ponto informado. Funciona como
+// botão: o toque executa [aoTocar], normalmente abrindo o mapa completo
 class PreviaDoMapa extends StatelessWidget {
   final LatLng ponto;
   final Color cor;
@@ -272,7 +278,7 @@ class PreviaDoMapa extends StatelessWidget {
                     ),
                   ),
                 ),
-                // O crédito do OpenStreetMap, obrigatório também na prévia
+                // Atribuição exigida pela licença do OpenStreetMap
                 if (!_emTeste)
                   Positioned(
                     left: 8,

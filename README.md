@@ -223,6 +223,9 @@ Em um terminal, na raiz do projeto:
 npx json-server api/db.json --port 3000
 ```
 
+O app funciona com o `json-server` 0.17 e com o 1.x. A versão 1.x devolve os
+ids em texto (por exemplo `"id": "1"`), e o app aceita os dois formatos.
+
 Com a API respondendo em `http://localhost:3000/animais`, em outro terminal:
 
 ```

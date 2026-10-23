@@ -1,12 +1,15 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
 
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo painel_de_confirmacao.dart: painel inferior de confirmação.
+import 'painel_de_confirmacao.dart';
 
-// Protege um formulário: com algo mudado e não salvo, voltar (pela seta ou
-// pelo botão do aparelho) pergunta antes de sair. Salvar continua saindo
-// direto, porque as telas saem com Navigator.pop, que não passa por aqui.
-// A mudança é conferida na hora de voltar, porque digitar num campo não
-// redesenha a tela
+// Envolve um formulário e pede confirmação ao voltar (seta ou botão do
+// aparelho) quando há alterações não salvas. [alterado] é consultado no
+// momento da volta, pois digitar não reconstrói a tela. Salvar não passa por
+// aqui, porque a tela fecha com Navigator.pop
 class ProtegerAlteracoes extends StatelessWidget {
   final bool Function() alterado;
   final Widget child;
@@ -24,66 +27,35 @@ class ProtegerAlteracoes extends StatelessWidget {
       onPopInvokedWithResult: (saiu, _) async {
         if (saiu) return;
         final navegador = Navigator.of(context);
-        if (!alterado() || await confirmarSaida(context)) navegador.pop();
+        if (!alterado()) {
+          navegador.pop();
+          return;
+        }
+        final sair = await confirmarSaida(context);
+        // A tela pode ter sido fechada enquanto o painel estava aberto
+        if (sair && context.mounted) navegador.pop();
       },
       child: child,
     );
   }
 }
 
-// O mesmo painel de baixo das outras confirmações do app. A ação segura é a
-// principal: o botão cheio continua editando, e sair fica em coral
+// Painel inferior "Sair sem salvar?". Devolve true se a pessoa confirmar a
+// saída. A ação segura (continuar editando) é o botão principal; sair fica
+// como botão de texto na cor de destaque
 Future<bool> confirmarSaida(BuildContext context) async =>
     await showModalBottomSheet<bool>(
       context: context,
       backgroundColor: context.cores.cartao,
       showDragHandle: true,
-      builder: (painel) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'Sair sem salvar?',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'O que você preencheu nesta tela será perdido.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: context.cores.textoFraco,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: () => Navigator.pop(painel, false),
-                style: FilledButton.styleFrom(
-                  backgroundColor: context.cores.principal,
-                  minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                child: const Text('Continuar editando'),
-              ),
-              const SizedBox(height: 6),
-              TextButton(
-                onPressed: () => Navigator.pop(painel, true),
-                style: TextButton.styleFrom(
-                  foregroundColor: context.cores.destaque,
-                  textStyle: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                child: const Text('Sair sem salvar'),
-              ),
-            ],
-          ),
-        ),
+      builder: (painel) => PainelDeConfirmacao(
+        titulo: 'Sair sem salvar?',
+        texto: 'O que você preencheu nesta tela será perdido.',
+        rotuloPrincipal: 'Continuar editando',
+        aoPrincipal: () => Navigator.pop(painel, false),
+        rotuloSecundario: 'Sair sem salvar',
+        aoSecundario: () => Navigator.pop(painel, true),
+        secundarioDeAlerta: true,
       ),
     ) ??
     false;

@@ -1,14 +1,19 @@
+// Arquivo racas.dart: lista de raças e a busca pelo nome oficial.
 import '../dados/racas.dart';
+// Arquivo animal.dart: modelo do animal que os filtros avaliam.
 import 'animal.dart';
+// Arquivo texto.dart: comparação de nomes sem acentos.
+import 'texto.dart';
 
+// Reexporta a opção "Sem raça definida" para as telas do filtro.
 export '../dados/racas.dart' show semRacaDefinida;
 
-// Os grupos de filtro do feed, na ordem em que aparecem no painel. Todos usam
-// dados que o cadastro já pede. A ONG guarda o id, e não o nome, porque o
-// nome pode mudar; quem mostra o nome é a tela
+// Os grupos de filtro do feed, na ordem em que aparecem no painel. No grupo
+// da ONG, a opção é o id, e não o nome, porque o nome pode mudar
 enum GrupoDeFiltro { especie, porte, sexo, raca, bairro, ong, saude }
 
 extension TituloDoGrupo on GrupoDeFiltro {
+  // O nome do grupo como aparece no painel
   String get titulo => switch (this) {
     GrupoDeFiltro.especie => 'Espécie',
     GrupoDeFiltro.porte => 'Porte',
@@ -20,22 +25,25 @@ extension TituloDoGrupo on GrupoDeFiltro {
   };
 }
 
-// O que está marcado em cada grupo. Dentro de um grupo vale qualquer opção
-// marcada ("médio ou grande"); entre os grupos, o animal precisa combinar com
-// todos. A saúde é a exceção: marcar "castrado" e "vacinado" pede os dois
-// cuidados, porque é isso que quem filtra quer saber
+// As opções marcadas em cada grupo. Dentro de um grupo basta o animal ter
+// uma das opções ("médio ou grande"); entre grupos, precisa atender a todos.
+// Na saúde, o animal precisa ter todos os cuidados marcados
 class FiltrosDoFeed {
   final Map<GrupoDeFiltro, Set<String>> marcados;
 
   const FiltrosDoFeed([this.marcados = const {}]);
 
+  // As opções marcadas no grupo
   Set<String> de(GrupoDeFiltro grupo) => marcados[grupo] ?? const {};
 
+  // Se nenhum filtro está marcado
   bool get vazio => marcados.values.every((opcoes) => opcoes.isEmpty);
 
+  // Quantas opções estão marcadas no total
   int get quantos =>
       marcados.values.fold(0, (soma, opcoes) => soma + opcoes.length);
 
+  // Se o animal passa por todos os filtros marcados
   bool combina(Animal animal) {
     for (final MapEntry(key: grupo, value: opcoes) in marcados.entries) {
       if (opcoes.isEmpty) continue;
@@ -48,11 +56,11 @@ class FiltrosDoFeed {
     return true;
   }
 
-  // Troca o que está marcado num grupo de uma vez, como as abas devolvem
+  // Substitui de uma vez as opções marcadas em um grupo
   FiltrosDoFeed comGrupo(GrupoDeFiltro grupo, Set<String> opcoes) =>
       FiltrosDoFeed({...marcados, grupo: opcoes});
 
-  // Marca a opção, ou desmarca se já estava marcada
+  // Marca a opção ou, se ela já estava marcada, desmarca
   FiltrosDoFeed alternar(GrupoDeFiltro grupo, String opcao) {
     final atuais = de(grupo);
     return FiltrosDoFeed({
@@ -64,14 +72,14 @@ class FiltrosDoFeed {
   }
 }
 
-// Os portes, as espécies, os sexos e os cuidados são os mesmos do cadastro
+// As opções fixas de porte, espécie, sexo e saúde, iguais às do cadastro
 const portesDoFeed = ['pequeno', 'médio', 'grande'];
 const _especies = ['cachorro', 'gato'];
 const _sexos = ['macho', 'fêmea'];
 const _cuidados = ['castrado', 'vacinado', 'vermifugado'];
 
-// Como o animal se encaixa em cada grupo. Sexo "não informado" e raça ou
-// bairro em branco ficam fora do filtro
+// Os valores do animal em um grupo, já normalizados para comparar com as
+// opções. Sexo "não informado" e raça ou bairro vazios não geram valor
 Set<String> valoresDe(Animal animal, GrupoDeFiltro grupo) => switch (grupo) {
   GrupoDeFiltro.especie => {animal.especie.trim().toLowerCase()},
   GrupoDeFiltro.porte => {portePadrao(animal.porte)},
@@ -93,8 +101,8 @@ Set<String> valoresDe(Animal animal, GrupoDeFiltro grupo) => switch (grupo) {
   },
 };
 
-// As opções de cada grupo. Raça e bairro saem dos próprios animais do feed,
-// para nunca oferecer uma opção que não devolve ninguém
+// As opções de cada grupo. Raça, bairro e ONG vêm dos animais do feed, para
+// não oferecer opção que não retorna nenhum animal
 List<String> opcoesDe(GrupoDeFiltro grupo, Iterable<Animal> animais) =>
     switch (grupo) {
       GrupoDeFiltro.especie => _especies,
@@ -111,21 +119,16 @@ List<String> opcoesDe(GrupoDeFiltro grupo, Iterable<Animal> animais) =>
       }.toList(),
     };
 
-// Como a opção aparece na tela: as fixas começam com maiúscula, e raça e
-// bairro já vêm escritos como devem aparecer
-String rotuloDaOpcao(String opcao) =>
-    opcao.isEmpty ? opcao : opcao[0].toUpperCase() + opcao.substring(1);
-
-// Palavras que ficam minúsculas no meio do nome da raça
+// Preposições e conjunções mantidas em minúsculas no meio do nome da raça
 const _ligacoes = {'de', 'da', 'do', 'dos', 'das', 'e'};
 
+// O porte em minúsculas e com acento, para "Medio" e "médio" serem iguais
 String portePadrao(String porte) =>
     porte.trim().toLowerCase().replaceAll('medio', 'médio');
 
-// A raça dos cadastros antigos foi escrita livremente: "labrador",
-// "Labrador" e "Labrador Retriever" são a mesma, e "vira-lata", "SRD" e "sem
-// raça definida" também. Raça da lista sai com o nome da lista; a que não
-// está nela sai com cada palavra em maiúscula
+// Normaliza a raça digitada livremente: "labrador" e "Labrador Retriever"
+// viram a mesma raça, assim como "vira-lata", "SRD" e "sem raça definida".
+// Raça da lista sai com o nome oficial; as demais, com iniciais maiúsculas
 String racaPadrao(String raca) {
   final limpa = raca.trim().replaceAll(RegExp(r'\s+'), ' ');
   if (limpa.isEmpty) return '';
@@ -140,8 +143,8 @@ String racaPadrao(String raca) {
   ].join(' ');
 }
 
-// As raças do feed, sem repetir: "Sem raça definida" primeiro, por ser a mais
-// comum entre os animais para adoção, e o resto em ordem alfabética
+// As raças presentes no feed, sem repetição: "Sem raça definida" primeiro e
+// as demais em ordem alfabética
 List<String> racasDoFeed(Iterable<Animal> animais) {
   final racas = {
     for (final animal in animais) ...valoresDe(animal, GrupoDeFiltro.raca),
@@ -152,18 +155,7 @@ List<String> racasDoFeed(Iterable<Animal> animais) {
   ];
 }
 
-// Ordem alfabética sem deixar "Água Vermelha" depois do "Z"
+// Ordena em ordem alfabética ignorando acentos, para "Água Vermelha" não ir
+// para depois do "Z"
 List<String> _emOrdem(Iterable<String> opcoes) =>
-    opcoes.toList()..sort((a, b) => _semAcento(a).compareTo(_semAcento(b)));
-
-String _semAcento(String texto) {
-  const de = 'áàâãäéèêëíìîïóòôõöúùûüç';
-  const para = 'aaaaaeeeeiiiiooooouuuuc';
-  final minusculo = texto.toLowerCase();
-  return String.fromCharCodes(
-    minusculo.runes.map((letra) {
-      final indice = de.indexOf(String.fromCharCode(letra));
-      return indice < 0 ? letra : para.codeUnitAt(indice);
-    }),
-  );
-}
+    opcoes.toList()..sort((a, b) => semAcento(a).compareTo(semAcento(b)));

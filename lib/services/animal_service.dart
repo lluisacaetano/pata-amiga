@@ -1,31 +1,37 @@
+// Biblioteca dart:convert: converte texto JSON em objetos e vice-versa.
 import 'dart:convert';
 
+// Pacote http: faz as requisições à API (GET, POST, PATCH, DELETE).
 import 'package:http/http.dart' as http;
 
+// Arquivo animal.dart: modelo do animal.
 import '../modelos/animal.dart';
+// Arquivo json_da_api.dart: leitura da lista sem os itens com defeito.
+import '../modelos/json_da_api.dart';
+// Arquivo endereco_da_api.dart: endereço base da API.
 import 'endereco_da_api.dart';
 
+// Leitura e gravação dos animais na API
 class AnimalService {
-  static final _baseUrl = enderecoDaApi;
-
+  // Todos os animais da API; lança exceção se a resposta não for 200. Um
+  // animal com defeito no JSON fica de fora, sem derrubar a lista
   Future<List<Animal>> buscarAnimais() async {
     final resp = await http
-        .get(Uri.parse('$_baseUrl/animais'))
+        .get(Uri.parse('$enderecoDaApi/animais'))
         .timeout(const Duration(seconds: 8));
 
     if (resp.statusCode != 200) {
       throw Exception('Erro ${resp.statusCode}');
     }
     final lista = jsonDecode(utf8.decode(resp.bodyBytes)) as List;
-    return lista
-        .map((e) => Animal.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return itensValidos(lista, Animal.fromJson);
   }
 
+  // Publica um animal novo na API
   Future<void> criarAnimal(Animal animal) async {
     final resp = await http
         .post(
-          Uri.parse('$_baseUrl/animais'),
+          Uri.parse('$enderecoDaApi/animais'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode(animal.toJson()),
         )
@@ -36,14 +42,14 @@ class AnimalService {
     }
   }
 
-  // Muda só o status na API. Animal que ainda não está na API (sem id) não
-  // tem o que atualizar lá
+  // Altera apenas o status do animal na API. Animal sem id existe só no
+  // aparelho e não é enviado
   Future<void> atualizarStatus(Animal animal, StatusAnimal novo) async {
     final id = animal.id;
     if (id == null) return;
     final resp = await http
         .patch(
-          Uri.parse('$_baseUrl/animais/$id'),
+          Uri.parse('$enderecoDaApi/animais/$id'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({'status': novo.name}),
         )
@@ -53,14 +59,14 @@ class AnimalService {
     }
   }
 
-  // Grava o registro editado inteiro. Como no status, animal sem id ainda não
-  // está na API e fica só no aparelho
+  // Substitui o registro inteiro do animal na API depois de uma edição.
+  // Animal sem id existe só no aparelho e não é enviado
   Future<void> atualizarAnimal(Animal animal) async {
     final id = animal.id;
     if (id == null) return;
     final resp = await http
         .put(
-          Uri.parse('$_baseUrl/animais/$id'),
+          Uri.parse('$enderecoDaApi/animais/$id'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode(animal.toJson()),
         )

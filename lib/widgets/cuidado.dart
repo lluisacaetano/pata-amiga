@@ -1,8 +1,11 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
 
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
 
-// A caixa de um cuidado do animal (castrado, vacinado, vermifugado)
+// Caixa que indica um cuidado de saúde do animal (castrado, vacinado ou
+// vermifugado). Fica preenchida em verde quando [marcado] e neutra quando não
 class Cuidado extends StatelessWidget {
   final String rotulo;
   final bool marcado;

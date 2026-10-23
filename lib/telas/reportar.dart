@@ -1,21 +1,37 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote flutter/services: Clipboard e PlatformException.
 import 'package:flutter/services.dart';
+// Pacote image_picker: abre a câmera ou a galeria para escolher fotos.
 import 'package:image_picker/image_picker.dart';
+// Pacote share_plus: abre o compartilhamento do sistema (WhatsApp etc.).
 import 'package:share_plus/share_plus.dart';
 
+// Arquivo canais_de_denuncia.dart: nome e telefone do canal de denúncia.
 import '../dados/canais_de_denuncia.dart';
+// Arquivo denuncia.dart: modelo da denúncia, tipo e protocolo.
 import '../modelos/denuncia.dart';
+// Arquivo denuncia_service.dart: serviço que registra a denúncia na API.
 import '../services/denuncia_service.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo barra_inferior.dart: barra de navegação inferior.
+import '../widgets/barra_inferior.dart';
+// Arquivo foto_animal.dart: exibição das miniaturas das fotos escolhidas.
 import '../widgets/foto_animal.dart';
+// Arquivo mapa_de_local.dart: centro de Formiga, ponto inicial do mapa.
 import '../widgets/mapa_de_local.dart';
+// Arquivo proteger_alteracoes.dart: aviso ao sair sem salvar.
 import '../widgets/proteger_alteracoes.dart';
+// Arquivo seletor_de_local.dart: escolha do local no mapa.
 import '../widgets/seletor_de_local.dart';
 
-// A denúncia de maus-tratos (US 11). Abre com o que diz a lei, pede o que
-// aconteceu, onde, quando e as fotos, e deixa enviar sem identificação. Ao
-// registrar, a pessoa recebe o protocolo e encaminha a denúncia à APAF pelo
-// WhatsApp, como no contato de adoção
+// Formulário de denúncia de maus-tratos. Mostra o que diz a lei e pede o
+// tipo, a descrição, o local, a data (opcional) e as fotos. A denúncia é
+// sempre anônima. Ao registrar, exibe o protocolo e oferece o envio ao canal
+// de denúncia pelo compartilhamento do aparelho (WhatsApp).
+//
+// [servico] permite injetar um serviço falso nos testes.
 class ReportarScreen extends StatefulWidget {
   final DenunciaService? servico;
 
@@ -25,6 +41,7 @@ class ReportarScreen extends StatefulWidget {
   State<ReportarScreen> createState() => _ReportarScreenState();
 }
 
+// Limite de fotos por denúncia
 const _maximoDeFotos = 5;
 
 class _ReportarScreenState extends State<ReportarScreen> {
@@ -47,7 +64,8 @@ class _ReportarScreenState extends State<ReportarScreen> {
     super.dispose();
   }
 
-  // O que já foi preenchido: o aviso de sair sem salvar só aparece com algo
+  // Indica se há algo preenchido. Controla o aviso de sair sem salvar, que
+  // não aparece durante o envio
   bool get _alterado =>
       !_enviando &&
       (_tipo != null ||
@@ -55,6 +73,7 @@ class _ReportarScreenState extends State<ReportarScreen> {
           _fotos.isNotEmpty ||
           _data != null);
 
+  // Todos os campos obrigatórios preenchidos (a data é opcional)
   bool get _completo =>
       _tipo != null &&
       _descricao.text.trim().isNotEmpty &&
@@ -62,6 +81,7 @@ class _ReportarScreenState extends State<ReportarScreen> {
       _local.bairro.trim().isNotEmpty &&
       _fotos.isNotEmpty;
 
+  // Abre o calendário; não permite datas futuras
   Future<void> _escolherData() async {
     final hoje = DateTime.now();
     final data = await showDatePicker(
@@ -74,6 +94,8 @@ class _ReportarScreenState extends State<ReportarScreen> {
     if (data != null && mounted) setState(() => _data = data);
   }
 
+  // Abre a galeria e adiciona fotos até completar o limite; as excedentes
+  // são descartadas
   Future<void> _adicionarFotos() async {
     final vagas = _maximoDeFotos - _fotos.length;
     if (vagas <= 0) return;
@@ -89,6 +111,7 @@ class _ReportarScreenState extends State<ReportarScreen> {
     }
   }
 
+  // Mostra uma mensagem curta, substituindo a que estiver na tela
   void _avisar(String mensagem) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
@@ -96,6 +119,9 @@ class _ReportarScreenState extends State<ReportarScreen> {
       ..showSnackBar(SnackBar(content: Text(mensagem)));
   }
 
+  // Valida o formulário e registra a denúncia. Se faltar algo, marca os
+  // campos com erro e rola para o topo. Se registrar, mostra a folha com o
+  // protocolo e fecha a tela ao concluir
   Future<void> _enviar() async {
     FocusScope.of(context).unfocus();
     setState(() => _tentou = true);
@@ -122,8 +148,8 @@ class _ReportarScreenState extends State<ReportarScreen> {
           longitude: _local.ponto.longitude,
           ocorridaEm: _data,
           fotos: [for (final foto in _fotos) foto.path],
-          // Toda denúncia é anônima: o registro e o texto não levam quem
-          // denunciou
+          // Toda denúncia é anônima: nem o registro nem a mensagem levam
+          // dados de quem denunciou
           anonima: true,
           registradaEm: agora,
         ),
@@ -134,15 +160,18 @@ class _ReportarScreenState extends State<ReportarScreen> {
         context: context,
         isDismissible: false,
         enableDrag: false,
-        // Com texto grande, a folha passa da altura padrão: ela cresce e rola
+        // Permite que a folha ultrapasse a altura padrão e role, o que é
+        // necessário com fonte ampliada
         isScrollControlled: true,
         backgroundColor: context.cores.cartao,
         showDragHandle: true,
         builder: (_) => _DenunciaRegistrada(denuncia: registrada),
       );
-      // Registrada, a tela fecha: não há mais nada a salvar
+      // Denúncia registrada: a tela fecha sem o aviso de alterações
       navegador.pop();
-    } on Exception {
+    } catch (_) {
+      // Qualquer falha (rede, resposta inesperada da API) destrava o botão,
+      // para a pessoa poder tentar de novo
       if (!mounted) return;
       setState(() => _enviando = false);
       _avisar('Não foi possível registrar a denúncia agora. Tente de novo.');
@@ -355,13 +384,17 @@ class _ReportarScreenState extends State<ReportarScreen> {
             ),
           ],
         ),
+        // Reportar é uma das abas da barra inferior, por isso a barra fica
+        // visível aqui como nas outras abas
+        bottomNavigationBar: const BarraInferior(atual: 2),
       ),
     );
   }
 }
 
-// A abertura: o que é maus-tratos e o que diz a lei, com o trecho do art. 32
-// na barra verde das citações do app
+// Quadro inicial: explica o que é maus-tratos, cita o art. 32 da Lei
+// 9.605/1998 (com a barra lateral usada nas citações) e a pena para cães e
+// gatos, e orienta a ligar 190 em caso de perigo imediato
 class _OQueDizALei extends StatelessWidget {
   const _OQueDizALei();
 
@@ -456,8 +489,8 @@ class _OQueDizALei extends StatelessWidget {
   }
 }
 
-// O compartilhar do celular leva o texto e as fotos juntos, como o
-// compartilhar do feed; a pessoa escolhe o WhatsApp e a conversa da APAF
+// Abre o compartilhamento do sistema com o texto da denúncia e as fotos.
+// A pessoa escolhe o WhatsApp e a conversa do canal de denúncia
 Future<void> encaminharDenuncia(Denuncia denuncia) async {
   await SharePlus.instance.share(
     ShareParams(
@@ -467,8 +500,9 @@ Future<void> encaminharDenuncia(Denuncia denuncia) async {
   );
 }
 
-// Depois de registrar: o protocolo em destaque, para copiar, e o
-// encaminhamento à APAF, com a denúncia já escrita e as fotos
+// Folha exibida após o registro: protocolo em destaque com botão de copiar,
+// dados do canal de denúncia, aviso de anonimato e o botão que encaminha a
+// denúncia com as fotos
 class _DenunciaRegistrada extends StatelessWidget {
   const _DenunciaRegistrada({required this.denuncia});
 
@@ -556,8 +590,8 @@ class _DenunciaRegistrada extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14),
-            // Para quem vai: o mesmo quadro do lugar da ficha do animal, com
-            // o número em destaque para a pessoa achar a conversa
+            // Destinatário da denúncia, com o número em destaque para a
+            // pessoa localizar a conversa no WhatsApp
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -615,10 +649,9 @@ class _DenunciaRegistrada extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            // Anônima no registro e na mensagem. O número de quem envia pelo
-            // WhatsApp aparece para a APAF, que o mantém em sigilo; a
-            // mensagem também pede isso. A barra verde é a mesma do relato e
-            // das observações do animal
+            // Aviso de anonimato. O registro e a mensagem não identificam
+            // quem denuncia, mas o WhatsApp mostra ao canal o número de quem
+            // envia; o texto deixa isso claro
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(12, 2, 4, 2),
@@ -700,6 +733,7 @@ class _DenunciaRegistrada extends StatelessWidget {
   }
 }
 
+// Seção do formulário: cartão com ícone e título acima do conteúdo
 class _Cartao extends StatelessWidget {
   const _Cartao({
     required this.icone,
@@ -746,6 +780,7 @@ class _Cartao extends StatelessWidget {
   }
 }
 
+// Rótulo de campo, em maiúsculas
 class _Rotulo extends StatelessWidget {
   const _Rotulo(this.texto);
 
@@ -763,6 +798,7 @@ class _Rotulo extends StatelessWidget {
   );
 }
 
+// Texto de ajuda abaixo de um campo; em vermelho quando indica erro
 class _Recado extends StatelessWidget {
   const _Recado(this.texto, {this.erro = false});
 
@@ -782,7 +818,8 @@ class _Recado extends StatelessWidget {
   );
 }
 
-// A mesma caixa dos campos do cadastro de animal
+// Decoração padrão dos campos de texto, igual à do cadastro de animal. Com
+// [comErro], a borda fica na cor de destaque
 InputDecoration _caixa(
   BuildContext context,
   String? dica, {
@@ -812,6 +849,7 @@ InputDecoration _caixa(
   ),
 );
 
+// Miniatura de uma foto escolhida, com botão para removê-la
 class _Miniatura extends StatelessWidget {
   const _Miniatura({required this.caminho, required this.aoRemover});
 
@@ -825,22 +863,36 @@ class _Miniatura extends StatelessWidget {
       child: Stack(
         children: [
           FotoAnimal(caminho: caminho, altura: 92),
+          // O círculo visível é pequeno, mas a área de toque tem 48 x 48,
+          // o mínimo recomendado para acessibilidade
           Positioned(
-            top: 4,
-            right: 4,
-            child: Material(
-              color: context.cores.cartao,
-              shape: const CircleBorder(),
+            top: 0,
+            right: 0,
+            child: Semantics(
+              button: true,
+              label: 'Remover foto',
+              excludeSemantics: true,
               child: InkWell(
                 customBorder: const CircleBorder(),
                 onTap: aoRemover,
-                child: Padding(
-                  padding: const EdgeInsets.all(4),
-                  child: Icon(
-                    Icons.close,
-                    size: 16,
-                    color: context.cores.texto,
-                    semanticLabel: 'Remover foto',
+                child: SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: Center(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: context.cores.cartao,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(
+                          Icons.close,
+                          size: 16,
+                          color: context.cores.texto,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -852,6 +904,7 @@ class _Miniatura extends StatelessWidget {
   }
 }
 
+// Botão para adicionar fotos; ganha borda de erro se nenhuma foi escolhida
 class _AdicionarFoto extends StatelessWidget {
   const _AdicionarFoto({required this.aoTocar, required this.comErro});
 

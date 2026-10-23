@@ -1,21 +1,28 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
 
+// Arquivo racas.dart: busca sem acentos (buscarNaLista).
 import '../dados/racas.dart';
+// Arquivo ong.dart: modelo da ONG.
 import '../modelos/ong.dart';
+// Arquivo ong_service.dart: serviço que busca as ONGs na API.
 import '../services/ong_service.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo escolha_de_tipo.dart: estilo padrão das abas.
 import 'escolha_de_tipo.dart';
+// Arquivo selecao_com_busca.dart: campo de seleção com busca.
 import 'selecao_com_busca.dart';
 
-// "Você faz parte de alguma ONG?": com o sim, aparecem as ONGs cadastradas
-// em ordem alfabética para escolher. Escolher só pede para entrar: quem
-// administra a ONG aprova antes de a pessoa ter acesso. Serve ao "Criar conta" e
-// ao "Editar perfil"
+// Pergunta "Você faz parte de alguma ONG ou abrigo?" usada em "Criar conta"
+// e "Editar perfil". Com "Sim", carrega as ONGs em ordem alfabética para a
+// pessoa escolher. A escolha é um pedido de entrada, que precisa ser
+// aprovado por quem administra a ONG
 class EscolhaDeOng extends StatefulWidget {
   final OngService? servico;
   final Ong? escolhida;
   final ValueChanged<Ong?> aoEscolher;
-  // No "Criar conta" a pergunta segue os rótulos daquela tela
+  // Estilo da pergunta, para seguir os rótulos da tela que usa o widget
   final TextStyle? estiloDaPergunta;
 
   const EscolhaDeOng({
@@ -41,6 +48,8 @@ class _EscolhaDeOngState extends State<EscolhaDeOng> {
   void initState() {
     super.initState();
     _busca.text = widget.escolhida?.nome ?? '';
+    // Já nasce com uma ONG escolhida: carrega a lista para poder trocá-la
+    if (_fazParte) _carregar();
   }
 
   @override
@@ -49,12 +58,13 @@ class _EscolhaDeOngState extends State<EscolhaDeOng> {
     super.dispose();
   }
 
+  // ONG cujo nome corresponde ao texto, ignorando acentos e maiúsculas
   Ong? _pelaNome(List<Ong> ongs, String texto) => ongs
       .where((ong) => Ong.nomeComparavel(ong.nome) == Ong.nomeComparavel(texto))
       .firstOrNull;
 
-  // As ONGs só são buscadas com o sim: quem não faz parte de nenhuma não
-  // espera a lista carregar
+  // Busca as ONGs na API e ordena pelo nome. Só é chamada após o "Sim" ou
+  // quando já há uma ONG escolhida, para não carregar a lista sem necessidade
   Future<void> _carregar() async {
     setState(() => _semConexao = false);
     try {
@@ -69,6 +79,7 @@ class _EscolhaDeOngState extends State<EscolhaDeOng> {
     }
   }
 
+  // Trata a resposta: "Não" limpa a escolha; "Sim" carrega a lista
   void _responder(bool fazParte) {
     setState(() => _fazParte = fazParte);
     if (!fazParte) {
@@ -111,26 +122,7 @@ class _EscolhaDeOngState extends State<EscolhaDeOng> {
         if (_fazParte) ...[
           const SizedBox(height: 12),
           if (_semConexao)
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Não foi possível carregar as ONGs.',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: context.cores.destaque,
-                    ),
-                  ),
-                ),
-                TextButton(
-                  onPressed: _carregar,
-                  style: TextButton.styleFrom(
-                    foregroundColor: context.cores.principal,
-                  ),
-                  child: const Text('Tentar de novo'),
-                ),
-              ],
-            )
+            _AvisoSemConexao(aoTentarDeNovo: _carregar)
           else if (ongs == null)
             Center(
               child: Padding(
@@ -146,10 +138,8 @@ class _EscolhaDeOngState extends State<EscolhaDeOng> {
               style: TextStyle(fontSize: 13, color: context.cores.textoFraco),
             )
           else ...[
-            // O mesmo select com busca do bairro e da raça, em ordem
-            // alfabética
             SelecaoComBusca(
-              // No "Criar conta", o rótulo e o texto seguem os outros campos
+              // Com estilo próprio, rótulo e texto seguem os campos da tela
               rotulo: widget.estiloDaPergunta == null ? 'ONG' : 'Qual ONG?',
               estiloDoRotulo: widget.estiloDaPergunta,
               estiloDoTexto: widget.estiloDaPergunta == null
@@ -173,6 +163,73 @@ class _EscolhaDeOngState extends State<EscolhaDeOng> {
           ],
         ],
       ],
+    );
+  }
+}
+
+// Aviso exibido quando a lista de ONGs não carrega: ícone, explicação e o
+// botão para buscar de novo, no mesmo tom dos avisos de conexão do app
+class _AvisoSemConexao extends StatelessWidget {
+  const _AvisoSemConexao({required this.aoTentarDeNovo});
+
+  final VoidCallback aoTentarDeNovo;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+      decoration: BoxDecoration(
+        color: context.cores.fundo,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.cores.borda),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.wifi_off, size: 22, color: context.cores.principal),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Não foi possível carregar as ONGs.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: context.cores.texto,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Confira a conexão com a internet e tente de novo.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: context.cores.textoFraco,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: aoTentarDeNovo,
+              icon: const Icon(Icons.refresh, size: 18),
+              label: const Text('Tentar de novo'),
+              style: TextButton.styleFrom(
+                foregroundColor: context.cores.principal,
+                textStyle: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

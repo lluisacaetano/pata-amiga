@@ -1,39 +1,59 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote flutter/services: área de transferência (Clipboard).
 import 'package:flutter/services.dart';
+// Pacote latlong2: coordenadas (latitude e longitude) e cálculo de distâncias.
 import 'package:latlong2/latlong.dart';
+// Pacote url_launcher: abre WhatsApp, telefone e links no navegador.
 import 'package:url_launcher/url_launcher.dart';
 
+// Arquivo canais_de_denuncia.dart: nome do canal de denúncia.
 import '../dados/canais_de_denuncia.dart';
+// Arquivo denuncia.dart: modelo da denúncia e data relativa.
 import '../modelos/denuncia.dart';
+// Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo etiqueta.dart: etiqueta arredondada usada para a situação.
 import '../widgets/etiqueta.dart';
+// Arquivo galeria_animal.dart: galeria de fotos deslizável.
 import '../widgets/galeria_animal.dart';
+// Arquivo mapa_de_local.dart: prévia do mapa com o ponto da denúncia.
 import '../widgets/mapa_de_local.dart';
+// Arquivo mascaras.dart: formatação do telefone para exibição.
 import '../widgets/mascaras.dart';
+// Arquivo reportar.dart: envio da denúncia pelo compartilhamento.
 import 'reportar.dart';
 
-// A denúncia por inteiro, no mesmo desenho da ficha do animal: as fotos no
-// alto, depois o que aconteceu, onde, e quem denunciou
+// Detalhes de uma denúncia, no mesmo layout da ficha do animal: galeria de
+// fotos, tipo e situação, protocolo, datas, local, relato e denunciante. O
+// botão inferior reenvia a denúncia ao canal de denúncia
 class DetalhesDenuncia extends StatelessWidget {
   const DetalhesDenuncia({super.key, required this.denuncia});
 
   final Denuncia denuncia;
 
-  // A denúncia não entra no mapa do app: o ponto abre no app de mapas do
-  // celular
+  // Abre o ponto da denúncia no app de mapas, já que denúncias não aparecem
+  // no mapa do app. Usa o link do Google Maps, que abre no app de mapas ou no
+  // navegador em qualquer plataforma
   Future<void> _abrirNoMapa(BuildContext context) async {
     final mensageiro = ScaffoldMessenger.of(context);
     final ponto = '${denuncia.latitude},${denuncia.longitude}';
-    final abriu = await launchUrl(
-      Uri.parse('geo:$ponto?q=$ponto'),
-      mode: LaunchMode.externalApplication,
-    );
+    bool abriu;
+    try {
+      abriu = await launchUrl(
+        Uri.parse('https://www.google.com/maps/search/?api=1&query=$ponto'),
+        mode: LaunchMode.externalApplication,
+      );
+    } on Exception {
+      // Sem aplicativo que trate o link, a plataforma lança exceção
+      abriu = false;
+    }
     if (!abriu) {
       mensageiro
         ..hideCurrentSnackBar()
         ..showSnackBar(
           const SnackBar(
-            content: Text('Nenhum app de mapas encontrado neste aparelho.'),
+            content: Text('Não foi possível abrir o mapa neste aparelho.'),
           ),
         );
     }
@@ -127,7 +147,7 @@ class _Ficha extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // O tipo e a situação, que é o que a pessoa volta para ver
+          // Cabeçalho: tipo da denúncia e situação atual
           Row(
             children: [
               Expanded(
@@ -218,6 +238,8 @@ class _Ficha extends StatelessWidget {
           const _Divisoria(),
           const _Rotulo('Quem denunciou'),
           const SizedBox(height: 4),
+          // O app grava toda denúncia como anônima. O painel com nome e
+          // telefone atende registros antigos, feitos com identificação
           if (denuncia.anonima)
             Text(
               'Denúncia anônima: o registro não inclui o nome nem o telefone de quem denunciou.',
@@ -240,9 +262,10 @@ class _Ficha extends StatelessWidget {
   }
 }
 
+// Número com dois dígitos, para datas no formato dd/mm/aaaa
 String _dois(int n) => n.toString().padLeft(2, '0');
 
-// Os dados em duas colunas, como as medidas da ficha do animal
+// Pares rótulo e valor lado a lado, em colunas de mesma largura
 class _Painel extends StatelessWidget {
   const _Painel({required this.dados});
 
@@ -293,6 +316,7 @@ class _Painel extends StatelessWidget {
   }
 }
 
+// Título de uma seção da ficha
 class _Rotulo extends StatelessWidget {
   const _Rotulo(this.texto);
 
@@ -308,6 +332,7 @@ class _Rotulo extends StatelessWidget {
   );
 }
 
+// Linha que separa as seções da ficha
 class _Divisoria extends StatelessWidget {
   const _Divisoria();
 
@@ -318,6 +343,7 @@ class _Divisoria extends StatelessWidget {
   );
 }
 
+// Endereço da denúncia: rua em destaque e bairro abaixo
 class _QuadroDoLugar extends StatelessWidget {
   const _QuadroDoLugar({required this.denuncia});
 
@@ -377,7 +403,7 @@ class _QuadroDoLugar extends StatelessWidget {
   }
 }
 
-// O relato com a barra verde à esquerda, como as observações do animal
+// Relato de quem denunciou, com a barra lateral usada em citações
 class _Relato extends StatelessWidget {
   const _Relato(this.texto);
 
