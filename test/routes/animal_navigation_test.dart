@@ -462,6 +462,8 @@ void main() {
     );
 
     await abrirPerfil(tester, estado: estado, usuario: usuario);
+    await tester.tap(find.byTooltip('Mais opções'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Editar perfil'));
     await tester.pumpAndSettle();
     expect(find.text('EDITAR PERFIL'), findsOneWidget);
@@ -494,6 +496,8 @@ void main() {
     );
 
     await abrirPerfil(tester, estado: estado, usuario: usuario);
+    await tester.tap(find.byTooltip('Mais opções'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Editar perfil'));
     await tester.pumpAndSettle();
 

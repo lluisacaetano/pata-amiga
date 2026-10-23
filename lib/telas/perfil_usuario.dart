@@ -45,7 +45,7 @@ import '../widgets/sino_de_notificacoes.dart';
 enum _SecaoPerfil { curtidos, meusCadastros }
 
 // Itens do menu de três pontos da barra superior
-enum _OpcaoDoMenu { denuncias, aparencia, acessibilidade, sair }
+enum _OpcaoDoMenu { editar, denuncias, aparencia, acessibilidade, sair }
 
 // Grupos de "Meus registros", na ordem de exibição: primeiro os que ainda
 // estão em aberto, depois cada desfecho
@@ -237,8 +237,8 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
           // Notificações da conta, como os pedidos de entrada na ONG que a
           // pessoa administra
           SinoDeNotificacoes(email: usuario.email),
-          // Denúncias, aparência, acessibilidade e sair ficam num menu só,
-          // para não ocupar o corpo do perfil
+          // Editar perfil, denúncias, aparência, acessibilidade e sair ficam
+          // num menu só, para não ocupar o corpo do perfil
           PopupMenuButton<_OpcaoDoMenu>(
             tooltip: 'Mais opções',
             icon: Icon(Icons.more_vert, color: context.cores.principal),
@@ -247,6 +247,10 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
               borderRadius: BorderRadius.circular(14),
             ),
             onSelected: (opcao) => switch (opcao) {
+              _OpcaoDoMenu.editar => Navigator.pushNamed(
+                context,
+                AppRoutes.editarPerfil,
+              ),
               _OpcaoDoMenu.denuncias => Navigator.pushNamed(
                 context,
                 AppRoutes.minhasDenuncias,
@@ -262,6 +266,11 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
               _OpcaoDoMenu.sair => _sair(),
             },
             itemBuilder: (_) => [
+              _itemDoMenu(
+                _OpcaoDoMenu.editar,
+                Icons.edit_outlined,
+                'Editar perfil',
+              ),
               _itemDoMenu(
                 _OpcaoDoMenu.denuncias,
                 Icons.shield_outlined,
@@ -294,8 +303,6 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
         topo: [
           _Cabecalho(
             usuario: usuario,
-            aoEditar: () =>
-                Navigator.pushNamed(context, AppRoutes.editarPerfil),
             vinculo: VinculoComOng(
               ong: estado.ongDe(usuario.email),
               pedida: estado.ongPedidaPor(usuario.email),
@@ -364,16 +371,12 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
   }
 }
 
-// Topo do perfil: foto, nome, contato, vínculo com ONG e o botão de editar
+// Topo do perfil: foto, nome, contato e vínculo com ONG. Editar o perfil
+// fica no menu de três pontos da barra superior
 class _Cabecalho extends StatelessWidget {
-  const _Cabecalho({
-    required this.usuario,
-    required this.aoEditar,
-    this.vinculo,
-  });
+  const _Cabecalho({required this.usuario, this.vinculo});
 
   final Usuario usuario;
-  final VoidCallback aoEditar;
   // Vínculo com ONG exibido abaixo do contato, quando houver
   final Widget? vinculo;
 
@@ -421,24 +424,6 @@ class _Cabecalho extends StatelessWidget {
               ),
             ),
           ],
-        ),
-        const SizedBox(height: 16),
-        OutlinedButton.icon(
-          onPressed: aoEditar,
-          icon: const Icon(Icons.edit_outlined, size: 18),
-          label: const Text('Editar perfil'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: context.cores.principal,
-            side: BorderSide(color: context.cores.principal),
-            minimumSize: const Size.fromHeight(44),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            textStyle: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
         ),
       ],
     );
