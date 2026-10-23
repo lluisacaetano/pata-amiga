@@ -122,26 +122,7 @@ class _EscolhaDeOngState extends State<EscolhaDeOng> {
         if (_fazParte) ...[
           const SizedBox(height: 12),
           if (_semConexao)
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Não foi possível carregar as ONGs.',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: context.cores.destaque,
-                    ),
-                  ),
-                ),
-                TextButton(
-                  onPressed: _carregar,
-                  style: TextButton.styleFrom(
-                    foregroundColor: context.cores.principal,
-                  ),
-                  child: const Text('Tentar de novo'),
-                ),
-              ],
-            )
+            _AvisoSemConexao(aoTentarDeNovo: _carregar)
           else if (ongs == null)
             Center(
               child: Padding(
@@ -182,6 +163,73 @@ class _EscolhaDeOngState extends State<EscolhaDeOng> {
           ],
         ],
       ],
+    );
+  }
+}
+
+// Aviso exibido quando a lista de ONGs não carrega: ícone, explicação e o
+// botão para buscar de novo, no mesmo tom dos avisos de conexão do app
+class _AvisoSemConexao extends StatelessWidget {
+  const _AvisoSemConexao({required this.aoTentarDeNovo});
+
+  final VoidCallback aoTentarDeNovo;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+      decoration: BoxDecoration(
+        color: context.cores.fundo,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.cores.borda),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.wifi_off, size: 22, color: context.cores.principal),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Não foi possível carregar as ONGs.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: context.cores.texto,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Confira a conexão com a internet e tente de novo.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: context.cores.textoFraco,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: aoTentarDeNovo,
+              icon: const Icon(Icons.refresh, size: 18),
+              label: const Text('Tentar de novo'),
+              style: TextButton.styleFrom(
+                foregroundColor: context.cores.principal,
+                textStyle: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
