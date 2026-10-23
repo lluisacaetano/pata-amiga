@@ -24,6 +24,8 @@ import '../services/animal_service.dart';
 import '../tema/cores.dart';
 // Arquivo acoes_do_registro.dart: ações sobre um registro de animal.
 import '../widgets/acoes_do_registro.dart';
+// Arquivo aviso_no_centro.dart: aviso centralizado de lista vazia ou erro.
+import '../widgets/aviso_no_centro.dart';
 // Arquivo barra_inferior.dart: barra de navegação inferior.
 import '../widgets/barra_inferior.dart';
 // Arquivo vinculo_com_ong.dart: vínculo da pessoa com a ONG.
@@ -288,9 +290,8 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
           const SizedBox(width: 4),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        children: [
+      body: ListaComAviso(
+        topo: [
           _Cabecalho(
             usuario: usuario,
             aoEditar: () =>
@@ -306,50 +307,56 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
             aoEscolher: (secao) => setState(() => _secao = secao),
           ),
           const SizedBox(height: 16),
+        ],
+        // Aba vazia: o aviso ocupa o espaço abaixo das abas, no centro
+        aviso: _secao == _SecaoPerfil.curtidos && curtidos.isEmpty
+            ? AvisoNoCentro(
+                icone: Icons.favorite_border,
+                titulo: 'Nenhum animal curtido ainda',
+                texto:
+                    'Toque no coração de um animal no feed para guardá-lo '
+                    'aqui e decidir com calma.',
+                acao: 'Ver animais no feed',
+                aoAgir: _voltarAoFeed,
+              )
+            : _secao == _SecaoPerfil.meusCadastros && cadastros.isEmpty
+            ? AvisoNoCentro(
+                icone: Icons.pets_outlined,
+                titulo: 'Nenhum animal registrado ainda',
+                texto:
+                    'Os animais que você cadastrar pelo botão + do feed '
+                    'aparecem aqui.',
+                acao: 'Ver animais no feed',
+                aoAgir: _voltarAoFeed,
+              )
+            : null,
+        itens: [
           if (_secao == _SecaoPerfil.curtidos)
-            curtidos.isEmpty
-                ? _ListaVazia(
-                    icone: Icons.favorite_border,
-                    titulo: 'Nenhum animal curtido ainda',
-                    texto:
-                        'Toque no coração de um animal no feed para guardá-lo '
-                        'aqui e decidir com calma.',
-                    aoVerAnimais: _voltarAoFeed,
-                  )
-                : _GradeDeCurtidos(
-                    animais: curtidos,
-                    aoAbrir: _abrirDetalhes,
-                    aoRemover: (animal) => _removerCurtida(estado, animal),
-                  )
+            _GradeDeCurtidos(
+              animais: curtidos,
+              aoAbrir: _abrirDetalhes,
+              aoRemover: (animal) => _removerCurtida(estado, animal),
+            )
           else
-            cadastros.isEmpty
-                ? _ListaVazia(
-                    icone: Icons.pets_outlined,
-                    titulo: 'Nenhum animal registrado ainda',
-                    texto:
-                        'Os animais que você cadastrar pelo botão + do feed '
-                        'aparecem aqui.',
-                    aoVerAnimais: _voltarAoFeed,
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Para quem faz parte de uma ONG, uma dica de que os
-                      // registros podem ser transferidos para ela
-                      if (estado.ongDe(usuario.email) case final ong?)
-                        _DicaDaOng(ong: ong.nome),
-                      for (final grupo in _gruposDeRegistro)
-                        ..._grupo(
-                          grupo.titulo,
-                          [
-                            for (final animal in cadastros)
-                              if (animal.status == grupo.status) animal,
-                          ],
-                          estado,
-                          usuario.email,
-                        ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Para quem faz parte de uma ONG, uma dica de que os
+                // registros podem ser transferidos para ela
+                if (estado.ongDe(usuario.email) case final ong?)
+                  _DicaDaOng(ong: ong.nome),
+                for (final grupo in _gruposDeRegistro)
+                  ..._grupo(
+                    grupo.titulo,
+                    [
+                      for (final animal in cadastros)
+                        if (animal.status == grupo.status) animal,
                     ],
+                    estado,
+                    usuario.email,
                   ),
+              ],
+            ),
         ],
       ),
       bottomNavigationBar: BarraInferior(atual: 4),
@@ -884,69 +891,6 @@ class _Lugar extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-// Estado vazio de uma aba, com o atalho para o feed, onde se curte e de
-// onde se cadastra
-class _ListaVazia extends StatelessWidget {
-  const _ListaVazia({
-    required this.icone,
-    required this.titulo,
-    required this.texto,
-    required this.aoVerAnimais,
-  });
-
-  final IconData icone;
-  final String titulo;
-  final String texto;
-  final VoidCallback aoVerAnimais;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 32, 24, 8),
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 32,
-            backgroundColor: context.cores.principalClara,
-            child: Icon(icone, size: 30, color: context.cores.principal),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            titulo,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: context.cores.texto,
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            texto,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: context.cores.textoFraco,
-              fontSize: 14,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 18),
-          TextButton(
-            onPressed: aoVerAnimais,
-            style: TextButton.styleFrom(
-              foregroundColor: context.cores.principal,
-            ),
-            child: const Text(
-              'Ver animais no feed',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

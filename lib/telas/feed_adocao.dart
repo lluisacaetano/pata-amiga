@@ -30,6 +30,8 @@ import '../modelos/ong.dart';
 import '../tema/cores.dart';
 // Arquivo barra_inferior.dart: barra de navegação inferior.
 import '../widgets/barra_inferior.dart';
+// Arquivo aviso_no_centro.dart: aviso centralizado de lista vazia ou erro.
+import '../widgets/aviso_no_centro.dart';
 // Arquivo card_animal.dart: card de cada animal do feed.
 import '../widgets/card_animal.dart';
 // Arquivo escolha_de_tipo.dart: abas de adoção, perdidos e resgates.
@@ -541,66 +543,28 @@ class _FeedAdocaoState extends State<FeedAdocao> {
     // Sem conexão e sem cache: tela de erro, a menos que haja animal
     // cadastrado neste aparelho para exibir
     if (_estado == EstadoFeed.erro && _animaisCriados.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.wifi_off,
-                size: 56,
-                color: context.cores.principal.withValues(alpha: 0.25),
-              ),
-              const SizedBox(height: 14),
-              Text(
-                'Sem conexão e sem dados salvos.\n'
-                'Conecte-se à internet para carregar os animais.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: context.cores.textoFraco),
-              ),
-              const SizedBox(height: 14),
-              ElevatedButton(
-                onPressed: _carregar,
-                child: const Text('Tentar novamente'),
-              ),
-            ],
-          ),
-        ),
+      return AvisoNoCentro(
+        icone: Icons.wifi_off,
+        titulo: 'Sem conexão e sem dados salvos.',
+        texto: 'Conecte-se à internet para carregar os animais.',
+        acao: 'Tentar de novo',
+        aoAgir: _carregar,
+        acaoEmDestaque: true,
       );
     }
 
     final animais = _animaisVisiveis;
     if (animais.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.pets,
-                size: 56,
-                color: context.cores.principal.withValues(alpha: 0.25),
-              ),
-              const SizedBox(height: 14),
-              Text(
-                _filtros.vazio
-                    ? 'Nenhum animal encontrado.'
-                    : 'Nenhum animal com esses filtros.',
-                style: TextStyle(color: context.cores.textoFraco),
-              ),
-              if (!_filtros.vazio)
-                TextButton(
-                  onPressed: _limparFiltros,
-                  style: TextButton.styleFrom(
-                    foregroundColor: context.cores.principal,
-                  ),
-                  child: const Text('Limpar filtros'),
-                ),
-            ],
-          ),
-        ),
+      return AvisoNoCentro(
+        icone: Icons.pets,
+        titulo: _filtros.vazio
+            ? 'Nenhum animal encontrado.'
+            : 'Nenhum animal com esses filtros.',
+        texto: _filtros.vazio
+            ? null
+            : 'Tire algum filtro para ver mais animais.',
+        acao: _filtros.vazio ? null : 'Limpar filtros',
+        aoAgir: _filtros.vazio ? null : _limparFiltros,
       );
     }
 
