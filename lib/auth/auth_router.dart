@@ -9,6 +9,8 @@ import 'screens/auth_components.dart';
 import 'screens/boas_vindas_screen.dart';
 // Arquivo de_volta_screen.dart: recepção rápida de quem reabre o app logado.
 import 'screens/de_volta_screen.dart';
+// Arquivo cores.dart: cor de fundo do tema, usada atrás da transição.
+import '../tema/cores.dart';
 // Arquivo feed_adocao.dart: feed de animais, a tela principal do app.
 import '../telas/feed_adocao.dart';
 // Arquivo onboarding_screen.dart: onboarding e se ele já foi visto.
@@ -72,18 +74,23 @@ class _EstadoRoteadorAutenticacao extends State<RoteadorAutenticacao> {
         );
       }
       // Com a sessão salva: a recepção rápida e, ao fim dela, o feed. Sem
-      // animação quando o aparelho pede movimento reduzido
-      return AnimatedSwitcher(
-        duration: MediaQuery.disableAnimationsOf(context)
-            ? Duration.zero
-            : const Duration(milliseconds: 400),
-        child: _mostrarDeVolta
-            ? DeVoltaScreen(
-                aoTerminar: () {
-                  if (mounted) setState(() => _mostrarDeVolta = false);
-                },
-              )
-            : const FeedAdocao(),
+      // animação quando o aparelho pede movimento reduzido. O fundo do tema
+      // fica por trás da troca: no meio do esmaecimento as duas telas estão
+      // semitransparentes, e sem ele apareceria o fundo preto da janela
+      return ColoredBox(
+        color: context.cores.fundo,
+        child: AnimatedSwitcher(
+          duration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : const Duration(milliseconds: 400),
+          child: _mostrarDeVolta
+              ? DeVoltaScreen(
+                  aoTerminar: () {
+                    if (mounted) setState(() => _mostrarDeVolta = false);
+                  },
+                )
+              : const FeedAdocao(),
+        ),
       );
     }
 
