@@ -15,23 +15,6 @@ import '../widgets/escolha_de_tipo.dart';
 class ConfiguracoesAcessibilidade extends StatelessWidget {
   const ConfiguracoesAcessibilidade({super.key});
 
-  // Executa a gravação e avisa com um SnackBar se ela falhar
-  Future<void> _salvar(
-    BuildContext context,
-    Future<void> Function() salvar,
-  ) async {
-    try {
-      await salvar();
-    } on Exception catch (_) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Não foi possível salvar a configuração.'),
-        ),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final preferencias = context.watch<PreferenciasAplicativoProvider>();
@@ -119,11 +102,12 @@ class ConfiguracoesAcessibilidade extends StatelessWidget {
                     ],
                     selected: {preferencias.tamanhoTexto},
                     showSelectedIcon: false,
-                    onSelectionChanged: (escolha) => _salvar(
+                    onSelectionChanged: (escolha) => salvarPreferencia(
                       context,
                       () => context
                           .read<PreferenciasAplicativoProvider>()
                           .definirTamanhoTexto(escolha.first),
+                      mensagemDeErro: 'Não foi possível salvar a configuração.',
                     ),
                     style: estiloDasAbas(context, context.cores.fundo),
                   ),

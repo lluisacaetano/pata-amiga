@@ -158,6 +158,10 @@ class _ListaDePedidosState extends State<_ListaDePedidos> {
   // desabilitados para evitar respostas duplicadas
   String? _respondendo;
 
+  // Resultado da última resposta a um pedido, exibido no topo do painel.
+  // Um SnackBar ficaria atrás do véu do painel, quase invisível
+  String? _resultado;
+
   // Marca o aviso como visto na API, removendo-o do sino. Em caso de falha,
   // o aviso continua e pode ser dispensado depois
   Future<void> _dispensar(Ong ong) async {
@@ -200,7 +204,14 @@ class _ListaDePedidosState extends State<_ListaDePedidos> {
     } on Exception {
       aviso = 'Não foi possível responder agora. Tente de novo.';
     }
-    if (mounted) setState(() => _respondendo = null);
+    if (mounted) {
+      setState(() {
+        _respondendo = null;
+        _resultado = aviso;
+      });
+      return;
+    }
+    // Painel já fechado: o resultado vai para a tela de baixo
     mensageiro
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(aviso)));
@@ -248,7 +259,10 @@ class _ListaDePedidosState extends State<_ListaDePedidos> {
     final notificacoes =
         <(DateTime?, Widget)>[
           if (ong != null)
-            for (final pessoa in ong.pedidos)
+            // A outra ONG de cada pessoa é calculada uma vez por pedido
+            for (final (pessoa, outra) in [
+              for (final pessoa in ong.pedidos) (pessoa, outraDe(pessoa)),
+            ])
               (
                 pessoa.em,
                 _Notificacao(
@@ -266,14 +280,14 @@ class _ListaDePedidosState extends State<_ListaDePedidos> {
                       ],
                     ),
                   ),
-                  aviso: switch (outraDe(pessoa)) {
+                  aviso: switch (outra) {
                     final outra? =>
                       'Já faz parte de ${outra.nome}. Cada conta pode ter só '
                           'uma ONG, então não dá para aprovar.',
                     null => null,
                   },
                   detalhe: 'Toque para ver o perfil.',
-                  aoTocar: () => _verPerfil(ong, pessoa, outraDe(pessoa)),
+                  aoTocar: () => _verPerfil(ong, pessoa, outra),
                   acoes: [
                     const Spacer(),
                     TextButton(
@@ -285,7 +299,7 @@ class _ListaDePedidosState extends State<_ListaDePedidos> {
                     ),
                     const SizedBox(width: 4),
                     FilledButton(
-                      onPressed: _respondendo != null || outraDe(pessoa) != null
+                      onPressed: _respondendo != null || outra != null
                           ? null
                           : () => _responder(ong, pessoa, aprovar: true),
                       style: FilledButton.styleFrom(
@@ -407,12 +421,37 @@ class _ListaDePedidosState extends State<_ListaDePedidos> {
                       ),
                     ),
                   ),
+                  if (_resultado case final resultado?)
+                    Container(
+                      margin: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: context.cores.principalClara,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Semantics(
+                        liveRegion: true,
+                        child: Text(
+                          resultado,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: context.cores.texto,
+                          ),
+                        ),
+                      ),
+                    ),
                   if (notificacoes.isEmpty)
                     Padding(
                       padding: EdgeInsets.fromLTRB(18, 4, 18, 20),
                       child: Text(
-                        'Nenhuma notificação. Quando alguém disser que faz '
-                        'parte da sua ONG, o pedido aparece aqui.',
+                        // Só quem administra uma ONG recebe pedidos de entrada
+                        ong != null
+                            ? 'Nenhuma notificação. Quando alguém disser que '
+                                  'faz parte da sua ONG, o pedido aparece aqui.'
+                            : 'Nenhuma notificação no momento.',
                         style: TextStyle(
                           fontSize: 14,
                           color: context.cores.textoFraco,

@@ -19,8 +19,6 @@ import '../auth/screens/documento_legal_screen.dart';
 import '../auth/screens/login_screen.dart';
 // Arquivo recuperar_senha.dart: tela de recuperação de senha.
 import '../auth/screens/recuperar_senha.dart';
-// Arquivo home_screen.dart: tela inicial simples da rota home.
-import '../telas/home_screen.dart';
 // Arquivo feed_adocao.dart: feed de animais.
 import '../telas/feed_adocao.dart';
 // Arquivo detalhes_animal.dart: ficha do animal.
@@ -84,7 +82,6 @@ class AppRoutesConfig {
 
     AppRoutes.recoverPassword: (_) => const RecoverPasswordScreen(),
 
-    AppRoutes.home: (_) => const SuaTelaHome(),
 
     AppRoutes.feed: (_) => const FeedAdocao(),
 

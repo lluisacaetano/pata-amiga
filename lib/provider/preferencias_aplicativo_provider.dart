@@ -57,5 +57,21 @@ class PreferenciasAplicativoProvider extends ChangeNotifier {
     _tamanhoTexto = tamanho;
     notifyListeners();
   }
+}
 
+// Executa [salvar] (uma das gravações deste provider) e, se a gravação no
+// aparelho falhar, avisa a pessoa com [mensagemDeErro]. Usada pelas telas de
+// Aparência e Acessibilidade
+Future<void> salvarPreferencia(
+  BuildContext context,
+  Future<void> Function() salvar, {
+  required String mensagemDeErro,
+}) async {
+  try {
+    await salvar();
+  } on Exception catch (_) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(mensagemDeErro)));
+  }
 }

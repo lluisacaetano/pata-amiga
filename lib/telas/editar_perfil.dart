@@ -128,11 +128,26 @@ class _EditarPerfilState extends State<EditarPerfil> {
     if (!_formulario.currentState!.validate()) return;
     setState(() => _salvando = true);
     final provider = context.read<UsuarioProvider>();
-    await provider.atualizarUsuario(
-      nome: _nomeController.text.trim(),
-      telefone: _telefoneController.text.trim(),
-      foto: _fotoSelecionada?.path ?? provider.usuario.foto,
-    );
+    try {
+      await provider.atualizarUsuario(
+        nome: _nomeController.text.trim(),
+        telefone: _telefoneController.text.trim(),
+        foto: _fotoSelecionada?.path ?? provider.usuario.foto,
+      );
+    } catch (_) {
+      // Falha ao gravar no aparelho: destrava o botão e mantém a tela aberta
+      // com o que foi digitado, para a pessoa tentar de novo
+      if (!mounted) return;
+      setState(() => _salvando = false);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Não foi possível salvar agora. Tente de novo.'),
+          ),
+        );
+      return;
+    }
     if (!mounted) return;
     var aviso = 'Alterações salvas.';
     final ong = _ong;
@@ -302,6 +317,8 @@ class _EditarPerfilState extends State<EditarPerfil> {
           Row(
             children: [
               if (minha != null)
+                // Raio 22 mais o anel de 2 do AvatarDaOng dá 48 de diâmetro,
+                // o mesmo do círculo de "aguardando" (raio 24)
                 AvatarDaOng(ong: minha, raio: 22)
               else
                 CircleAvatar(

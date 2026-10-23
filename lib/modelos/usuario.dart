@@ -47,21 +47,4 @@ class Usuario {
     }
     return Usuario.fromMap(decoded);
   }
-
-  // Formato antigo, com os campos separados por "|" e a senha em texto.
-  // Não é usado pelo app
-  String toJson() => '$email|$senha|$nome|$telefone|${foto ?? ''}';
-
-  // Lê o formato antigo separado por "|". Não é usado pelo app
-  static Usuario formJson(String json) {
-    final parts = json.split('|');
-
-    return Usuario(
-      nome: parts[2],
-      email: parts[0],
-      senha: parts[1],
-      telefone: parts.length > 3 ? parts[3] : '',
-      foto: parts.length > 4 && parts[4].isNotEmpty ? parts[4] : null,
-    );
-  }
 }

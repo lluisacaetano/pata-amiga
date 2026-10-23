@@ -154,13 +154,21 @@ class AuthField extends StatelessWidget {
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(color: context.cores.textoFraco),
-            prefixIcon: Icon(prefixIcon, size: 20, color: context.cores.textoFraco),
+            prefixIcon: Icon(
+              prefixIcon,
+              size: 20,
+              color: context.cores.textoFraco,
+            ),
             suffixIcon: suffixIcon == null
                 ? null
                 : IconButton(
                     tooltip: obscureText ? 'Mostrar senha' : 'Ocultar senha',
                     onPressed: onSuffixPressed,
-                    icon: Icon(suffixIcon, size: 20, color: context.cores.textoFraco),
+                    icon: Icon(
+                      suffixIcon,
+                      size: 20,
+                      color: context.cores.textoFraco,
+                    ),
                   ),
             filled: true,
             fillColor: context.cores.cartao.withValues(alpha: 0.9),
@@ -171,7 +179,10 @@ class AuthField extends StatelessWidget {
             border: outline,
             enabledBorder: outline,
             focusedBorder: outline.copyWith(
-              borderSide: BorderSide(color: context.cores.principal, width: 1.5),
+              borderSide: BorderSide(
+                color: context.cores.principal,
+                width: 1.5,
+              ),
             ),
           ),
         ),
@@ -181,12 +192,14 @@ class AuthField extends StatelessWidget {
 }
 
 // Botão de largura total das telas de entrada. O principal é preenchido de
-// verde; o secundário é contornado. [leading] aparece antes do rótulo
+// verde; o secundário é contornado. [leading] aparece antes do rótulo e,
+// com [carregando], dá lugar a um indicador de progresso
 class AuthButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
   final bool primary;
   final Widget? leading;
+  final bool carregando;
 
   const AuthButton({
     super.key,
@@ -194,6 +207,7 @@ class AuthButton extends StatelessWidget {
     required this.onPressed,
     this.primary = true,
     this.leading,
+    this.carregando = false,
   });
 
   @override
@@ -219,7 +233,19 @@ class AuthButton extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (leading != null) ...[leading!, const SizedBox(width: 10)],
+        if (carregando) ...[
+          SizedBox.square(
+            dimension: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.2,
+              color: primary ? context.sobrePrincipal : context.cores.principal,
+            ),
+          ),
+          const SizedBox(width: 10),
+        ] else if (leading != null) ...[
+          leading!,
+          const SizedBox(width: 10),
+        ],
         Text(label),
       ],
     );
@@ -250,47 +276,6 @@ class AuthButton extends StatelessWidget {
           backgroundColor: WidgetStatePropertyAll(context.cores.cartao),
         ),
         child: contents,
-      ),
-    );
-  }
-}
-
-// A palavra "Google" nas cores da marca, usada no botão de entrar com o
-// Google
-class GoogleWordmark extends StatelessWidget {
-  const GoogleWordmark({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Text.rich(
-      TextSpan(
-        style: TextStyle(fontFamily: 'Roboto', fontWeight: FontWeight.w700),
-        children: [
-          TextSpan(
-            text: 'G',
-            style: TextStyle(color: Color(0xFF4285F4)),
-          ),
-          TextSpan(
-            text: 'o',
-            style: TextStyle(color: Color(0xFFEA4335)),
-          ),
-          TextSpan(
-            text: 'o',
-            style: TextStyle(color: Color(0xFFFBBC05)),
-          ),
-          TextSpan(
-            text: 'g',
-            style: TextStyle(color: Color(0xFF4285F4)),
-          ),
-          TextSpan(
-            text: 'l',
-            style: TextStyle(color: Color(0xFF34A853)),
-          ),
-          TextSpan(
-            text: 'e',
-            style: TextStyle(color: Color(0xFFEA4335)),
-          ),
-        ],
       ),
     );
   }

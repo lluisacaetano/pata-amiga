@@ -1,3 +1,5 @@
+// Biblioteca dart:async: unawaited, para regravar sem esperar.
+import 'dart:async';
 // Biblioteca dart:convert: converte texto JSON em objetos e vice-versa.
 import 'dart:convert';
 
@@ -23,14 +25,15 @@ class EstadoPataAmiga extends ChangeNotifier {
   static const _chaveCurtidos = 'curtidos';
   static const _chaveMeusCadastros = 'meus_cadastros';
 
-  // Nomes dos animais curtidos (a curtida é identificada pelo nome)
+  // Chaves dos animais curtidos ([Animal.chave]: o id ou, no animal só
+  // local, o nome)
   final Set<String> _curtidos = {};
   List<Animal> _animais = [];
   final List<Animal> _meusCadastros = [];
   // Evita notificar depois do dispose, quando uma leitura termina tarde
   bool _descartado = false;
 
-  bool estaCurtido(String nome) => _curtidos.contains(nome);
+  bool estaCurtido(String chave) => _curtidos.contains(chave);
 
   List<Animal> get meusCadastros => List.unmodifiable(_meusCadastros);
 
@@ -128,12 +131,35 @@ class EstadoPataAmiga extends ChangeNotifier {
 
   // Animais curtidos que ainda estão ativos (os finalizados saem da lista)
   List<Animal> get animaisCurtidos => _animais
-      .where((animal) => _curtidos.contains(animal.nome) && !animal.finalizado)
+      .where((animal) => _curtidos.contains(animal.chave) && !animal.finalizado)
       .toList(growable: false);
 
   void atualizarAnimais(List<Animal> animais) {
     _animais = List.unmodifiable(animais);
+    _converterCurtidasPorNome();
     notifyListeners();
+  }
+
+  // Curtidas gravadas pelo nome do animal (formato anterior) passam a usar a
+  // chave do animal de mesmo nome que já tem id, e a lista é regravada
+  void _converterCurtidasPorNome() {
+    final chaves = {for (final animal in _animais) animal.chave};
+    var mudou = false;
+    for (final curtida in _curtidos.toList()) {
+      if (chaves.contains(curtida)) continue;
+      final doMesmoNome = _animais.where((animal) => animal.nome == curtida);
+      if (doMesmoNome.isEmpty) continue;
+      _curtidos
+        ..remove(curtida)
+        ..addAll(doMesmoNome.map((animal) => animal.chave));
+      mudou = true;
+    }
+    if (mudou) unawaited(_salvarCurtidos());
+  }
+
+  Future<void> _salvarCurtidos() async {
+    final armazenamento = await SharedPreferences.getInstance();
+    await armazenamento.setStringList(_chaveCurtidos, _curtidos.toList());
   }
 
   // Substitui um animal pela versão nova no feed e nos cadastros locais, e
@@ -224,10 +250,10 @@ class EstadoPataAmiga extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Põe o animal no topo dos cadastros locais (substituindo o de mesmo
-  // nome) e salva a lista no aparelho
+  // Põe o animal no topo dos cadastros locais (substituindo o de mesma
+  // chave) e salva a lista no aparelho
   Future<void> registrarCadastro(Animal animal) async {
-    _meusCadastros.removeWhere((registro) => registro.nome == animal.nome);
+    _meusCadastros.removeWhere((registro) => registro.chave == animal.chave);
     _meusCadastros.insert(0, animal);
     notifyListeners();
 
@@ -238,22 +264,18 @@ class EstadoPataAmiga extends ChangeNotifier {
     );
   }
 
-  // Curte ou descurte o animal e salva as curtidas no aparelho
-  Future<void> alternarCurtida(String nome) async {
-    if (!_curtidos.add(nome)) _curtidos.remove(nome);
+  // Curte ou descurte o animal da chave e salva as curtidas no aparelho
+  Future<void> alternarCurtida(String chave) async {
+    if (!_curtidos.add(chave)) _curtidos.remove(chave);
     notifyListeners();
-
-    final armazenamento = await SharedPreferences.getInstance();
-    await armazenamento.setStringList(_chaveCurtidos, _curtidos.toList());
+    await _salvarCurtidos();
   }
 
   // Remove a curtida, se existir, e salva as curtidas no aparelho
-  Future<void> removerCurtida(String nome) async {
-    if (!_curtidos.remove(nome)) return;
+  Future<void> removerCurtida(String chave) async {
+    if (!_curtidos.remove(chave)) return;
     notifyListeners();
-
-    final armazenamento = await SharedPreferences.getInstance();
-    await armazenamento.setStringList(_chaveCurtidos, _curtidos.toList());
+    await _salvarCurtidos();
   }
 
   @override

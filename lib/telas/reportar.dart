@@ -167,7 +167,9 @@ class _ReportarScreenState extends State<ReportarScreen> {
       );
       // Denúncia registrada: a tela fecha sem o aviso de alterações
       navegador.pop();
-    } on Exception {
+    } catch (_) {
+      // Qualquer falha (rede, resposta inesperada da API) destrava o botão,
+      // para a pessoa poder tentar de novo
       if (!mounted) return;
       setState(() => _enviando = false);
       _avisar('Não foi possível registrar a denúncia agora. Tente de novo.');
@@ -856,22 +858,36 @@ class _Miniatura extends StatelessWidget {
       child: Stack(
         children: [
           FotoAnimal(caminho: caminho, altura: 92),
+          // O círculo visível é pequeno, mas a área de toque tem 48 x 48,
+          // o mínimo recomendado para acessibilidade
           Positioned(
-            top: 4,
-            right: 4,
-            child: Material(
-              color: context.cores.cartao,
-              shape: const CircleBorder(),
+            top: 0,
+            right: 0,
+            child: Semantics(
+              button: true,
+              label: 'Remover foto',
+              excludeSemantics: true,
               child: InkWell(
                 customBorder: const CircleBorder(),
                 onTap: aoRemover,
-                child: Padding(
-                  padding: const EdgeInsets.all(4),
-                  child: Icon(
-                    Icons.close,
-                    size: 16,
-                    color: context.cores.texto,
-                    semanticLabel: 'Remover foto',
+                child: SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: Center(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: context.cores.cartao,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(
+                          Icons.close,
+                          size: 16,
+                          color: context.cores.texto,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),

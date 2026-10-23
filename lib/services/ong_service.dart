@@ -4,6 +4,8 @@ import 'dart:convert';
 // Pacote http: faz as requisições à API (GET, POST, PATCH, DELETE).
 import 'package:http/http.dart' as http;
 
+// Arquivo json_da_api.dart: leitura da lista sem os itens com defeito.
+import '../modelos/json_da_api.dart';
 // Arquivo ong.dart: modelo da ONG e das pessoas ligadas a ela.
 import '../modelos/ong.dart';
 // Arquivo endereco_da_api.dart: endereço base da API.
@@ -32,7 +34,7 @@ class NaoEMembro implements Exception {
 // operação lê a versão atual da ONG na API antes de gravar, para não
 // sobrescrever mudanças feitas por outra pessoa
 class OngService {
-  // Todas as ONGs cadastradas
+  // Todas as ONGs cadastradas; o item com defeito fica de fora
   Future<List<Ong>> buscarOngs() async {
     final resposta = await http
         .get(Uri.parse('$enderecoDaApi/ongs'))
@@ -40,13 +42,14 @@ class OngService {
     if (resposta.statusCode != 200) {
       throw Exception('Erro ${resposta.statusCode}');
     }
-    return (jsonDecode(utf8.decode(resposta.bodyBytes)) as List)
-        .map((item) => Ong.fromJson(item as Map<String, dynamic>))
-        .toList();
+    return itensValidos(
+      jsonDecode(utf8.decode(resposta.bodyBytes)) as List,
+      Ong.fromJson,
+    );
   }
 
   // Uma ONG pelo id
-  Future<Ong> buscarOng(int id) async {
+  Future<Ong> buscarOng(String id) async {
     final resposta = await http
         .get(Uri.parse('$enderecoDaApi/ongs/$id'))
         .timeout(const Duration(seconds: 8));

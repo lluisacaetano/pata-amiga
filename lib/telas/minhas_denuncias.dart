@@ -9,12 +9,15 @@ import '../routes/route_names.dart';
 import '../services/denuncia_service.dart';
 // Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo campo_de_busca.dart: campo de busca arredondado do topo da lista.
+import '../widgets/campo_de_busca.dart';
 // Arquivo foto_animal.dart: exibição da primeira foto da denúncia.
 import '../widgets/foto_animal.dart';
 
 // Lista das denúncias registradas neste aparelho (os protocolos ficam
 // salvos localmente), com a situação atual de cada uma buscada na API.
-// Permite buscar pelo protocolo e atualizar puxando a lista para baixo.
+// Permite buscar pelo protocolo e atualizar puxando a lista para baixo ou
+// pelo botão "Tentar de novo" quando falta conexão.
 //
 // [servico] permite injetar um serviço falso nos testes.
 class MinhasDenuncias extends StatefulWidget {
@@ -107,114 +110,149 @@ class _MinhasDenunciasState extends State<MinhasDenuncias> {
       body: RefreshIndicator(
         color: context.cores.principal,
         onRefresh: _carregar,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          children: [
-            if (todas != null && todas.isNotEmpty) ...[
-              TextField(
-                controller: _pesquisa,
-                onChanged: (texto) => setState(() => _busca = texto),
-                style: const TextStyle(fontSize: 15),
-                decoration: InputDecoration(
-                  isDense: true,
-                  filled: true,
-                  fillColor: context.cores.cartao,
-                  hintText: 'Buscar pelo protocolo',
-                  hintStyle: TextStyle(
-                    fontSize: 14,
-                    color: context.cores.textoFraco,
-                  ),
-                  prefixIcon: Icon(
-                    Icons.search,
-                    color: context.cores.textoFraco,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: BorderSide(color: context.cores.borda),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: BorderSide(
-                      color: context.cores.principal,
-                      width: 1.5,
+        // LayoutBuilder dá a altura da área, para centralizar os avisos de
+        // lista vazia e sem conexão no meio da tela, como no feed
+        child: LayoutBuilder(
+          builder: (context, limites) => ListView(
+            // Sempre rolável, para o puxar para atualizar funcionar mesmo
+            // com a lista vazia
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            children: [
+              if (todas != null && todas.isNotEmpty) ...[
+                CampoDeBusca(
+                  controller: _pesquisa,
+                  dica: 'Buscar pelo protocolo',
+                  aoMudar: (texto) => setState(() => _busca = texto),
+                ),
+                const SizedBox(height: 16),
+                // Sem conexão, mas com a lista anterior: aviso discreto
+                if (_semConexao)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Sem conexão: a situação pode estar '
+                            'desatualizada.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: context.cores.textoFraco,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: _carregar,
+                          style: TextButton.styleFrom(
+                            foregroundColor: context.cores.principal,
+                          ),
+                          child: const Text('Tentar de novo'),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 16),
+              ],
+              if (denuncias == null)
+                SizedBox(
+                  height: limites.maxHeight - 32,
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: context.cores.principal,
+                    ),
+                  ),
+                )
+              else if (denuncias.isEmpty && buscando)
+                Padding(
+                  padding: const EdgeInsets.only(top: 24),
+                  child: Text(
+                    'Nenhuma denúncia com esse protocolo.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: context.cores.textoFraco,
+                    ),
+                  ),
+                )
+              else if (denuncias.isEmpty)
+                SizedBox(
+                  height: limites.maxHeight - 32,
+                  child: Center(
+                    child: _semConexao
+                        ? _Aviso(
+                            icone: Icons.wifi_off,
+                            titulo: 'Sem conexão',
+                            texto:
+                                'Não foi possível buscar a situação das '
+                                'denúncias. Confira a internet e tente de '
+                                'novo.',
+                            aoTentarDeNovo: _carregar,
+                          )
+                        : const _Aviso(
+                            icone: Icons.shield_outlined,
+                            titulo: 'Nenhuma denúncia feita neste aparelho.',
+                            texto:
+                                'As denúncias que você registrar pelo '
+                                'Reportar aparecem aqui, com o protocolo e a '
+                                'situação.',
+                          ),
+                  ),
+                )
+              else
+                for (final denuncia in denuncias)
+                  _CartaoDaDenuncia(denuncia: denuncia),
             ],
-            if (_semConexao)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Text(
-                  'Sem conexão: não foi possível atualizar a situação. Puxe '
-                  'para baixo para tentar de novo.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: context.cores.textoFraco,
-                  ),
-                ),
-              ),
-            if (denuncias == null)
-              Padding(
-                padding: const EdgeInsets.only(top: 40),
-                child: Center(
-                  child: CircularProgressIndicator(
-                    color: context.cores.principal,
-                  ),
-                ),
-              )
-            else if (denuncias.isEmpty && buscando)
-              Padding(
-                padding: const EdgeInsets.only(top: 24),
-                child: Text(
-                  'Nenhuma denúncia com esse protocolo.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: context.cores.textoFraco,
-                  ),
-                ),
-              )
-            else if (denuncias.isEmpty && !_semConexao)
-              Padding(
-                padding: const EdgeInsets.only(top: 32),
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.shield_outlined,
-                      size: 44,
-                      color: context.cores.principal,
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Nenhuma denúncia feita neste aparelho.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'As denúncias que você registrar pelo Reportar aparecem '
-                      'aqui, com o protocolo e a situação.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: context.cores.textoFraco,
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            else
-              for (final denuncia in denuncias)
-                _CartaoDaDenuncia(denuncia: denuncia),
-          ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+// Aviso centralizado da lista: ícone, título e explicação. Com
+// [aoTentarDeNovo], mostra o botão para buscar de novo
+class _Aviso extends StatelessWidget {
+  const _Aviso({
+    required this.icone,
+    required this.titulo,
+    required this.texto,
+    this.aoTentarDeNovo,
+  });
+
+  final IconData icone;
+  final String titulo;
+  final String texto;
+  final VoidCallback? aoTentarDeNovo;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icone, size: 44, color: context.cores.principal),
+        const SizedBox(height: 12),
+        Text(
+          titulo,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          texto,
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 14, color: context.cores.textoFraco),
+        ),
+        if (aoTentarDeNovo != null) ...[
+          const SizedBox(height: 12),
+          TextButton(
+            onPressed: aoTentarDeNovo,
+            style: TextButton.styleFrom(
+              foregroundColor: context.cores.principal,
+            ),
+            child: const Text('Tentar de novo'),
+          ),
+        ],
+      ],
     );
   }
 }

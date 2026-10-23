@@ -2,8 +2,6 @@
 import 'package:flutter/material.dart';
 // Pacote flutter_map: mapa interativo com os blocos do OpenStreetMap.
 import 'package:flutter_map/flutter_map.dart';
-// Pacote geolocator: lê a localização atual do aparelho e pede a permissão.
-import 'package:geolocator/geolocator.dart';
 // Pacote latlong2: coordenadas (latitude e longitude) e cálculo de distâncias.
 import 'package:latlong2/latlong.dart';
 // Pacote provider: compartilha estado entre as telas e as reconstrói.
@@ -19,12 +17,14 @@ import '../modelos/avistamento.dart';
 import '../modelos/camadas_do_mapa.dart';
 // Arquivo ponto_de_alimentacao.dart: ponto de alimentação e sua situação.
 import '../modelos/ponto_de_alimentacao.dart';
+// Arquivo texto.dart: o texto "hoje", "ontem" ou "há N dias".
+import '../modelos/texto.dart';
 // Arquivo usuario_provider.dart: dados do usuário logado.
 import '../provider/usuario_provider.dart';
 // Arquivo route_names.dart: nomes das rotas de navegação.
 import '../routes/route_names.dart';
-// Arquivo alimentacao_service.dart: acesso à API dos pontos de alimentação.
-import '../services/alimentacao_service.dart';
+// Arquivo localizacao_service.dart: leitura da posição atual do aparelho.
+import '../services/localizacao_service.dart';
 // Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
 // Arquivo barra_inferior.dart: barra de navegação inferior.
@@ -35,12 +35,17 @@ import '../widgets/escolha_de_tipo.dart';
 import '../widgets/etiqueta.dart';
 // Arquivo foto_animal.dart: exibição da foto do animal.
 import '../widgets/foto_animal.dart';
-// Arquivo icone_de_tigela.dart: ícone de osso dos comedouros.
-import '../widgets/icone_de_tigela.dart';
+// Arquivo icone_de_osso.dart: ícone de osso dos comedouros.
+import '../widgets/icone_de_osso.dart';
+// Arquivo pino_da_patinha.dart: pino com patinha usado nos mapas.
+import '../widgets/pino_da_patinha.dart';
+// Arquivo mapa_de_local.dart: coordenada do centro de Formiga.
+import '../widgets/mapa_de_local.dart';
 
 // Cor de cada tipo de animal no mapa, usada no pino e na legenda do filtro:
 // perdidos na cor de destaque, resgates na cor principal
-Color corDaCamada(BuildContext context, TipoRegistro tipo) => tipo == TipoRegistro.perdido
+Color corDaCamada(BuildContext context, TipoRegistro tipo) =>
+    tipo == TipoRegistro.perdido
     ? context.cores.destaque
     : context.cores.principal;
 
@@ -66,7 +71,9 @@ extension SobreACamada on CamadaDoFiltro {
 // Cor do pino de um ponto de alimentação: ocre para comedouro (e para o
 // ponto que é os dois), azul para bebedouro
 Color corDoPonto(BuildContext context, TipoDePonto tipo) =>
-    tipo == TipoDePonto.bebedouro ? context.cores.agua : context.cores.alimentacao;
+    tipo == TipoDePonto.bebedouro
+    ? context.cores.agua
+    : context.cores.alimentacao;
 
 // Indica se há usuário logado; cadastrar ponto e registrar abastecimento
 // exigem login
@@ -246,14 +253,12 @@ class TelaMapa extends StatefulWidget {
     this.mostrarAlimentacao = false,
     this.comMapaDeFundo = true,
     this.focar,
-    this.alimentacao,
   });
 
   final Set<TipoRegistro> ligadas;
   final bool mostrarAlimentacao;
   final bool comMapaDeFundo;
   final Animal? focar;
-  final AlimentacaoService? alimentacao;
 
   @override
   State<TelaMapa> createState() => _TelaMapaState();
@@ -295,8 +300,6 @@ class _TelaMapaState extends State<TelaMapa> {
     super.dispose();
   }
 
-  static const LatLng _centroInicial = LatLng(-20.4647, -45.4264); // Formiga-MG
-
   LatLng? _minhaPosicao;
   // O painel "Perto de você" aparece depois que o usuário toca na mira
   bool _mostrarPerto = false;
@@ -316,28 +319,7 @@ class _TelaMapaState extends State<TelaMapa> {
     setState(() => _buscandoLocalizacao = true);
 
     try {
-      if (!await Geolocator.isLocationServiceEnabled()) {
-        _aviso('Ative a localização do aparelho.');
-        return;
-      }
-
-      var permissao = await Geolocator.checkPermission();
-      if (permissao == LocationPermission.denied) {
-        permissao = await Geolocator.requestPermission();
-      }
-      if (permissao == LocationPermission.denied ||
-          permissao == LocationPermission.deniedForever) {
-        _aviso('Permissão de localização negada.');
-        return;
-      }
-
-      final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 15),
-        ),
-      );
-
+      final pos = await const LocalizacaoService().posicaoAtual();
       final ponto = LatLng(pos.latitude, pos.longitude);
       if (!mounted) return;
       setState(() {
@@ -345,14 +327,12 @@ class _TelaMapaState extends State<TelaMapa> {
         _mostrarPerto = true;
       });
       _controller.move(ponto, 15);
-    } catch (e) {
-      _aviso('Não foi possível obter a localização.');
+    } on ErroDeLocalizacao catch (erro) {
+      _aviso(erro.texto);
     } finally {
       if (mounted) setState(() => _buscandoLocalizacao = false);
     }
   }
-
-  late final _servicoDeAlimentacao = widget.alimentacao ?? AlimentacaoService();
 
   // Abre a folha inferior com o resumo do ponto de alimentação
   void _mostrarPonto(PontoDeAlimentacao ponto) {
@@ -360,8 +340,7 @@ class _TelaMapaState extends State<TelaMapa> {
       context: context,
       backgroundColor: context.cores.cartao,
       showDragHandle: true,
-      builder: (_) =>
-          _ResumoDoPonto(ponto: ponto, servico: _servicoDeAlimentacao),
+      builder: (_) => _ResumoDoPonto(ponto: ponto),
     );
   }
 
@@ -401,7 +380,7 @@ class _TelaMapaState extends State<TelaMapa> {
           mapController: _controller,
           options: MapOptions(
             initialCenter: _pinoEmFoco == null
-                ? _centroInicial
+                ? centroDeFormiga
                 : LatLng(_pinoEmFoco.latitude, _pinoEmFoco.longitude),
             initialZoom: _pinoEmFoco == null ? 14 : 17,
           ),
@@ -505,7 +484,7 @@ class _TelaMapaState extends State<TelaMapa> {
             bottom: base + 72,
             child: FloatingActionButton(
               heroTag: 'btn_novo_ponto',
-              backgroundColor: Colors.white,
+              backgroundColor: context.cores.cartao,
               tooltip: 'Cadastrar ponto de alimentação',
               onPressed: () =>
                   Navigator.pushNamed(context, AppRoutes.cadastrarPonto),
@@ -546,14 +525,17 @@ class _TelaMapaState extends State<TelaMapa> {
           bottom: base,
           child: FloatingActionButton(
             heroTag: 'btn_minha_localizacao',
-            backgroundColor: Colors.white,
+            backgroundColor: context.cores.cartao,
             tooltip: 'Minha localização',
             onPressed: _irParaMinhaLocalizacao,
             child: _buscandoLocalizacao
-                ? const SizedBox(
+                ? SizedBox(
                     width: 22,
                     height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: context.cores.principal,
+                    ),
                   )
                 : Icon(Icons.my_location, color: context.cores.principal),
           ),
@@ -576,63 +558,6 @@ class _Pino extends StatelessWidget {
       button: true,
       label: rotulo,
       child: PinoDaPatinha(cor: cor),
-    );
-  }
-}
-
-// Desenho do pino: círculo na cor da camada com um símbolo dentro e uma
-// ponta embaixo que marca o local exato
-class PinoDaPatinha extends StatelessWidget {
-  const PinoDaPatinha({
-    super.key,
-    required this.cor,
-    this.tamanho = 38,
-    this.simbolo,
-  });
-
-  final Color cor;
-  final double tamanho;
-  // Símbolo dentro do círculo; sem ele, usa a patinha
-  final Widget? simbolo;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: tamanho,
-      height: tamanho + 10,
-      child: Stack(
-        alignment: Alignment.topCenter,
-        children: [
-          // Ponta: um quadrado girado 45 graus, metade escondida pelo círculo
-          Positioned(
-            bottom: 2,
-            child: Transform.rotate(
-              angle: 0.785398,
-              child: Container(width: 12, height: 12, color: cor),
-            ),
-          ),
-          Container(
-            width: tamanho,
-            height: tamanho,
-            decoration: BoxDecoration(
-              color: cor,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2.5),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x33000000),
-                  blurRadius: 4,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            alignment: Alignment.center,
-            child:
-                simbolo ??
-                Icon(Icons.pets, color: Colors.white, size: tamanho * 0.5),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -741,7 +666,10 @@ class _ResumoDoAnimal extends StatelessWidget {
                 ),
                 Text(
                   ' · ${animal.publicadoHa(DateTime.now())}',
-                  style: TextStyle(color: context.cores.textoFraco, fontSize: 13),
+                  style: TextStyle(
+                    color: context.cores.textoFraco,
+                    fontSize: 13,
+                  ),
                 ),
               ],
             ),
@@ -784,33 +712,24 @@ class _ResumoDoAnimal extends StatelessWidget {
 
 // Resumo de um ponto de alimentação: tipo, local, situação e último
 // abastecimento. Quem está logado pode registrar um abastecimento
-class _ResumoDoPonto extends StatefulWidget {
-  const _ResumoDoPonto({required this.ponto, required this.servico});
+class _ResumoDoPonto extends StatelessWidget {
+  const _ResumoDoPonto({required this.ponto});
 
   final PontoDeAlimentacao ponto;
-  final AlimentacaoService servico;
 
-  @override
-  State<_ResumoDoPonto> createState() => _ResumoDoPontoState();
-}
-
-class _ResumoDoPontoState extends State<_ResumoDoPonto> {
   // Abre a tela de registro, que confere a localização antes de gravar
-  Future<void> _abasteci() async {
-    await Navigator.pushNamed(
-      context,
-      AppRoutes.registrarAbastecimento,
-      arguments: widget.ponto,
-    );
-  }
+  void _abasteci(BuildContext context) => Navigator.pushNamed(
+    context,
+    AppRoutes.registrarAbastecimento,
+    arguments: ponto,
+  );
 
   @override
   Widget build(BuildContext context) {
     final estado = PataAmigaScope.of(context);
     final agora = DateTime.now();
-    final ultimo = ultimoAbastecimento(widget.ponto, estado.abastecimentos);
+    final ultimo = ultimoAbastecimento(ponto, estado.abastecimentos);
     final situacao = situacaoDoPonto(ultimo, agora);
-    final ponto = widget.ponto;
 
     return SafeArea(
       child: Padding(
@@ -825,9 +744,10 @@ class _ResumoDoPontoState extends State<_ResumoDoPonto> {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: corDoPonto(context, ponto.tipo).withValues(
-                      alpha: 0.15,
-                    ),
+                    color: corDoPonto(
+                      context,
+                      ponto.tipo,
+                    ).withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
                   child: Center(
@@ -893,7 +813,7 @@ class _ResumoDoPontoState extends State<_ResumoDoPonto> {
                         ? 'Ainda não foi abastecido'
                         : [
                             'Último abastecimento '
-                                '${haQuantoTempo(ultimo.data, agora)}',
+                                '${haQuantosDias(ultimo.data, agora)}',
                             if (ultimo.registradoPor.isNotEmpty)
                               'por ${ultimo.registradoPor}',
                           ].join(', '),
@@ -923,7 +843,7 @@ class _ResumoDoPontoState extends State<_ResumoDoPonto> {
                     agora,
                   );
                   return FilledButton.icon(
-                    onPressed: jaRegistrou ? null : _abasteci,
+                    onPressed: jaRegistrou ? null : () => _abasteci(context),
                     icon: Icon(
                       jaRegistrou ? Icons.check_circle : Icons.check,
                       size: 18,
@@ -1036,7 +956,10 @@ class _PertoDeVoce extends StatelessWidget {
                   // Crédito obrigatório do mapa, coberto pelo painel
                   Text(
                     '© OpenStreetMap',
-                    style: TextStyle(fontSize: 10, color: context.cores.textoFraco),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: context.cores.textoFraco,
+                    ),
                   ),
                   IconButton(
                     tooltip: 'Fechar',

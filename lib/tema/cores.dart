@@ -140,6 +140,8 @@ ThemeData temaPataAmiga({Brightness brilho = Brightness.light}) {
     alimentacao: escuro ? const Color(0xFFFFCB72) : Cores.alimentacao,
     agua: escuro ? const Color(0xFF91C8F0) : Cores.agua,
   );
+  // Conteúdo sobre o verde principal: o mesmo em botões, etiquetas e abas
+  final sobrePrincipal = escuro ? const Color(0xFF102016) : Colors.white;
   final base = ThemeData(
     brightness: brilho,
     useMaterial3: true,
@@ -154,7 +156,7 @@ ThemeData temaPataAmiga({Brightness brilho = Brightness.light}) {
     scaffoldBackgroundColor: paleta.fundo,
     colorScheme: base.colorScheme.copyWith(
       primary: paleta.principal,
-      onPrimary: escuro ? const Color(0xFF102016) : Colors.white,
+      onPrimary: sobrePrincipal,
       surface: paleta.cartao,
       onSurface: paleta.texto,
       outline: paleta.borda,
@@ -176,7 +178,7 @@ ThemeData temaPataAmiga({Brightness brilho = Brightness.light}) {
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: paleta.principal,
-        foregroundColor: base.colorScheme.onPrimary,
+        foregroundColor: sobrePrincipal,
       ),
     ),
   );

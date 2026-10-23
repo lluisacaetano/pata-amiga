@@ -59,19 +59,30 @@ class PerfilOng extends StatelessWidget {
     final texto = Uri.encodeComponent(
       'Olá! Vi a ${ong.nome} no Pata Amiga e queria saber mais.',
     );
-    final abriu = await launchUrl(
+    await _abrirLink(
+      mensageiro,
       Uri.parse('https://wa.me/$numero?text=$texto'),
-      mode: LaunchMode.externalApplication,
+      'Não foi possível abrir o WhatsApp neste aparelho.',
     );
-    if (!abriu) {
-      mensageiro
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(
-            content: Text('Não foi possível abrir o WhatsApp neste aparelho.'),
-          ),
-        );
+  }
+
+  // Abre um link em outro aplicativo. Se não abrir (ou a plataforma lançar
+  // exceção por não haver app que o trate), mostra o aviso recebido
+  static Future<void> _abrirLink(
+    ScaffoldMessengerState mensageiro,
+    Uri endereco,
+    String aviso,
+  ) async {
+    bool abriu;
+    try {
+      abriu = await launchUrl(endereco, mode: LaunchMode.externalApplication);
+    } on Exception {
+      abriu = false;
     }
+    if (abriu) return;
+    mensageiro
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(aviso)));
   }
 
   // Copia a chave Pix para a área de transferência e confirma com um aviso
@@ -90,12 +101,13 @@ class PerfilOng extends StatelessWidget {
   }
 
   // Abre a localização da ONG no app de mapas, para traçar a rota
-  Future<void> _abrirNoMapa(Ong ong) => launchUrl(
+  Future<void> _abrirNoMapa(BuildContext context, Ong ong) => _abrirLink(
+    ScaffoldMessenger.of(context),
     Uri.parse(
       'https://www.google.com/maps/search/?api=1'
       '&query=${ong.latitude},${ong.longitude}',
     ),
-    mode: LaunchMode.externalApplication,
+    'Não foi possível abrir o mapa neste aparelho.',
   );
 
   @override
@@ -209,12 +221,15 @@ class PerfilOng extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Text(
-            atual.descricao,
-            style: const TextStyle(fontSize: 15, height: 1.45),
-          ),
-          const SizedBox(height: 18),
+          // Sem descrição, o espaço reservado a ela não aparece
+          if (atual.descricao.trim().isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text(
+              atual.descricao,
+              style: const TextStyle(fontSize: 15, height: 1.45),
+            ),
+          ],
+          SizedBox(height: atual.descricao.trim().isNotEmpty ? 18 : 16),
           SizedBox(
             height: 50,
             child: ElevatedButton.icon(
@@ -297,7 +312,7 @@ class PerfilOng extends StatelessWidget {
               child: PreviaDoMapa(
                 ponto: LatLng(atual.latitude!, atual.longitude!),
                 cor: context.cores.principal,
-                aoTocar: () => _abrirNoMapa(atual),
+                aoTocar: () => _abrirNoMapa(context, atual),
               ),
             ),
         ],

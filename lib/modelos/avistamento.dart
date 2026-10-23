@@ -1,10 +1,15 @@
 // Arquivo animal.dart: modelo do animal, usado para achar os avistamentos dele.
 import 'animal.dart';
+// Arquivo json_da_api.dart: leitura e gravação do id da API.
+import 'json_da_api.dart';
+// Arquivo texto.dart: o texto "hoje", "ontem" ou "há N dias".
+import 'texto.dart';
 
 // O registro de que alguém viu um animal perdido: quando, onde e, se houver,
 // uma foto
 class Avistamento {
-  final int? id;
+  // O id gerado pela API, sempre em texto
+  final String? id;
   // A chave do animal avistado (Animal.chave): o id da API ou, se o animal
   // existe só no aparelho, o nome
   final String animal;
@@ -32,9 +37,12 @@ class Avistamento {
     required this.registradoEm,
   });
 
+  // Cria o avistamento a partir do JSON da API. A data e as coordenadas são
+  // obrigatórias; sem elas, gera erro
   factory Avistamento.fromJson(Map<String, dynamic> json) => Avistamento(
-    id: (json['id'] as num?)?.toInt(),
-    animal: json['animal'].toString(),
+    id: idDaApi(json['id']),
+    // A chave pode ter sido gravada como número (o id do animal)
+    animal: idDaApi(json['animal']) ?? '',
     data: DateTime.parse(json['data'] as String),
     latitude: (json['latitude'] as num).toDouble(),
     longitude: (json['longitude'] as num).toDouble(),
@@ -46,7 +54,7 @@ class Avistamento {
   );
 
   Map<String, dynamic> toJson() => {
-    if (id != null) 'id': id,
+    if (id != null) 'id': idParaApi(id!),
     'animal': animal,
     'data': data.toIso8601String(),
     'latitude': latitude,
@@ -63,14 +71,7 @@ class Avistamento {
       [rua, bairro].where((parte) => parte.trim().isNotEmpty).join(', ');
 
   // Há quanto tempo foi o avistamento: "hoje", "ontem" ou "há 3 dias"
-  String vistoHa(DateTime agora) {
-    final hoje = DateTime(agora.year, agora.month, agora.day);
-    final dia = DateTime(data.year, data.month, data.day);
-    final dias = hoje.difference(dia).inDays;
-    if (dias <= 0) return 'hoje';
-    if (dias == 1) return 'ontem';
-    return 'há $dias dias';
-  }
+  String vistoHa(DateTime agora) => haQuantosDias(data, agora);
 }
 
 // Os avistamentos de um animal, do mais recente para o mais antigo. Com a

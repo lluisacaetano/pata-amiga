@@ -497,7 +497,9 @@ class _CadastroOngState extends State<CadastroOng> {
                                 local.ponto.longitude == salva.longitude) {
                               return;
                             }
-                            _local = local;
+                            // Reconstrói para o aviso de endereço faltando
+                            // sumir assim que o pino tiver rua e bairro
+                            setState(() => _local = local);
                           },
                         ),
                         if (_tentou &&

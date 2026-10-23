@@ -1,9 +1,6 @@
 // Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
 
-// Arquivo cores.dart: paleta de cores do tema claro e escuro.
-import '../../tema/cores.dart';
-
 // Qual documento legal a tela mostra
 enum TipoDocumentoLegal { termos, privacidade }
 
@@ -36,7 +33,7 @@ class DocumentoLegalScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Rascunho informativo — atualizado em 22 de outubro de 2026.',
+            'Rascunho informativo, sujeito a revisão antes da publicação.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 16),
@@ -50,10 +47,6 @@ class DocumentoLegalScreen extends StatelessWidget {
             Text(secao.conteudo, style: Theme.of(context).textTheme.bodyMedium),
             const SizedBox(height: 16),
           ],
-          Card(
-            color: context.cores.destaque.withValues(alpha: 0.15),
-            child: const Padding(padding: EdgeInsets.all(12)),
-          ),
         ],
       ),
     );
@@ -81,8 +74,9 @@ const _termos = [
   _SecaoDocumento(
     '2. Cadastro e funcionamento',
     'Na versão atual, os dados do perfil e a sessão são mantidos localmente '
-        'no dispositivo. O campo de senha do formulário não é usado para '
-        'autenticação nem armazenado pelo aplicativo. Não compartilhe uma '
+        'no dispositivo. A senha é conferida no login e guardada apenas como '
+        'um resumo criptográfico, nunca em texto. Como a conta existe só '
+        'neste aparelho, não há recuperação de senha por e-mail. Não use uma '
         'senha que você use em outros serviços.',
   ),
   _SecaoDocumento(
@@ -132,9 +126,9 @@ const _privacidade = [
     '2. Dados tratados',
     'O cadastro solicita nome, e-mail e telefone. Na versão atual, essas '
         'informações de perfil e a identificação da sessão são salvas no '
-        'armazenamento local do dispositivo. O formulário também solicita '
-        'uma senha, mas o aplicativo não a utiliza para autenticação nem a '
-        'armazena. Registros de animais, contatos informados, avistamentos, '
+        'armazenamento local do dispositivo. A senha é guardada no aparelho '
+        'apenas como um resumo criptográfico, usado para conferir o login. '
+        'Registros de animais, contatos informados, avistamentos, '
         'pontos de alimentação, fotos e informações de localização podem ser '
         'incluídos nas publicações conforme os campos preenchidos.',
   ),

@@ -24,28 +24,29 @@ String rotuloPlural(TipoRegistro tipo) {
 // Compartilhado pelo feed, cadastro, perfil e escolha de ONG
 ButtonStyle estiloDasAbas(BuildContext context, Color fundoDaOpcao) =>
     ButtonStyle(
-  backgroundColor: WidgetStateProperty.resolveWith(
-    (estados) => estados.contains(WidgetState.selected)
-        ? context.cores.principal
-        : fundoDaOpcao,
-  ),
-  foregroundColor: WidgetStateProperty.resolveWith(
-    (estados) =>
-        estados.contains(WidgetState.selected) ? context.sobrePrincipal : context.cores.texto,
-  ),
-  textStyle: WidgetStateProperty.resolveWith(
-    (estados) => TextStyle(
-      fontSize: 14,
-      fontWeight: estados.contains(WidgetState.selected)
-          ? FontWeight.w600
-          : FontWeight.w500,
-    ),
-  ),
-  side: WidgetStatePropertyAll(BorderSide(color: context.cores.borda)),
-  shape: WidgetStatePropertyAll(
-    RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-  ),
-);
+      backgroundColor: WidgetStateProperty.resolveWith(
+        (estados) => estados.contains(WidgetState.selected)
+            ? context.cores.principal
+            : fundoDaOpcao,
+      ),
+      foregroundColor: WidgetStateProperty.resolveWith(
+        (estados) => estados.contains(WidgetState.selected)
+            ? context.sobrePrincipal
+            : context.cores.texto,
+      ),
+      textStyle: WidgetStateProperty.resolveWith(
+        (estados) => TextStyle(
+          fontSize: 14,
+          fontWeight: estados.contains(WidgetState.selected)
+              ? FontWeight.w600
+              : FontWeight.w500,
+        ),
+      ),
+      side: WidgetStatePropertyAll(BorderSide(color: context.cores.borda)),
+      shape: WidgetStatePropertyAll(
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
 
 // Abas com os três tipos de registro (adoção, perdido e resgate). Começa sem
 // seleção quando [escolhido] é nulo; [rotulo] define o texto de cada aba
@@ -75,7 +76,10 @@ class EscolhaDeTipo extends StatelessWidget {
         selected: escolhido == null ? const <TipoRegistro>{} : {escolhido!},
         emptySelectionAllowed: true,
         showSelectedIcon: false,
-        onSelectionChanged: (escolha) => aoEscolher(escolha.first),
+        // Tocar na aba já escolhida devolve um conjunto vazio: nada muda
+        onSelectionChanged: (escolha) {
+          if (escolha.isNotEmpty) aoEscolher(escolha.first);
+        },
         style: estiloDasAbas(context, fundoDaOpcao),
       ),
     );

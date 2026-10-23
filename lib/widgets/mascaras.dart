@@ -61,3 +61,14 @@ class MascaraDeEmail extends TextInputFormatter {
     );
   }
 }
+
+// Validador do campo de e-mail usado no login e no cadastro: exige o
+// preenchimento e o formato nome@dominio.ext
+String? validarEmail(String? valor) {
+  final email = valor?.trim() ?? '';
+  if (email.isEmpty) return 'Informe seu e-mail.';
+  if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+    return 'Digite um e-mail válido.';
+  }
+  return null;
+}

@@ -1,24 +1,19 @@
 // Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
 
-// Arquivo auth_components.dart: fundo, campos e botões das telas de entrada.
+// Arquivo auth_components.dart: fundo, logotipo e botões das telas de entrada.
 import 'auth_components.dart';
+// Arquivo route_names.dart: nomes das rotas de navegação.
+import '../../routes/route_names.dart';
 // Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../../tema/cores.dart';
-// Arquivo mascaras.dart: máscara do campo de e-mail.
-import '../../widgets/mascaras.dart';
 
-// Tela de recuperação de senha. Apenas visual: o botão ainda não envia
-// nenhum e-mail
-class RecoverPasswordScreen extends StatefulWidget {
+// Tela de "Esqueci a senha". A conta existe só neste aparelho e o app não
+// tem servidor de e-mail, então não há link de recuperação: a tela explica
+// isso e oferece criar a conta de novo com o mesmo e-mail, o que define uma
+// senha nova e mantém os cadastros e curtidas guardados no aparelho
+class RecoverPasswordScreen extends StatelessWidget {
   const RecoverPasswordScreen({super.key});
-
-  @override
-  State<RecoverPasswordScreen> createState() => _RecoverPasswordScreenState();
-}
-
-class _RecoverPasswordScreenState extends State<RecoverPasswordScreen> {
-  final _emailController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +36,9 @@ class _RecoverPasswordScreenState extends State<RecoverPasswordScreen> {
             ),
             const SizedBox(height: 10),
             Text(
-              'Informe o e-mail cadastrado para receber as instruções de redefinição.',
+              'Sua conta fica guardada só neste aparelho, por isso não '
+              'enviamos link por e-mail. Para definir uma senha nova, crie a '
+              'conta de novo com o mesmo e-mail.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: 'Roboto',
@@ -51,16 +48,12 @@ class _RecoverPasswordScreenState extends State<RecoverPasswordScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            AuthField(
-              label: 'E-mail',
-              hint: 'Digite seu e-mail',
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              inputFormatters: [MascaraDeEmail()],
-              prefixIcon: Icons.mail_outline,
+            AuthButton(
+              label: 'Criar a conta de novo',
+              onPressed: () =>
+                  Navigator.of(context)
+                      .pushReplacementNamed(AppRoutes.register),
             ),
-            const SizedBox(height: 20),
-            AuthButton(label: 'Enviar link de recuperação', onPressed: () {}),
             const SizedBox(height: 10),
             Center(
               child: TextButton(
@@ -72,11 +65,5 @@ class _RecoverPasswordScreenState extends State<RecoverPasswordScreen> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    super.dispose();
   }
 }

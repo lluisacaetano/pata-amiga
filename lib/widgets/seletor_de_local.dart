@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 // Pacote geocoding: converte coordenadas em endereço e endereço em coordenadas.
 import 'package:geocoding/geocoding.dart';
-// Pacote geolocator: lê a localização atual do aparelho e pede a permissão.
-import 'package:geolocator/geolocator.dart';
 // Pacote latlong2: coordenadas (latitude e longitude) e cálculo de distâncias.
 import 'package:latlong2/latlong.dart';
 
@@ -13,6 +11,8 @@ import 'package:latlong2/latlong.dart';
 import '../dados/bairros_formiga.dart';
 // Arquivo bairro_service.dart: bairro pelo CEP ou pela rua (ViaCEP).
 import '../services/bairro_service.dart';
+// Arquivo localizacao_service.dart: posição atual do aparelho para a mira.
+import '../services/localizacao_service.dart';
 // Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
 // Arquivo mapa_de_local.dart: mapa pequeno com pino fixo no centro.
@@ -43,6 +43,11 @@ class _SeletorDeLocalState extends State<SeletorDeLocal> {
   final _mapa = MapController();
   final _busca = TextEditingController();
   final _bairros = BairroService();
+  // Permissão e leitura da posição para a mira; o texto de erro termina
+  // com o que fazer no lugar
+  final _localizacao = const LocalizacaoService(
+    alternativa: 'Arraste o mapa até o local.',
+  );
   late LatLng _ponto = widget.inicio;
   ({String rua, String bairro})? _endereco;
   bool _lendoEndereco = false;
@@ -154,29 +159,10 @@ class _SeletorDeLocalState extends State<SeletorDeLocal> {
     setState(() => _buscandoPosicao = true);
     String? aviso;
     try {
-      if (!await Geolocator.isLocationServiceEnabled()) {
-        aviso = 'Ligue a localização do aparelho para usar a mira.';
-      } else {
-        var permissao = await Geolocator.checkPermission();
-        if (permissao == LocationPermission.denied) {
-          permissao = await Geolocator.requestPermission();
-        }
-        if (permissao == LocationPermission.denied ||
-            permissao == LocationPermission.deniedForever) {
-          aviso = 'Sem permissão de localização. Arraste o mapa até o local.';
-        } else {
-          final posicao = await Geolocator.getCurrentPosition(
-            locationSettings: const LocationSettings(
-              timeLimit: Duration(seconds: 15),
-            ),
-          );
-          if (mounted) {
-            _moverPara(LatLng(posicao.latitude, posicao.longitude));
-          }
-        }
-      }
-    } on Exception {
-      aviso = 'Não foi possível encontrar a localização. Arraste o mapa.';
+      final posicao = await _localizacao.posicaoAtual();
+      if (mounted) _moverPara(LatLng(posicao.latitude, posicao.longitude));
+    } on ErroDeLocalizacao catch (erro) {
+      aviso = erro.texto;
     }
     if (!mounted) return;
     setState(() {
@@ -263,14 +249,19 @@ class _SeletorDeLocalState extends State<SeletorDeLocal> {
         // Endereço do ponto atual, ou o estado da consulta
         Row(
           children: [
-            Icon(Icons.place_outlined, size: 16, color: context.cores.principal),
+            Icon(
+              Icons.place_outlined,
+              size: 16,
+              color: context.cores.principal,
+            ),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
                 _lendoEndereco
                     ? 'Buscando o endereço deste ponto…'
                     : lugar.isEmpty
-                    ? 'Endereço não encontrado. O ponto do mapa será usado.'
+                    ? 'Endereço não encontrado. Escreva a rua ou arraste o '
+                          'pino até ela.'
                     : lugar,
                 style: TextStyle(
                   fontSize: 14,

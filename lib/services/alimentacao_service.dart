@@ -4,6 +4,8 @@ import 'dart:convert';
 // Pacote http: faz as requisições à API (GET, POST, PATCH, DELETE).
 import 'package:http/http.dart' as http;
 
+// Arquivo json_da_api.dart: leitura da lista sem os itens com defeito.
+import '../modelos/json_da_api.dart';
 // Arquivo ponto_de_alimentacao.dart: modelos do ponto e do abastecimento.
 import '../modelos/ponto_de_alimentacao.dart';
 // Arquivo endereco_da_api.dart: endereço base da API.
@@ -40,17 +42,15 @@ class AlimentacaoService {
     return jsonDecode(utf8.decode(resposta.bodyBytes)) as Map<String, dynamic>;
   }
 
-  Future<List<PontoDeAlimentacao>> buscarPontos() async =>
-      (await _buscar('pontosAlimentacao'))
-          .map(
-            (item) => PontoDeAlimentacao.fromJson(item as Map<String, dynamic>),
-          )
-          .toList();
+  // Os comedouros e bebedouros; o item com defeito fica de fora
+  Future<List<PontoDeAlimentacao>> buscarPontos() async => itensValidos(
+    await _buscar('pontosAlimentacao'),
+    PontoDeAlimentacao.fromJson,
+  );
 
+  // Os abastecimentos registrados; o item com defeito fica de fora
   Future<List<Abastecimento>> buscarAbastecimentos() async =>
-      (await _buscar('abastecimentos'))
-          .map((item) => Abastecimento.fromJson(item as Map<String, dynamic>))
-          .toList();
+      itensValidos(await _buscar('abastecimentos'), Abastecimento.fromJson);
 
   // Os dois cadastros devolvem o item como a API gravou, já com o id
   Future<PontoDeAlimentacao> cadastrarPonto(PontoDeAlimentacao ponto) async =>

@@ -1,10 +1,12 @@
 // Arquivo dono.dart: modelo do responsável pelo animal.
 import 'dono.dart';
+// Arquivo json_da_api.dart: leitura e gravação do id da API.
+import 'json_da_api.dart';
+// Arquivo texto.dart: primeira letra maiúscula e "há N dias".
+import 'texto.dart';
 
-// Devolve o texto com a primeira letra maiúscula. Os dados do cadastro são
-// gravados em minúsculas e passam por aqui antes de aparecer na tela
-String comMaiuscula(String texto) =>
-    texto.isEmpty ? texto : texto[0].toUpperCase() + texto.substring(1);
+// Quem importa o modelo do animal também recebe comMaiuscula
+export 'texto.dart' show comMaiuscula;
 
 // O tipo de publicação: animal para adoção, perdido ou que precisa de resgate
 enum TipoRegistro { adocao, perdido, resgate }
@@ -54,8 +56,9 @@ extension RotuloStatus on StatusAnimal {
 // Um animal publicado no feed, com os dados do cadastro, o responsável e a
 // localização. É o mesmo formato usado pela API e pelo cache do aparelho
 class Animal {
-  // O id gerado pela API; fica nulo enquanto o animal existe só no aparelho
-  final int? id;
+  // O id gerado pela API, sempre em texto; fica nulo enquanto o animal
+  // existe só no aparelho
+  final String? id;
   final String nome;
   final String especie;
   final String raca;
@@ -83,7 +86,7 @@ class Animal {
   final String responsavelEmail;
   // A ONG em nome da qual o animal foi publicado; nulo quando a publicação é
   // da própria pessoa. O perfil da ONG lista os animais por este campo
-  final int? ongId;
+  final String? ongId;
   final List<String> fotos;
   final DateTime publicadoEm;
   // As coordenadas do animal, preenchidas quando o cadastro usou a
@@ -121,73 +124,77 @@ class Animal {
   });
 
   // Cria o animal a partir do JSON da API ou do cache do aparelho. Os campos
-  // com valor padrão (`?? ''`, `?? false`) podem faltar; os demais são
-  // obrigatórios e um JSON sem eles gera erro. Campo novo no modelo precisa
-  // entrar aqui e no toJson
+  // de texto ausentes ficam vazios e o status ausente vale "disponível". Só o
+  // tipo e a data de publicação são obrigatórios: sem eles, ou com um tipo
+  // desconhecido, gera erro. Campo novo no modelo precisa entrar aqui e no
+  // toJson
   factory Animal.fromJson(Map<String, dynamic> json) => Animal(
-        id: (json['id'] as num?)?.toInt(),
-        nome: json['nome'] as String,
-        especie: json['especie'] as String,
-        raca: json['raca'] as String? ?? '',
-        sexo: json['sexo'] as String,
-        porte: json['porte'] as String,
-        idade: json['idade'] as String,
-        peso: json['peso'] as String? ?? '',
-        cor: json['cor'] as String? ?? '',
-        rua: json['rua'] as String? ?? '',
-        bairro: json['bairro'] as String,
-        cidade: json['cidade'] as String,
-        // Os enums são gravados pelo nome do valor ("adocao", "disponivel")
-        tipo: TipoRegistro.values.byName(json['tipo'] as String),
-        status: StatusAnimal.values
-            .byName(json['status'] as String? ?? 'disponivel'),
-        castrado: json['castrado'] as bool? ?? false,
-        vacinado: json['vacinado'] as bool? ?? false,
-        vermifugado: json['vermifugado'] as bool? ?? false,
-        observacoes: json['observacoes'] as String? ?? '',
-        necessidadesEspeciais: json['necessidadesEspeciais'] as String? ?? '',
-        // O dono vem como objeto aninhado dentro do animal
-        dono: Dono.fromJson(json['dono'] as Map<String, dynamic>),
-        responsavelEmail: json['responsavelEmail'] as String? ?? '',
-        ongId: (json['ongId'] as num?)?.toInt(),
-        fotos: List<String>.from(json['fotos'] as List? ?? []),
-        // A data é gravada como texto no formato ISO 8601
-        publicadoEm: DateTime.parse(json['publicadoEm'] as String),
-        // `num?` aceita inteiro, decimal ou nulo
-        latitude: (json['latitude'] as num?)?.toDouble(),
-        longitude: (json['longitude'] as num?)?.toDouble(),
-      );
+    id: idDaApi(json['id']),
+    nome: json['nome'] as String? ?? '',
+    especie: json['especie'] as String? ?? '',
+    raca: json['raca'] as String? ?? '',
+    sexo: json['sexo'] as String? ?? '',
+    porte: json['porte'] as String? ?? '',
+    idade: json['idade'] as String? ?? '',
+    peso: json['peso'] as String? ?? '',
+    cor: json['cor'] as String? ?? '',
+    rua: json['rua'] as String? ?? '',
+    bairro: json['bairro'] as String? ?? '',
+    cidade: json['cidade'] as String? ?? '',
+    // Os enums são gravados pelo nome do valor ("adocao", "disponivel")
+    tipo: TipoRegistro.values.byName(json['tipo'] as String),
+    status:
+        StatusAnimal.values
+            .where((status) => status.name == json['status'])
+            .firstOrNull ??
+        StatusAnimal.disponivel,
+    castrado: json['castrado'] as bool? ?? false,
+    vacinado: json['vacinado'] as bool? ?? false,
+    vermifugado: json['vermifugado'] as bool? ?? false,
+    observacoes: json['observacoes'] as String? ?? '',
+    necessidadesEspeciais: json['necessidadesEspeciais'] as String? ?? '',
+    // O dono vem como objeto aninhado dentro do animal
+    dono: Dono.fromJson(json['dono'] as Map<String, dynamic>? ?? const {}),
+    responsavelEmail: json['responsavelEmail'] as String? ?? '',
+    ongId: idDaApi(json['ongId']),
+    fotos: List<String>.from(json['fotos'] as List? ?? []),
+    // A data é gravada como texto no formato ISO 8601
+    publicadoEm: DateTime.parse(json['publicadoEm'] as String),
+    // `num?` aceita inteiro, decimal ou nulo
+    latitude: (json['latitude'] as num?)?.toDouble(),
+    longitude: (json['longitude'] as num?)?.toDouble(),
+  );
 
   // Converte o animal no JSON enviado à API e gravado no cache. Precisa
   // espelhar o fromJson: campo que faltar aqui se perde ao salvar
   Map<String, dynamic> toJson() => {
-        if (id != null) 'id': id,
-        'nome': nome,
-        'especie': especie,
-        'raca': raca,
-        'sexo': sexo,
-        'porte': porte,
-        'idade': idade,
-        'peso': peso,
-        'cor': cor,
-        'rua': rua,
-        'bairro': bairro,
-        'cidade': cidade,
-        'tipo': tipo.name,
-        'status': status.name,
-        'castrado': castrado,
-        'vacinado': vacinado,
-        'vermifugado': vermifugado,
-        'observacoes': observacoes,
-        'necessidadesEspeciais': necessidadesEspeciais,
-        'dono': dono.toJson(),
-        'responsavelEmail': responsavelEmail,
-        if (ongId != null) 'ongId': ongId,
-        'fotos': fotos,
-        'publicadoEm': publicadoEm.toIso8601String(),
-        'latitude': latitude,
-        'longitude': longitude,
-      };
+    if (id != null) 'id': idParaApi(id!),
+    'nome': nome,
+    'especie': especie,
+    'raca': raca,
+    'sexo': sexo,
+    'porte': porte,
+    'idade': idade,
+    'peso': peso,
+    'cor': cor,
+    'rua': rua,
+    'bairro': bairro,
+    'cidade': cidade,
+    'tipo': tipo.name,
+    'status': status.name,
+    'castrado': castrado,
+    'vacinado': vacinado,
+    'vermifugado': vermifugado,
+    'observacoes': observacoes,
+    'necessidadesEspeciais': necessidadesEspeciais,
+    'dono': dono.toJson(),
+    'responsavelEmail': responsavelEmail,
+    if (ongId != null) 'ongId': idParaApi(ongId!),
+    'fotos': fotos,
+    'publicadoEm': publicadoEm.toIso8601String(),
+    'latitude': latitude,
+    'longitude': longitude,
+  };
 
   // A foto de capa, que é a primeira da lista; vazia quando não há fotos
   String get foto => fotos.isEmpty ? '' : fotos.first;
@@ -197,7 +204,7 @@ class Animal {
 
   // O identificador usado pelos avistamentos: o id da API ou, quando o
   // animal existe só no aparelho, o nome
-  String get chave => id?.toString() ?? nome;
+  String get chave => id ?? nome;
 
   // Se o animal já teve desfecho (adotado, encontrado ou resgatado)
   bool get finalizado => status != StatusAnimal.disponivel;
@@ -234,23 +241,13 @@ class Animal {
 
   // Espécie, raça e sexo, exibidos abaixo do nome na ficha do animal. Os
   // campos vazios ficam de fora
-  String get identidade => [especie, raca, sexo]
-      .where((campo) => campo.trim().isNotEmpty)
-      .map(comMaiuscula)
-      .join(' · ');
+  String get identidade => [
+    especie,
+    raca,
+    sexo,
+  ].where((campo) => campo.trim().isNotEmpty).map(comMaiuscula).join(' · ');
 
   // Há quanto tempo o animal foi publicado ("hoje", "ontem", "há 3 dias",
-  // "há 2 meses"). Compara só as datas, sem a hora; o mês conta 30 dias
-  String publicadoHa(DateTime agora) {
-    final hoje = DateTime(agora.year, agora.month, agora.day);
-    final dia = DateTime(publicadoEm.year, publicadoEm.month, publicadoEm.day);
-    final dias = hoje.difference(dia).inDays;
-
-    if (dias <= 0) return 'hoje';
-    if (dias == 1) return 'ontem';
-    if (dias <= 30) return 'há $dias dias';
-
-    final meses = dias ~/ 30;
-    return meses == 1 ? 'há 1 mês' : 'há $meses meses';
-  }
+  // "há 2 meses")
+  String publicadoHa(DateTime agora) => haQuantosDias(publicadoEm, agora);
 }

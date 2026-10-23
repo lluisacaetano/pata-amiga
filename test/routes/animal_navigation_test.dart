@@ -171,7 +171,8 @@ class _OngsFalsas extends OngService {
   Future<List<Ong>> buscarOngs() async => [...ongs];
 
   @override
-  Future<Ong> buscarOng(int id) async => ongs.firstWhere((ong) => ong.id == id);
+  Future<Ong> buscarOng(String id) async =>
+      ongs.firstWhere((ong) => ong.id == id);
 
   @override
   Future<Ong> salvarOng(Ong ong) async {
@@ -347,15 +348,12 @@ void main() {
     expect(find.text('DETALHES'), findsOneWidget);
     await tester.tap(find.byTooltip('Adicionar aos curtidos'));
     await tester.pump();
-    expect(estado.estaCurtido(animalSelecionado.nome), isTrue);
+    expect(estado.estaCurtido(animalSelecionado.chave), isTrue);
 
     await tester.tap(find.byTooltip('Voltar'));
     await tester.pumpAndSettle();
 
-    expect(
-      find.text('Você voltou dos detalhes de ${animalSelecionado.nome}.'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('Você voltou dos detalhes'), findsNothing);
     expect(find.text(animalSelecionado.nome.toUpperCase()), findsOneWidget);
 
     expect(find.text('Mapa'), findsOneWidget);
@@ -399,7 +397,7 @@ void main() {
     addTearDown(estado.dispose);
     final animal = animaisMock.first;
     estado.atualizarAnimais([animal]);
-    await estado.alternarCurtida(animal.nome);
+    await estado.alternarCurtida(animal.chave);
 
     await abrirPerfil(tester, estado: estado, usuario: UsuarioProvider());
 
@@ -407,12 +405,12 @@ void main() {
 
     await tester.tap(find.byTooltip('Remover dos curtidos'));
     await tester.pumpAndSettle();
-    expect(estado.estaCurtido(animal.nome), isFalse);
+    expect(estado.estaCurtido(animal.chave), isFalse);
     expect(find.text('Nenhum animal curtido ainda'), findsOneWidget);
 
     await tester.tap(find.text('Desfazer'));
     await tester.pumpAndSettle();
-    expect(estado.estaCurtido(animal.nome), isTrue);
+    expect(estado.estaCurtido(animal.chave), isTrue);
     expect(find.text(animal.nome.toUpperCase()), findsOneWidget);
   });
 
@@ -425,7 +423,7 @@ void main() {
       'status': StatusAnimal.adotado.name,
     });
     estado.atualizarAnimais([adotado]);
-    await estado.alternarCurtida(adotado.nome);
+    await estado.alternarCurtida(adotado.chave);
 
     await abrirPerfil(tester, estado: estado, usuario: UsuarioProvider());
 
@@ -1119,27 +1117,28 @@ void main() {
     final adocao = noMapa('Thor', TipoRegistro.adocao);
     final semPonto = noMapa('Bidu', TipoRegistro.perdido, comPonto: false);
     final todos = [perdido, resgate, adocao, semPonto];
+    List<Animal> noMapaCom(Set<TipoRegistro> ligadas) => [
+      for (final pino in pinosDoMapa(todos, const [], ligadas)) pino.animal,
+    ];
 
     test('adoção nunca vai para o mapa', () {
       expect(
-        animaisNoMapa(todos, TipoRegistro.values.toSet()),
+        noMapaCom(TipoRegistro.values.toSet()),
         isNot(contains(adocao)),
       );
     });
 
     test('animal sem coordenada fica fora do mapa', () {
-      expect(
-        animaisNoMapa(todos, camadasDoMapa.toSet()),
-        isNot(contains(semPonto)),
-      );
+      expect(noMapaCom(camadasDoMapa.toSet()), isNot(contains(semPonto)));
     });
 
     test('só aparecem as camadas ligadas', () {
-      expect(animaisNoMapa(todos, {TipoRegistro.perdido}), [perdido]);
-      expect(animaisNoMapa(todos, {TipoRegistro.resgate}), [resgate]);
-      expect(animaisNoMapa(todos, {}), isEmpty);
+      expect(noMapaCom({TipoRegistro.perdido}), [perdido]);
+      expect(noMapaCom({TipoRegistro.resgate}), [resgate]);
+      expect(noMapaCom({}), isEmpty);
     });
   });
+
 
   Future<void> abrirMapa(WidgetTester tester, List<Animal> animais) async {
     SharedPreferences.setMockInitialValues({});
@@ -1542,7 +1541,7 @@ void main() {
     int id = 1,
     TipoDePonto tipo = TipoDePonto.comedouro,
   }) => PontoDeAlimentacao(
-    id: id,
+    id: '$id',
     tipo: tipo,
     referencia: 'Perto dos bancos',
     rua: 'Praça Ferreira Pires',
@@ -1555,7 +1554,7 @@ void main() {
   group('pontos de alimentação', () {
     final hoje = DateTime(2026, 10, 19, 15);
     Abastecimento em(DateTime data, {int ponto = 1}) =>
-        Abastecimento(ponto: ponto, data: data, registradoPor: 'Ana');
+        Abastecimento(ponto: '$ponto', data: data, registradoPor: 'Ana');
 
     test('a situação segue os dias desde o último abastecimento', () {
       expect(
@@ -1629,7 +1628,6 @@ void main() {
                 ligadas: const {},
                 mostrarAlimentacao: true,
                 comMapaDeFundo: false,
-                alimentacao: servico,
               ),
             ),
             routes: {
@@ -1658,7 +1656,7 @@ void main() {
       logado: false,
       abastecimentos: [
         Abastecimento(
-          ponto: 1,
+          ponto: '1',
           data: DateTime.now().subtract(const Duration(days: 4)),
           registradoPor: 'Carla',
         ),
@@ -1704,7 +1702,7 @@ void main() {
 
     await tester.tap(find.text('Confirmar abastecimento'));
     await tester.pumpAndSettle();
-    expect(servico.abastecimentos.single.ponto, 1);
+    expect(servico.abastecimentos.single.ponto, '1');
     expect(servico.abastecimentos.single.email, 'luisa@pata.com');
 
     // De volta ao resumo: abastecido, e o botão não deixa repetir hoje
@@ -1752,7 +1750,7 @@ void main() {
     }) => verificarAbastecimento(
       latitudeDoPonto: -20.4613736,
       longitudeDoPonto: -45.432412,
-      idDoPonto: 1,
+      idDoPonto: '1',
       latitudeDaPessoa: latitude,
       longitudeDaPessoa: longitude,
       email: 'luisa@pata.com',
@@ -1771,17 +1769,17 @@ void main() {
 
     test('a mesma pessoa não registra o mesmo ponto duas vezes no dia', () {
       final hojeCedo = Abastecimento(
-        ponto: 1,
+        ponto: '1',
         data: DateTime(2026, 10, 19, 8),
         email: 'luisa@pata.com',
       );
       final deOutraPessoa = Abastecimento(
-        ponto: 1,
+        ponto: '1',
         data: DateTime(2026, 10, 19, 8),
         email: 'ana@pata.com',
       );
       final ontem = Abastecimento(
-        ponto: 1,
+        ponto: '1',
         data: DateTime(2026, 10, 18, 8),
         email: 'luisa@pata.com',
       );
@@ -1834,7 +1832,7 @@ void main() {
   // Perto de você: o GPS falso está na Praça Olegário Maciel
   group('perto de você', () {
     final pertinho = PontoDeAlimentacao(
-      id: 7,
+      id: '7',
       tipo: TipoDePonto.bebedouro,
       rua: 'Praça Doutor Olinto Fonseca',
       bairro: 'Centro',
@@ -1843,7 +1841,7 @@ void main() {
       cadastradoEm: DateTime(2026, 10, 1),
     );
     final longe = PontoDeAlimentacao(
-      id: 8,
+      id: '8',
       tipo: TipoDePonto.comedouro,
       latitude: -20.4870323,
       longitude: -45.4361244,
@@ -2339,7 +2337,7 @@ void main() {
       expect(find.text('Alterações salvas.'), findsOneWidget);
       // O que o formulário não mostra continua igual
       final gravado = api.editados.single;
-      expect(gravado.id, 7);
+      expect(gravado.id, '7');
       expect(gravado.status, StatusAnimal.encontrado);
       expect(gravado.tipo, TipoRegistro.perdido);
       expect(gravado.responsavelEmail, email);
@@ -2800,7 +2798,7 @@ void main() {
       expect(find.text('Mostrar 1 animal'), findsOneWidget);
     });
 
-    testWidgets('sem nenhum animal que combine, o feed oferece limpar', (
+    testWidgets('sem nenhum animal que combine, o botão fica desativado', (
       tester,
     ) async {
       await abrirFeed(tester);
@@ -2816,14 +2814,37 @@ void main() {
         'Centro',
       );
       expect(find.text('Nenhum animal combina'), findsOneWidget);
+      final botao = tester.widget<FilledButton>(
+        find.ancestor(
+          of: find.text('Nenhum animal combina'),
+          matching: find.byType(FilledButton),
+        ),
+      );
+      expect(botao.onPressed, isNull);
+    });
 
-      await tester.tap(find.text('Nenhum animal combina'));
+    testWidgets('filtro que esvazia outra aba, o feed oferece limpar', (
+      tester,
+    ) async {
+      await abrirFeed(tester);
+      await tester.tap(find.byTooltip('Filtros'));
+      await tester.pumpAndSettle();
+      // Na Água Vermelha só há a Mel, para adoção; Perdidos fica vazio
+      await escolherNoSelect(
+        tester,
+        'Digite para buscar o bairro',
+        'Água Vermelha',
+        'Água Vermelha',
+      );
+      await tester.tap(find.text('Mostrar 1 animal'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Perdidos'));
       await tester.pumpAndSettle();
       expect(find.text('Nenhum animal com esses filtros.'), findsOneWidget);
 
       await tester.tap(find.text('Limpar filtros').last);
       await tester.pumpAndSettle();
-      expect(find.text('THOR'), findsOneWidget);
+      expect(find.text('REX'), findsOneWidget);
     });
   });
 
@@ -2831,7 +2852,7 @@ void main() {
     const emailDaOng = 'ong@example.org';
 
     Ong ongDeExemplo({int? id = 1, String email = emailDaOng}) => Ong(
-      id: id,
+      id: id?.toString(),
       nome: 'Abrigo Focinhos (exemplo)',
       descricao: 'Resgata cães e gatos.',
       politicaDeAdocao: 'Visita e termo de adoção.',
@@ -3114,7 +3135,7 @@ void main() {
       await tester.tap(find.text('Salvar alterações'));
       await tester.pumpAndSettle();
       // Gravou por cima da mesma ONG, sem criar outra
-      expect(servico.salvas.single.id, 1);
+      expect(servico.salvas.single.id, '1');
       expect(servico.ongs, hasLength(1));
     });
 
@@ -3253,7 +3274,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(servico.salvas.single.fazParte('maria@pata.com'), isTrue);
-      expect(estado.ongDe('maria@pata.com')?.id, 1);
+      expect(estado.ongDe('maria@pata.com')?.id, '1');
       expect(
         find.text('Maria agora faz parte de Abrigo Focinhos (exemplo).'),
         findsOneWidget,
@@ -3516,7 +3537,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final enviado = api.editados.single;
-      expect(enviado.ongId, 1);
+      expect(enviado.ongId, '1');
       expect(enviado.dono.nome, 'Abrigo Focinhos (exemplo)');
       expect(enviado.responsavelEmail, 'luisa@pata.com');
       // Sai de Meus registros e passa a ser da ONG
@@ -4091,7 +4112,7 @@ void main() {
       await tester.ensureVisible(find.text('Salvar alterações'));
       await tester.tap(find.text('Salvar alterações'));
       await tester.pumpAndSettle();
-      expect(api.editados.single.ongId, 1);
+      expect(api.editados.single.ongId, '1');
     });
 
     testWidgets('o Início também pergunta antes de largar um formulário', (

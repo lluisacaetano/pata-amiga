@@ -298,7 +298,11 @@ class _PainelDeFiltrosState extends State<PainelDeFiltros> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
               child: FilledButton(
-                onPressed: () => Navigator.pop(context, _filtros),
+                // Sem nenhum animal que combine, aplicar só esvaziaria o
+                // feed: o botão fica desativado até a pessoa afrouxar o filtro
+                onPressed: quantos == 0
+                    ? null
+                    : () => Navigator.pop(context, _filtros),
                 style: FilledButton.styleFrom(
                   backgroundColor: context.cores.principal,
                   minimumSize: const Size.fromHeight(52),
@@ -389,7 +393,7 @@ class _Abas extends StatelessWidget {
       child: SegmentedButton<String>(
         segments: [
           for (final opcao in opcoes)
-            ButtonSegment(value: opcao, label: Text(rotuloDaOpcao(opcao))),
+            ButtonSegment(value: opcao, label: Text(comMaiuscula(opcao))),
         ],
         selected: marcadas,
         multiSelectionEnabled: true,

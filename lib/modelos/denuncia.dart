@@ -1,6 +1,9 @@
 // Biblioteca dart:math: Random, para sortear o número do protocolo.
 import 'dart:math';
 
+// Arquivo json_da_api.dart: leitura e gravação do id da API.
+import 'json_da_api.dart';
+
 // O tipo de ocorrência relatada na denúncia
 enum TipoDeDenuncia { mausTratos, abandono, negligencia, outros }
 
@@ -27,7 +30,8 @@ extension RotuloDaSituacao on SituacaoDaDenuncia {
 // Uma denúncia de maus-tratos, abandono ou negligência. Na anônima, o nome e
 // o contato de quem denunciou não são enviados à API
 class Denuncia {
-  final int? id;
+  // O id gerado pela API, sempre em texto
+  final String? id;
   final String protocolo;
   final TipoDeDenuncia tipo;
   final String descricao;
@@ -78,7 +82,7 @@ class Denuncia {
   // Cria a denúncia a partir do JSON da API. Campos ausentes ou valores
   // desconhecidos recebem um padrão, sem gerar erro
   factory Denuncia.fromJson(Map<String, dynamic> json) => Denuncia(
-    id: (json['id'] as num?)?.toInt(),
+    id: idDaApi(json['id']),
     protocolo: json['protocolo'] as String? ?? '',
     tipo:
         TipoDeDenuncia.values
@@ -108,7 +112,7 @@ class Denuncia {
 
   // Converte a denúncia no JSON enviado à API
   Map<String, dynamic> toJson() => {
-    if (id != null) 'id': id,
+    if (id != null) 'id': idParaApi(id!),
     'protocolo': protocolo,
     'tipo': tipo.name,
     'descricao': descricao,
@@ -135,11 +139,17 @@ class Denuncia {
         ? null
         : '${dois(ocorridaEm!.day)}/${dois(ocorridaEm!.month)}/'
               '${ocorridaEm!.year}';
+    // Rua e bairro vazios ficam de fora, sem deixar vírgula sobrando
+    final local = [
+      rua,
+      bairro,
+      'Formiga',
+    ].where((parte) => parte.trim().isNotEmpty).join(', ');
     return [
       'Denúncia registrada no Pata Amiga',
       'Protocolo: $protocolo',
       'Tipo: ${tipo.rotulo}',
-      'Local: $rua, $bairro, Formiga',
+      'Local: $local',
       if (quando != null) 'Quando: $quando',
       'O que aconteceu: $descricao',
       if (fotos.isNotEmpty) 'Fotos: ${fotos.length}, em anexo',

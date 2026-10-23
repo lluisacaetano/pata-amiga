@@ -6,19 +6,6 @@ import '../routes/route_names.dart';
 // Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
 
-// Mostra um aviso rápido para itens cuja tela ainda não existe, para que o
-// toque dê retorno em vez de parecer um botão quebrado
-void avisarProximaSprint(BuildContext context) {
-  ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar()
-    ..showSnackBar(
-      const SnackBar(
-        content: Text('Esta tela entra em uma próxima sprint.'),
-        duration: Duration(seconds: 2),
-      ),
-    );
-}
-
 // Navegação da barra inferior, centralizada para que todas as telas tenham o
 // mesmo comportamento. [indice] é o item tocado e [atual], o item da tela
 // aberta. Tocar no item atual não faz nada, exceto Início, que sempre volta
@@ -49,8 +36,6 @@ void navegarPelaBarra(
       navegador.pushNamed(AppRoutes.ongs);
     case 4:
       navegador.pushNamed(AppRoutes.perfilUsuario);
-    default:
-      avisarProximaSprint(context);
   }
 }
 

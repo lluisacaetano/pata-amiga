@@ -72,10 +72,13 @@ class DetalhesAnimal extends StatelessWidget {
       'https://wa.me/${animal.dono.numeroNoWhatsApp}?text=$texto',
     );
 
-    final abriu = await launchUrl(
-      endereco,
-      mode: LaunchMode.externalApplication,
-    );
+    bool abriu;
+    try {
+      abriu = await launchUrl(endereco, mode: LaunchMode.externalApplication);
+    } on Exception {
+      // Sem aplicativo que trate o link, a plataforma lança exceção
+      abriu = false;
+    }
     if (!abriu) {
       mensageiro
         ..hideCurrentSnackBar()
@@ -122,10 +125,11 @@ class DetalhesAnimal extends StatelessWidget {
     final estado = PataAmigaScope.of(context);
     // A rota pode ter recebido uma cópia antiga; vale a versão do estado
     final animal = estado.atual(this.animal);
-    final email = context.read<UsuarioProvider?>()?.usuario.email ?? '';
+    // watch: a ficha se atualiza se a sessão mudar enquanto está aberta
+    final email = context.watch<UsuarioProvider?>()?.usuario.email ?? '';
     final ehResponsavel = estado.podeMudarStatus(animal, email);
     final minhaOng = estado.ongDe(email);
-    final estaCurtido = estado.estaCurtido(animal.nome);
+    final estaCurtido = estado.estaCurtido(animal.chave);
     final perdido = animal.tipo == TipoRegistro.perdido;
 
     return Scaffold(
@@ -156,7 +160,7 @@ class DetalhesAnimal extends StatelessWidget {
             tooltip: estaCurtido
                 ? 'Remover dos curtidos'
                 : 'Adicionar aos curtidos',
-            onPressed: () => estado.alternarCurtida(animal.nome),
+            onPressed: () => estado.alternarCurtida(animal.chave),
             icon: Icon(estaCurtido ? Icons.favorite : Icons.favorite_border),
           ),
         ],
@@ -175,7 +179,7 @@ class DetalhesAnimal extends StatelessWidget {
               _ControleDoStatus(
                 animal: animal,
                 aoMudar: () => mudarStatus(context, animal, api: api),
-                aoEditar: () => editarRegistro(context, animal, api: api),
+                aoEditar: () => editarRegistro(context, animal),
                 aoPublicar: () => publicarParaAdocao(context, animal, api: api),
                 // Quem faz parte de uma ONG pode transferir para ela um
                 // cadastro que ainda não é de nenhuma ONG
@@ -562,7 +566,11 @@ class _Avistamentos extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.visibility_outlined, size: 18, color: context.cores.principal),
+              Icon(
+                Icons.visibility_outlined,
+                size: 18,
+                color: context.cores.principal,
+              ),
               SizedBox(width: 8),
               Text(
                 'Avistamentos',
@@ -745,7 +753,9 @@ class _AvisarOTutor extends StatelessWidget {
             const SizedBox(height: 6),
             TextButton(
               onPressed: () => Navigator.pop(context),
-              style: TextButton.styleFrom(foregroundColor: context.cores.textoFraco),
+              style: TextButton.styleFrom(
+                foregroundColor: context.cores.textoFraco,
+              ),
               child: const Text('Agora não'),
             ),
           ],
@@ -810,12 +820,18 @@ class _QuadroDoLugar extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   secundario,
-                  style: TextStyle(fontSize: 13, color: context.cores.principal),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: context.cores.principal,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Publicado ${animal.publicadoHa(DateTime.now())}',
-                  style: TextStyle(fontSize: 12, color: context.cores.textoFraco),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: context.cores.textoFraco,
+                  ),
                 ),
               ],
             ),
@@ -839,7 +855,9 @@ class _Recado extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(12, 2, 4, 2),
       decoration: BoxDecoration(
-        border: Border(left: BorderSide(color: context.cores.principal, width: 3)),
+        border: Border(
+          left: BorderSide(color: context.cores.principal, width: 3),
+        ),
       ),
       child: Text(
         texto,

@@ -1,10 +1,14 @@
 // Biblioteca dart:async: Timer da verificação periódica e unawaited.
 import 'dart:async';
 
+// Pacote flutter/foundation: kIsWeb, para não ler arquivo local na web.
+import 'package:flutter/foundation.dart';
 // Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
 // Pacote flutter/services: leitura dos assets (rootBundle).
 import 'package:flutter/services.dart';
+// Pacote http: faz as requisições à API (GET, POST, PATCH, DELETE).
+import 'package:http/http.dart' as http;
 // Pacote provider: compartilha estado entre as telas e as reconstrói.
 import 'package:provider/provider.dart';
 // Pacote share_plus: abre o compartilhamento do sistema (WhatsApp etc.).
@@ -22,8 +26,6 @@ import '../modelos/dono.dart';
 import '../modelos/filtros_do_feed.dart';
 // Arquivo ong.dart: modelo da ONG, para o nome nas etiquetas de filtro.
 import '../modelos/ong.dart';
-// Arquivo route_names.dart: nomes das rotas de navegação.
-import '../routes/route_names.dart';
 // Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
 // Arquivo barra_inferior.dart: barra de navegação inferior.
@@ -34,7 +36,7 @@ import '../widgets/card_animal.dart';
 import '../widgets/escolha_de_tipo.dart';
 // Arquivo painel_de_filtros.dart: painel inferior com os filtros.
 import '../widgets/painel_de_filtros.dart';
-// Arquivo app_router.dart: configuração das rotas do aplicativo.
+// Arquivo app_router.dart: rotas do aplicativo e os nomes delas (AppRoutes).
 import '../routes/app_router.dart';
 // Arquivo alimentacao_service.dart: pontos de alimentação na API.
 import '../services/alimentacao_service.dart';
@@ -246,7 +248,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
       setState(() {
         _atualizando = false;
         if (salvos == null) _estado = EstadoFeed.erro;
-        // Com cache, o estado continua "cache" e a faixa laranja do topo
+        // Com cache, o estado continua "cache" e a faixa do topo
         // avisa que os dados podem estar desatualizados
       });
     }
@@ -309,20 +311,10 @@ class _FeedAdocaoState extends State<FeedAdocao> {
     );
   }
 
-  // Abre a ficha do animal
-  Future<void> _abrirDetalhes(Animal animal) async {
-    final animalRetornado = (await Navigator.pushNamed(
-      context,
-      AppRoutes.details,
-      arguments: animal,
-    )) as Animal?;
-    if (!mounted || animalRetornado == null) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Você voltou dos detalhes de ${animalRetornado.nome}.'),
-      ),
-    );
+  // Abre a ficha do animal. As mudanças feitas nela chegam ao feed pelo
+  // estado compartilhado, sem precisar de retorno
+  void _abrirDetalhes(Animal animal) {
+    Navigator.pushNamed(context, AppRoutes.details, arguments: animal);
   }
 
   List<Animal> get _animaisVisiveis => _visiveis(_filtros);
@@ -337,15 +329,10 @@ class _FeedAdocaoState extends State<FeedAdocao> {
   }
 
   // Animais da aba atual que combinam com os filtros e a pesquisa (nome,
-  // raça ou espécie), do mais recente ao mais antigo
+  // raça, espécie ou bairro), do mais recente ao mais antigo
   List<Animal> _visiveis(FiltrosDoFeed filtros) {
     final termo = _busca.trim().toLowerCase();
-    // Mesma origem de _todosOsAnimais, pelo mesmo motivo
-    final estado = PataAmigaScope.of(context);
-    final todos = estado.animais.isNotEmpty
-        ? estado.animais
-        : [..._animaisApi, ..._animaisCriados];
-    final encontrados = todos.where((animal) {
+    final encontrados = _todosOsAnimais.where((animal) {
       // Animal com desfecho (adotado, encontrado ou resgatado) sai do feed
       if (animal.finalizado) return false;
       if (animal.tipo != _abaAtual) return false;
@@ -353,7 +340,8 @@ class _FeedAdocaoState extends State<FeedAdocao> {
       if (termo.isEmpty) return true;
       return animal.nome.toLowerCase().contains(termo) ||
           animal.raca.toLowerCase().contains(termo) ||
-          animal.especie.toLowerCase().contains(termo);
+          animal.especie.toLowerCase().contains(termo) ||
+          animal.bairro.toLowerCase().contains(termo);
     }).toList();
     encontrados.sort((a, b) => b.publicadoEm.compareTo(a.publicadoEm));
     return encontrados;
@@ -451,21 +439,43 @@ class _FeedAdocaoState extends State<FeedAdocao> {
       'Divulgado pelo Pata Amiga',
     ].join('\n');
 
-    // Animal sem foto é compartilhado só com o texto
-    final arquivos = <XFile>[];
-    if (animal.foto.isNotEmpty) {
-      // O compartilhamento exige arquivo: lê a foto dos assets e anexa os bytes
-      final imagem = await rootBundle.load(animal.foto);
-      arquivos.add(
-        XFile.fromData(
-          imagem.buffer.asUint8List(),
-          mimeType: 'image/jpeg',
-          name: '${animal.nome}.jpg',
-        ),
-      );
-    }
+    // Sem foto, ou se ela não puder ser lida, compartilha só o texto
+    final foto = await _arquivoDaFoto(animal);
+    await SharePlus.instance.share(ShareParams(text: texto, files: [?foto]));
+  }
 
-    await SharePlus.instance.share(ShareParams(text: texto, files: arquivos));
+  // Lê a foto do animal para anexar ao compartilhamento, pela mesma regra
+  // de origem do FotoAnimal: "http" vem da internet, caminho absoluto é um
+  // arquivo do aparelho e o restante é asset do app. Devolve nulo se falhar
+  Future<XFile?> _arquivoDaFoto(Animal animal) async {
+    final caminho = animal.foto;
+    if (caminho.isEmpty) return null;
+    final nome = '${animal.nome}.jpg';
+    try {
+      if (caminho.startsWith('http')) {
+        final resposta = await http
+            .get(Uri.parse(caminho))
+            .timeout(const Duration(seconds: 10));
+        if (resposta.statusCode != 200) return null;
+        return XFile.fromData(
+          resposta.bodyBytes,
+          mimeType: 'image/jpeg',
+          name: nome,
+        );
+      }
+      if (!kIsWeb && caminho.startsWith('/')) {
+        return XFile(caminho, mimeType: 'image/jpeg', name: nome);
+      }
+      final imagem = await rootBundle.load(caminho);
+      return XFile.fromData(
+        imagem.buffer.asUint8List(),
+        mimeType: 'image/jpeg',
+        name: nome,
+      );
+    } catch (_) {
+      // Foto ausente, sem conexão ou formato inválido: segue sem anexo
+      return null;
+    }
   }
 
   // Faixa colorida usada pelo banner de estado
@@ -502,7 +512,8 @@ class _FeedAdocaoState extends State<FeedAdocao> {
         if (_atualizando) return const SizedBox.shrink();
         // A busca falhou: avisa que os dados podem estar desatualizados
         return _faixa(
-          cor: Colors.orange,
+          // Ocre da paleta: aviso sem ser erro, nos dois temas
+          cor: context.cores.alimentacao,
           icone: Icons.cloud_off,
           texto:
               'Dados salvos em ${_formatarData(_dataCache)}. '
@@ -697,9 +708,8 @@ class _FeedAdocaoState extends State<FeedAdocao> {
             _FiltrosAplicados(
               filtros: _filtros,
               ongs: PataAmigaScope.of(context).ongs,
-              aoTirar: (grupo, opcao) => setState(
-                () => _filtros = _filtros.alternar(grupo, opcao),
-              ),
+              aoTirar: (grupo, opcao) =>
+                  setState(() => _filtros = _filtros.alternar(grupo, opcao)),
               aoLimpar: _limparFiltros,
             ),
           _bannerDeEstado(),
@@ -754,7 +764,7 @@ class _FiltrosAplicados extends StatelessWidget {
                                   .firstOrNull
                                   ?.nome ??
                               'ONG'
-                        : rotuloDaOpcao(opcao),
+                        : comMaiuscula(opcao),
                   ),
                   onDeleted: () => aoTirar(grupo, opcao),
                   deleteButtonTooltipMessage: 'Tirar o filtro',
@@ -773,7 +783,9 @@ class _FiltrosAplicados extends StatelessWidget {
               ),
           TextButton(
             onPressed: aoLimpar,
-            style: TextButton.styleFrom(foregroundColor: context.cores.principal),
+            style: TextButton.styleFrom(
+              foregroundColor: context.cores.principal,
+            ),
             child: const Text('Limpar filtros'),
           ),
         ],

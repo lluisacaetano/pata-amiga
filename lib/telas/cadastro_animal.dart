@@ -1,7 +1,7 @@
 // Biblioteca dart:async: prazo das consultas de endereço (TimeoutException).
 import 'dart:async';
 
-// Pacote flutter/foundation: kIsWeb, defaultTargetPlatform e Uint8List.
+// Pacote flutter/foundation: kIsWeb e Uint8List, para a prévia da foto.
 import 'package:flutter/foundation.dart';
 // Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
@@ -9,8 +9,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 // Pacote geocoding: converte coordenadas em endereço e endereço em coordenadas.
 import 'package:geocoding/geocoding.dart';
-// Pacote geolocator: lê a localização atual do aparelho e pede a permissão.
-import 'package:geolocator/geolocator.dart';
 // Pacote flutter_map: mapa interativo com os blocos do OpenStreetMap.
 import 'package:flutter_map/flutter_map.dart';
 // Pacote image_picker: abre a câmera ou a galeria para escolher fotos.
@@ -38,6 +36,8 @@ import '../provider/usuario_provider.dart';
 import '../services/animal_service.dart';
 // Arquivo bairro_service.dart: consulta do bairro pelo ViaCEP.
 import '../services/bairro_service.dart';
+// Arquivo localizacao_service.dart: leitura da posição atual do aparelho.
+import '../services/localizacao_service.dart';
 // Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
 // Arquivo proteger_alteracoes.dart: confirma a saída sem salvar.
@@ -112,6 +112,9 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
   bool _tentouCadastrar = false;
   final _seletorDeFotos = ImagePicker();
   final _bairros = BairroService();
+  final _localizacao = const LocalizacaoService(
+    alternativa: 'Insira o endereço manualmente.',
+  );
   bool _buscandoLocalizacao = false;
   bool _salvando = false;
   // Indica que a edição está sendo gravada na API
@@ -207,10 +210,22 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     _preencherContato();
   }
 
-  // ONG do usuário logado, se ele fizer parte de uma
+  // ONG do usuário logado, se ele fizer parte de uma. Lê sem registrar
+  // dependência, para uso no initState e nas ações
   Ong? get _minhaOng {
     final email = context.read<UsuarioProvider?>()?.usuario.email ?? '';
     return PataAmigaScope.talvez(context)?.ongDe(email);
+  }
+
+  // Mesma consulta, para o build: registra dependência no estado do app, de
+  // modo que a opção "Publicar como" aparece quando as ONGs terminam de
+  // carregar depois de a tela abrir
+  Ong? _minhaOngNoBuild(BuildContext context) {
+    final email = context.read<UsuarioProvider?>()?.usuario.email ?? '';
+    return context
+        .dependOnInheritedWidgetOfExactType<PataAmigaScope>()
+        ?.notifier
+        ?.ongDe(email);
   }
 
   // Indica se o animal é publicado em nome da ONG ou do próprio usuário
@@ -286,31 +301,16 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     setState(() => _buscandoLocalizacao = true);
 
     try {
-      if (!await Geolocator.isLocationServiceEnabled()) {
-        _avisar('Ligue a localização do aparelho para usar esta opção.');
-        return;
-      }
-
-      var permissao = await Geolocator.checkPermission();
-      if (permissao == LocationPermission.denied) {
-        permissao = await Geolocator.requestPermission();
-      }
-      if (permissao == LocationPermission.denied ||
-          permissao == LocationPermission.deniedForever) {
-        _avisar('Sem permissão de localização. Insira o endereço manualmente.');
-        return;
-      }
-
-      final posicao = await Geolocator.getCurrentPosition(
-        locationSettings: _ajustesDeLocalizacao(),
-      );
+      final posicao = await _localizacao.posicaoAtual();
       // Prazo para a consulta do endereço, que depende da internet e pode
       // não responder com conexão ruim
       final lugares = await Geocoding()
           .placemarkFromCoordinates(posicao.latitude, posicao.longitude)
           .timeout(const Duration(seconds: 10));
       if (lugares.isEmpty) {
-        _avisar('Não achei o endereço deste ponto. Insira o endereço manualmente.');
+        _avisar(
+          'Não achei o endereço deste ponto. Insira o endereço manualmente.',
+        );
         return;
       }
 
@@ -324,23 +324,20 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
         _enderecoDoPino = endereco;
       });
       _mapa.move(_ponto, 17);
+    } on ErroDeLocalizacao catch (erro) {
+      _avisar(erro.texto);
     } on TimeoutException {
-      _avisar('A localização demorou demais. Insira o endereço manualmente.');
+      _avisar(
+        'A busca do endereço demorou demais. Insira o endereço '
+        'manualmente.',
+      );
     } on Exception {
-      _avisar('Não foi possível encontrar a localização. Insira o endereço manualmente.');
+      _avisar(
+        'Não foi possível encontrar o endereço. Insira o endereço manualmente.',
+      );
     } finally {
       if (mounted) setState(() => _buscandoLocalizacao = false);
     }
-  }
-
-  // No Android, usa o LocationManager do sistema em vez do provedor do
-  // Google, que exigiria a precisão do Google ligada e um diálogo extra
-  LocationSettings _ajustesDeLocalizacao() {
-    const prazo = Duration(seconds: 15);
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      return AndroidSettings(forceLocationManager: true, timeLimit: prazo);
-    }
-    return const LocationSettings(timeLimit: prazo);
   }
 
   // Monta rua (com número, quando disponível) e bairro a partir do resultado
@@ -458,13 +455,16 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     try {
       final achados = await Geocoding()
           .locationFromAddress(
-            [rua, bairro, 'Formiga, MG, Brasil']
-                .where((parte) => parte.isNotEmpty)
-                .join(', '),
+            [
+              rua,
+              bairro,
+              'Formiga, MG, Brasil',
+            ].where((parte) => parte.isNotEmpty).join(', '),
           )
           .timeout(const Duration(seconds: 8));
       if (achados.isEmpty) {
-        aviso = 'Não encontrei essa rua em Formiga. Confira o nome ou '
+        aviso =
+            'Não encontrei essa rua em Formiga. Confira o nome ou '
             'destrave o mapa e arraste.';
       } else if (mounted) {
         _ponto = LatLng(achados.first.latitude, achados.first.longitude);
@@ -484,9 +484,8 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
   // Mostra uma mensagem curta no rodapé, se a tela ainda existir
   void _avisar(String mensagem) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(mensagem)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(mensagem)));
   }
 
   // Abre a galeria e adiciona fotos até o limite
@@ -518,8 +517,9 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
 
   // Avisa quantas fotos foram descartadas por exceder o limite
   void _avisarQueSobrou(int escolhidas, int vagas) {
-    final quantas =
-        vagas == 1 ? 'a primeira' : 'as ${_porExtenso[vagas] ?? vagas} primeiras';
+    final quantas = vagas == 1
+        ? 'a primeira'
+        : 'as ${_porExtenso[vagas] ?? vagas} primeiras';
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -544,6 +544,42 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
       _telefone.text.replaceAll(RegExp(r'\D'), '').length >= 10;
 
   final _rolagem = ScrollController();
+
+  // Chaves dos cartões do formulário, para rolar até o que tem erro
+  final _cartaoDasFotos = GlobalKey();
+  final _cartaoDoAnimal = GlobalKey();
+  final _cartaoDoLugar = GlobalKey();
+  final _cartaoDoContato = GlobalKey();
+
+  // Rola até o primeiro cartão com campo obrigatório faltando, na ordem em
+  // que aparecem na tela
+  void _rolarAtePrimeiroErro() {
+    final vazio = [
+      _idade,
+      _observacoes,
+    ].any((campo) => campo.text.trim().isEmpty);
+    final GlobalKey alvo;
+    if (_fotos.isEmpty) {
+      alvo = _cartaoDasFotos;
+    } else if (_tipo == null ||
+        _especie == null ||
+        _porte == null ||
+        vazio ||
+        (_racaEscolhida == outraRaca && _raca.isEmpty)) {
+      alvo = _cartaoDoAnimal;
+    } else if (_rua.text.trim().isEmpty || _bairro.isEmpty) {
+      alvo = _cartaoDoLugar;
+    } else {
+      alvo = _cartaoDoContato;
+    }
+    final contexto = alvo.currentContext;
+    if (contexto == null) return;
+    Scrollable.ensureVisible(
+      contexto,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
+  }
 
   // Indica se todos os campos obrigatórios estão preenchidos (os mesmos que
   // ficam marcados em vermelho quando faltam)
@@ -603,12 +639,7 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     if (_salvando || _gravando) return;
     setState(() => _tentouCadastrar = true);
     if (!_completo) {
-      // Rola para o topo, onde começam os campos marcados com erro
-      _rolagem.animateTo(
-        0,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
+      _rolarAtePrimeiroErro();
       return;
     }
 
@@ -651,7 +682,9 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
       necessidadesEspeciais: _necessidades.text.trim(),
       dono: Dono(
         nome: _responsavel.text.trim(),
-        telefone: _telefone.text.trim(),
+        // Grava só os dígitos, no mesmo formato da ONG; a tela exibe com a
+        // máscara
+        telefone: _telefone.text.replaceAll(RegExp(r'\D'), ''),
       ),
       responsavelEmail: context.read<UsuarioProvider?>()?.usuario.email ?? '',
       // Na edição, mantém o vínculo com a ONG que o registro já tinha
@@ -733,378 +766,389 @@ class _CadastroAnimalState extends State<CadastroAnimal> {
     return ProtegerAlteracoes(
       alterado: () => _alterado,
       child: Scaffold(
-      appBar: AppBar(
-        backgroundColor: context.cores.fundo,
-        leadingWidth: 64,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 12),
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            tooltip: 'Voltar',
-            color: context.cores.principal,
-            onPressed: () => Navigator.maybePop(context),
-          ),
-        ),
-        centerTitle: true,
-        title: Text(
-          widget.editando != null
-              ? 'EDITAR REGISTRO'
-              : widget.base == null
-              ? 'CADASTRAR ANIMAL'
-              : 'PUBLICAR PARA ADOÇÃO',
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.8,
-            color: context.cores.principal,
-          ),
-        ),
-      ),
-      body: SingleChildScrollView(
-        controller: _rolagem,
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _Cartao(
-              child: _BlocoDeFotos(
-                fotos: _fotos,
-                aoAdicionar: _adicionarFotos,
-                aoReordenar: _reordenarFotos,
-                aoRemover: _removerFoto,
-                semFoto: _tentouCadastrar && _fotos.isEmpty,
-              ),
+        appBar: AppBar(
+          backgroundColor: context.cores.fundo,
+          leadingWidth: 64,
+          leading: Padding(
+            padding: const EdgeInsets.only(left: 12),
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              tooltip: 'Voltar',
+              color: context.cores.principal,
+              onPressed: () => Navigator.maybePop(context),
             ),
-            _Cartao(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const _TituloDoCartao(icone: Icons.pets, texto: 'O animal'),
-                  const SizedBox(height: 16),
-                  const _Rotulo('Tipo'),
-                  const SizedBox(height: 6),
-                  EscolhaDeTipo(
-                    escolhido: _tipo,
-                    aoEscolher: (escolha) => setState(() => _tipo = escolha),
-                    rotulo: rotuloSingular,
-                    fundoDaOpcao: context.cores.fundo,
-                  ),
-                  // Os demais campos só aparecem depois de escolhido o tipo
-                  if (_tentouCadastrar && _tipo == null)
-                    const _Recado(
-                      'Escolha se é adoção, perdido ou resgate.',
-                      erro: true,
-                    ),
-                  if (_tipo != null) ...[
+          ),
+          centerTitle: true,
+          title: Text(
+            widget.editando != null
+                ? 'EDITAR REGISTRO'
+                : widget.base == null
+                ? 'CADASTRAR ANIMAL'
+                : 'PUBLICAR PARA ADOÇÃO',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.8,
+              color: context.cores.principal,
+            ),
+          ),
+        ),
+        body: SingleChildScrollView(
+          controller: _rolagem,
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _Cartao(
+                key: _cartaoDasFotos,
+                child: _BlocoDeFotos(
+                  fotos: _fotos,
+                  aoAdicionar: _adicionarFotos,
+                  aoReordenar: _reordenarFotos,
+                  aoRemover: _removerFoto,
+                  semFoto: _tentouCadastrar && _fotos.isEmpty,
+                ),
+              ),
+              _Cartao(
+                key: _cartaoDoAnimal,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const _TituloDoCartao(icone: Icons.pets, texto: 'O animal'),
                     const SizedBox(height: 16),
-                    _Campo(
-                      rotulo: 'Nome',
-                      controlador: _nome,
-                      aviso:
-                          'O nome não é obrigatório: sem ele, o animal entra '
-                          'como "$_nomePadrao"',
+                    const _Rotulo('Tipo'),
+                    const SizedBox(height: 6),
+                    EscolhaDeTipo(
+                      escolhido: _tipo,
+                      aoEscolher: (escolha) => setState(() => _tipo = escolha),
+                      rotulo: rotuloSingular,
+                      fundoDaOpcao: context.cores.fundo,
                     ),
-                    const SizedBox(height: 14),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: _Selecao(
-                            rotulo: 'Espécie',
-                            opcoes: _especies,
-                            valor: _especie,
-                            comErro: _naoEscolhido(_especie),
-                            aoEscolher: _escolherEspecie,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _Selecao(
-                            rotulo: 'Porte',
-                            opcoes: _portes,
-                            valor: _porte,
-                            comErro: _naoEscolhido(_porte),
-                            aoEscolher: (escolha) =>
-                                setState(() => _porte = escolha),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    SelecaoComBusca(
-                      // A chave recria o campo quando a espécie muda
-                      key: ValueKey(_especie),
-                      rotulo: 'Raça',
-                      dica: _especie == null
-                          ? 'Escolha a espécie primeiro'
-                          : 'Digite para buscar a raça',
-                      habilitada: _especie != null,
-                      controlador: _buscaDaRaca,
-                      opcoes: (digitado) => filtrarRacas(_especie, digitado),
-                      daLista: (texto) => racaDaLista(_especie, texto),
-                      rodape: const [
-                        (valor: semRacaDefinida, texto: semRacaDefinida),
-                        (valor: outraRaca, texto: 'Outra raça'),
-                      ],
-                      aoEscolher: (raca) =>
-                          setState(() => _racaEscolhida = raca),
-                    ),
-                    if (_racaEscolhida == outraRaca) ...[
-                      const SizedBox(height: 14),
-                      _Campo(
-                        rotulo: 'Qual é a raça?',
-                        controlador: _outraRaca,
-                        exemplo: 'Informe o nome da raça',
-                        comErro: _faltando(_outraRaca),
+                    // Os demais campos só aparecem depois de escolhido o tipo
+                    if (_tentouCadastrar && _tipo == null)
+                      const _Recado(
+                        'Escolha se é adoção, perdido ou resgate.',
+                        erro: true,
                       ),
-                    ],
-                    const SizedBox(height: 14),
-                    _Campo(
-                      rotulo: 'Idade',
-                      controlador: _idade,
-                      exemplo: '2 anos',
-                      comErro: _faltando(_idade),
-                    ),
-                    const SizedBox(height: 14),
-                    _Selecao(
-                      rotulo: 'Sexo',
-                      opcoes: _sexos,
-                      valor: _sexo,
-                      aoEscolher: (escolha) => setState(() => _sexo = escolha),
-                    ),
-                    const SizedBox(height: 14),
-                    _Campo(
-                      rotulo: 'Observações',
-                      controlador: _observacoes,
-                      exemplo: _exemploDeObservacoes(_tipo!),
-                      linhas: 3,
-                      comErro: _faltando(_observacoes),
-                    ),
-                    if (_tipo != TipoRegistro.resgate) ...[
-                      const SizedBox(height: 14),
-                      _Campo(
-                        rotulo: 'Necessidades especiais',
-                        controlador: _necessidades,
-                        exemplo: 'Remédio de uso contínuo, deficiência, dieta',
-                        linhas: 2,
-                      ),
-                    ],
-                    if (_tipo == TipoRegistro.adocao) ...[
+                    if (_tipo != null) ...[
                       const SizedBox(height: 16),
-                      const _Rotulo('Cuidados'),
-                      const SizedBox(height: 8),
+                      _Campo(
+                        rotulo: 'Nome',
+                        controlador: _nome,
+                        aviso:
+                            'O nome não é obrigatório: sem ele, o animal entra '
+                            'como "$_nomePadrao"',
+                      ),
+                      const SizedBox(height: 14),
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
-                            child: _Cuidado(
-                              rotulo: 'Castrado',
-                              marcado: _castrado,
-                              aoMarcar: (valor) =>
-                                  setState(() => _castrado = valor),
+                            child: _Selecao(
+                              rotulo: 'Espécie',
+                              opcoes: _especies,
+                              valor: _especie,
+                              comErro: _naoEscolhido(_especie),
+                              aoEscolher: _escolherEspecie,
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 12),
                           Expanded(
-                            child: _Cuidado(
-                              rotulo: 'Vacinado',
-                              marcado: _vacinado,
-                              aoMarcar: (valor) =>
-                                  setState(() => _vacinado = valor),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _Cuidado(
-                              rotulo: 'Vermifugado',
-                              marcado: _vermifugado,
-                              aoMarcar: (valor) =>
-                                  setState(() => _vermifugado = valor),
+                            child: _Selecao(
+                              rotulo: 'Porte',
+                              opcoes: _portes,
+                              valor: _porte,
+                              comErro: _naoEscolhido(_porte),
+                              aoEscolher: (escolha) =>
+                                  setState(() => _porte = escolha),
                             ),
                           ),
                         ],
                       ),
+                      const SizedBox(height: 14),
+                      SelecaoComBusca(
+                        // A chave recria o campo quando a espécie muda
+                        key: ValueKey(_especie),
+                        rotulo: 'Raça',
+                        dica: _especie == null
+                            ? 'Escolha a espécie primeiro'
+                            : 'Digite para buscar a raça',
+                        habilitada: _especie != null,
+                        controlador: _buscaDaRaca,
+                        opcoes: (digitado) => filtrarRacas(_especie, digitado),
+                        daLista: (texto) => racaDaLista(_especie, texto),
+                        rodape: const [
+                          (valor: semRacaDefinida, texto: semRacaDefinida),
+                          (valor: outraRaca, texto: 'Outra raça'),
+                        ],
+                        aoEscolher: (raca) =>
+                            setState(() => _racaEscolhida = raca),
+                      ),
+                      if (_racaEscolhida == outraRaca) ...[
+                        const SizedBox(height: 14),
+                        _Campo(
+                          rotulo: 'Qual é a raça?',
+                          controlador: _outraRaca,
+                          exemplo: 'Informe o nome da raça',
+                          comErro: _faltando(_outraRaca),
+                        ),
+                      ],
+                      const SizedBox(height: 14),
+                      _Campo(
+                        rotulo: 'Idade',
+                        controlador: _idade,
+                        exemplo: '2 anos',
+                        comErro: _faltando(_idade),
+                      ),
+                      const SizedBox(height: 14),
+                      _Selecao(
+                        rotulo: 'Sexo',
+                        opcoes: _sexos,
+                        valor: _sexo,
+                        aoEscolher: (escolha) =>
+                            setState(() => _sexo = escolha),
+                      ),
+                      const SizedBox(height: 14),
+                      _Campo(
+                        rotulo: 'Observações',
+                        controlador: _observacoes,
+                        exemplo: _exemploDeObservacoes(_tipo!),
+                        linhas: 3,
+                        comErro: _faltando(_observacoes),
+                      ),
+                      if (_tipo != TipoRegistro.resgate) ...[
+                        const SizedBox(height: 14),
+                        _Campo(
+                          rotulo: 'Necessidades especiais',
+                          controlador: _necessidades,
+                          exemplo:
+                              'Remédio de uso contínuo, deficiência, dieta',
+                          linhas: 2,
+                        ),
+                      ],
+                      if (_tipo == TipoRegistro.adocao) ...[
+                        const SizedBox(height: 16),
+                        const _Rotulo('Cuidados'),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _Cuidado(
+                                rotulo: 'Castrado',
+                                marcado: _castrado,
+                                aoMarcar: (valor) =>
+                                    setState(() => _castrado = valor),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _Cuidado(
+                                rotulo: 'Vacinado',
+                                marcado: _vacinado,
+                                aoMarcar: (valor) =>
+                                    setState(() => _vacinado = valor),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _Cuidado(
+                                rotulo: 'Vermifugado',
+                                marcado: _vermifugado,
+                                aoMarcar: (valor) =>
+                                    setState(() => _vermifugado = valor),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ],
-                ],
+                ),
               ),
-            ),
-            _Cartao(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _TituloDoCartao(
-                    icone: Icons.location_on_outlined,
-                    texto: _tituloDoLugar(_tipo),
-                  ),
-                  const SizedBox(height: 16),
-                  _Campo(
-                    rotulo: 'Rua e número',
-                    controlador: _rua,
-                    exemplo: 'Informe a rua e o número',
-                    comErro: _faltando(_rua),
-                    aviso: _avisoDaBusca,
-                    acao: IconButton(
-                      onPressed: _buscandoNoMapa ? null : _buscarNoMapa,
-                      icon: _buscandoNoMapa
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.search, size: 20),
-                      color: context.cores.principal,
-                      tooltip: 'Buscar no mapa',
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  SelecaoComBusca(
-                    rotulo: 'Bairro',
-                    dica: 'Digite para buscar o bairro',
-                    controlador: _buscaDoBairro,
-                    opcoes: filtrarBairros,
-                    daLista: bairroDaLista,
-                    rodape: const [
-                      (valor: outroBairro, texto: 'Outro bairro'),
-                    ],
-                    comErro: _tentouCadastrar && _bairroEscolhido == null,
-                    aoEscolher: (bairro) =>
-                        setState(() => _bairroEscolhido = bairro),
-                  ),
-                  if (_bairroEscolhido == outroBairro) ...[
-                    const SizedBox(height: 14),
-                    _Campo(
-                      rotulo: 'Qual é o bairro?',
-                      controlador: _outroBairro,
-                      exemplo: 'Informe o nome do bairro',
-                      comErro: _faltando(_outroBairro),
-                    ),
-                  ],
-                  const SizedBox(height: 14),
-                  const _Rotulo('Ponto no mapa'),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Busque a rua pela lupa, toque na mira para usar sua '
-                    'localização ou destrave o mapa e arraste até o pino.',
-                    style: TextStyle(fontSize: 12, color: context.cores.textoFraco),
-                  ),
-                  const SizedBox(height: 8),
-                  MapaDeLocal(
-                    controlador: _mapa,
-                    inicio: _ponto,
-                    altura: 220,
-                    buscandoPosicao: _buscandoLocalizacao,
-                    aoUsarMinhaLocalizacao: _usarMinhaLocalizacao,
-                    aoArrastar: _aoArrastarOMapa,
-                  ),
-                ],
-              ),
-            ),
-            if (_tipo != null)
               _Cartao(
+                key: _cartaoDoLugar,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _TituloDoCartao(
-                      icone: Icons.person_outline,
-                      texto: _tipo!.tituloDoContato,
+                      icone: Icons.location_on_outlined,
+                      texto: _tituloDoLugar(_tipo),
                     ),
                     const SizedBox(height: 16),
-                    // Membro de ONG escolhe se publica em nome próprio ou
-                    // da ONG; só os da ONG aparecem no perfil dela
-                    if (_minhaOng case final ong?
-                        when widget.editando?.ongId == null) ...[
-                      const _Rotulo('Publicar como'),
-                      const SizedBox(height: 6),
-                      SizedBox(
-                        width: double.infinity,
-                        child: SegmentedButton<bool>(
-                          segments: [
-                            const ButtonSegment(
-                              value: false,
-                              label: Text('Eu'),
-                            ),
-                            ButtonSegment(
-                              value: true,
-                              label: Text(
-                                ong.nome,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                          selected: {_comoOng},
-                          showSelectedIcon: false,
-                          onSelectionChanged: (escolha) => setState(() {
-                            _comoOng = escolha.first;
-                            _preencherContato();
-                          }),
-                          style: estiloDasAbas(context, context.cores.fundo),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                    ],
                     _Campo(
-                      rotulo: 'Responsável',
-                      controlador: _responsavel,
-                      comErro: _faltando(_responsavel),
+                      rotulo: 'Rua e número',
+                      controlador: _rua,
+                      exemplo: 'Informe a rua e o número',
+                      comErro: _faltando(_rua),
+                      aviso: _avisoDaBusca,
+                      acao: IconButton(
+                        onPressed: _buscandoNoMapa ? null : _buscarNoMapa,
+                        icon: _buscandoNoMapa
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.search, size: 20),
+                        color: context.cores.principal,
+                        tooltip: 'Buscar no mapa',
+                      ),
                     ),
                     const SizedBox(height: 14),
-                    _Campo(
-                      rotulo: 'Telefone',
-                      controlador: _telefone,
-                      exemplo: '(37) 90000-0000',
-                      comErro: _tentouCadastrar && !_telefoneValido,
-                      erro: _faltando(_telefone)
-                          ? null
-                          : 'Digite um telefone com DDD.',
-                      teclado: TextInputType.phone,
-                      formatadores: [MascaraDeTelefone()],
+                    SelecaoComBusca(
+                      rotulo: 'Bairro',
+                      dica: 'Digite para buscar o bairro',
+                      controlador: _buscaDoBairro,
+                      opcoes: filtrarBairros,
+                      daLista: bairroDaLista,
+                      rodape: const [
+                        (valor: outroBairro, texto: 'Outro bairro'),
+                      ],
+                      comErro: _tentouCadastrar && _bairroEscolhido == null,
+                      aoEscolher: (bairro) =>
+                          setState(() => _bairroEscolhido = bairro),
+                    ),
+                    if (_bairroEscolhido == outroBairro) ...[
+                      const SizedBox(height: 14),
+                      _Campo(
+                        rotulo: 'Qual é o bairro?',
+                        controlador: _outroBairro,
+                        exemplo: 'Informe o nome do bairro',
+                        comErro: _faltando(_outroBairro),
+                      ),
+                    ],
+                    const SizedBox(height: 14),
+                    const _Rotulo('Ponto no mapa'),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Busque a rua pela lupa, toque na mira para usar sua '
+                      'localização ou destrave o mapa e arraste até o pino.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.cores.textoFraco,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    MapaDeLocal(
+                      controlador: _mapa,
+                      inicio: _ponto,
+                      altura: 220,
+                      buscandoPosicao: _buscandoLocalizacao,
+                      aoUsarMinhaLocalizacao: _usarMinhaLocalizacao,
+                      aoArrastar: _aoArrastarOMapa,
                     ),
                   ],
                 ),
               ),
-            const SizedBox(height: 8),
-            FilledButton.icon(
-              onPressed: _salvando || _gravando ? null : _cadastrar,
-              icon: _salvando || _gravando
-                  ? SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: context.sobrePrincipal,
+              if (_tipo != null)
+                _Cartao(
+                  key: _cartaoDoContato,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _TituloDoCartao(
+                        icone: Icons.person_outline,
+                        texto: _tipo!.tituloDoContato,
                       ),
-                    )
-                  : Icon(
-                      widget.editando != null ? Icons.check : Icons.pets,
-                      size: 18,
-                    ),
-              label: Text(
-                _salvando
-                    ? 'Localizando a rua…'
-                    : _gravando
-                    ? 'Salvando…'
-                    : widget.editando != null
-                    ? 'Salvar alterações'
-                    : 'Cadastrar',
-              ),
-              style: FilledButton.styleFrom(
-                backgroundColor: context.cores.principal,
-                minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                      const SizedBox(height: 16),
+                      // Membro de ONG escolhe se publica em nome próprio ou
+                      // da ONG; só os da ONG aparecem no perfil dela
+                      if (_minhaOngNoBuild(context) case final ong?
+                          when widget.editando?.ongId == null) ...[
+                        const _Rotulo('Publicar como'),
+                        const SizedBox(height: 6),
+                        SizedBox(
+                          width: double.infinity,
+                          child: SegmentedButton<bool>(
+                            segments: [
+                              const ButtonSegment(
+                                value: false,
+                                label: Text('Eu'),
+                              ),
+                              ButtonSegment(
+                                value: true,
+                                label: Text(
+                                  ong.nome,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                            selected: {_comoOng},
+                            showSelectedIcon: false,
+                            onSelectionChanged: (escolha) => setState(() {
+                              _comoOng = escolha.first;
+                              _preencherContato();
+                            }),
+                            style: estiloDasAbas(context, context.cores.fundo),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
+                      _Campo(
+                        rotulo: 'Responsável',
+                        controlador: _responsavel,
+                        comErro: _faltando(_responsavel),
+                      ),
+                      const SizedBox(height: 14),
+                      _Campo(
+                        rotulo: 'Telefone',
+                        controlador: _telefone,
+                        exemplo: '(37) 90000-0000',
+                        comErro: _tentouCadastrar && !_telefoneValido,
+                        erro: _faltando(_telefone)
+                            ? null
+                            : 'Digite um telefone com DDD.',
+                        teclado: TextInputType.phone,
+                        formatadores: [MascaraDeTelefone()],
+                      ),
+                    ],
+                  ),
                 ),
-                textStyle: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+              const SizedBox(height: 8),
+              FilledButton.icon(
+                onPressed: _salvando || _gravando ? null : _cadastrar,
+                icon: _salvando || _gravando
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: context.sobrePrincipal,
+                        ),
+                      )
+                    : Icon(
+                        widget.editando != null ? Icons.check : Icons.pets,
+                        size: 18,
+                      ),
+                label: Text(
+                  _salvando
+                      ? 'Localizando a rua…'
+                      : _gravando
+                      ? 'Salvando…'
+                      : widget.editando != null
+                      ? 'Salvar alterações'
+                      : 'Cadastrar',
+                ),
+                style: FilledButton.styleFrom(
+                  backgroundColor: context.cores.principal,
+                  minimumSize: const Size.fromHeight(52),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
+        bottomNavigationBar: BarraInferior(),
       ),
-      bottomNavigationBar: BarraInferior(),
-    ),
     );
   }
 }
@@ -1160,8 +1204,7 @@ class _BlocoDeFotos extends StatelessWidget {
           'Você pode escolher até $_maximoDeFotos fotos.',
           style: TextStyle(fontSize: 12, color: context.cores.textoFraco),
         ),
-        if (semFoto)
-          const _Recado('Adicione pelo menos uma foto.', erro: true),
+        if (semFoto) const _Recado('Adicione pelo menos uma foto.', erro: true),
         if (fotos.isNotEmpty) ...[
           const SizedBox(height: 10),
           Text(
@@ -1182,7 +1225,10 @@ class _BlocoDeFotos extends StatelessWidget {
                 if (indice == fotos.length) {
                   return Padding(
                     key: const ValueKey('adicionar-foto'),
-                    padding: const EdgeInsets.only(right: 10, top: _folgaDaTira),
+                    padding: const EdgeInsets.only(
+                      right: 10,
+                      top: _folgaDaTira,
+                    ),
                     child: _AdicionarFoto(aoTocar: aoAdicionar),
                   );
                 }
@@ -1401,7 +1447,7 @@ class _FotoDaGaleriaState extends State<_FotoDaGaleria> {
 class _Cartao extends StatelessWidget {
   final Widget child;
 
-  const _Cartao({required this.child});
+  const _Cartao({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -1451,28 +1497,28 @@ InputDecoration _caixa(
   bool comErro = false,
   Widget? acao,
 }) => InputDecoration(
-      isDense: true,
-      filled: true,
-      fillColor: context.cores.fundo,
-      hintText: exemplo,
-      suffixIcon: acao,
-      hintStyle: TextStyle(fontSize: 14, color: context.cores.textoFraco),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(
-          color: comErro ? context.cores.destaque : context.cores.borda,
-          width: comErro ? 1.5 : 1,
-        ),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(
-          color: comErro ? context.cores.destaque : context.cores.principal,
-          width: 1.5,
-        ),
-      ),
-    );
+  isDense: true,
+  filled: true,
+  fillColor: context.cores.fundo,
+  hintText: exemplo,
+  suffixIcon: acao,
+  hintStyle: TextStyle(fontSize: 14, color: context.cores.textoFraco),
+  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+  enabledBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(12),
+    borderSide: BorderSide(
+      color: comErro ? context.cores.destaque : context.cores.borda,
+      width: comErro ? 1.5 : 1,
+    ),
+  ),
+  focusedBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(12),
+    borderSide: BorderSide(
+      color: comErro ? context.cores.destaque : context.cores.principal,
+      width: 1.5,
+    ),
+  ),
+);
 
 // Campo de texto com rótulo, mensagem de erro e aviso opcional
 class _Campo extends StatelessWidget {
@@ -1515,12 +1561,7 @@ class _Campo extends StatelessWidget {
           inputFormatters: formatadores,
           textCapitalization: TextCapitalization.sentences,
           style: const TextStyle(fontSize: 15),
-          decoration: _caixa(
-            context,
-            exemplo,
-            comErro: comErro,
-            acao: acao,
-          ),
+          decoration: _caixa(context, exemplo, comErro: comErro, acao: acao),
         ),
         if (comErro) _Recado(erro ?? 'Campo obrigatório', erro: true),
         if (aviso != null && !comErro) _Recado(aviso!),
@@ -1582,7 +1623,10 @@ class _Selecao extends StatelessWidget {
             'Escolher',
             style: TextStyle(fontSize: 14, color: context.cores.textoFraco),
           ),
-          icon: Icon(Icons.keyboard_arrow_down, color: context.cores.textoFraco),
+          icon: Icon(
+            Icons.keyboard_arrow_down,
+            color: context.cores.textoFraco,
+          ),
           style: TextStyle(fontSize: 15, color: context.cores.texto),
           items: [
             for (final opcao in opcoes)
@@ -1641,4 +1685,3 @@ class _Cuidado extends StatelessWidget {
     );
   }
 }
-

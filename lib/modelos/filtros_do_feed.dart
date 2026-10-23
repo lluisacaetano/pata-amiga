@@ -2,6 +2,8 @@
 import '../dados/racas.dart';
 // Arquivo animal.dart: modelo do animal que os filtros avaliam.
 import 'animal.dart';
+// Arquivo texto.dart: comparação de nomes sem acentos.
+import 'texto.dart';
 
 // Reexporta a opção "Sem raça definida" para as telas do filtro.
 export '../dados/racas.dart' show semRacaDefinida;
@@ -117,10 +119,6 @@ List<String> opcoesDe(GrupoDeFiltro grupo, Iterable<Animal> animais) =>
       }.toList(),
     };
 
-// O texto da opção na tela, com a primeira letra maiúscula
-String rotuloDaOpcao(String opcao) =>
-    opcao.isEmpty ? opcao : opcao[0].toUpperCase() + opcao.substring(1);
-
 // Preposições e conjunções mantidas em minúsculas no meio do nome da raça
 const _ligacoes = {'de', 'da', 'do', 'dos', 'das', 'e'};
 
@@ -160,17 +158,4 @@ List<String> racasDoFeed(Iterable<Animal> animais) {
 // Ordena em ordem alfabética ignorando acentos, para "Água Vermelha" não ir
 // para depois do "Z"
 List<String> _emOrdem(Iterable<String> opcoes) =>
-    opcoes.toList()..sort((a, b) => _semAcento(a).compareTo(_semAcento(b)));
-
-// O texto em minúsculas e sem acentos, usado na ordenação
-String _semAcento(String texto) {
-  const de = 'áàâãäéèêëíìîïóòôõöúùûüç';
-  const para = 'aaaaaeeeeiiiiooooouuuuc';
-  final minusculo = texto.toLowerCase();
-  return String.fromCharCodes(
-    minusculo.runes.map((letra) {
-      final indice = de.indexOf(String.fromCharCode(letra));
-      return indice < 0 ? letra : para.codeUnitAt(indice);
-    }),
-  );
-}
+    opcoes.toList()..sort((a, b) => semAcento(a).compareTo(semAcento(b)));

@@ -22,9 +22,11 @@ import '../services/alimentacao_service.dart';
 import '../services/localizacao_service.dart';
 // Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo cartao_de_secao.dart: cartão com título de seção do formulário.
+import '../widgets/cartao_de_secao.dart';
 
 // Tela para confirmar o abastecimento de um ponto de alimentação. O registro
-// só é aceito com a pessoa a até 150 m do ponto e uma vez por dia; a foto é
+// só é aceito com a pessoa perto do ponto e uma vez por dia; a foto é
 // opcional e aparece no resumo do ponto
 class RegistrarAbastecimento extends StatefulWidget {
   final PontoDeAlimentacao ponto;
@@ -59,6 +61,7 @@ class _RegistrarAbastecimentoState extends State<RegistrarAbastecimento> {
       );
       if (foto != null && mounted) setState(() => _foto = foto);
     } on Exception {
+      if (!mounted) return;
       setState(() => _recusa = 'Não foi possível abrir a câmera.');
     }
   }
@@ -87,6 +90,7 @@ class _RegistrarAbastecimentoState extends State<RegistrarAbastecimento> {
         agora: agora,
       );
       if (motivo != null) {
+        if (!mounted) return;
         setState(() {
           _salvando = false;
           _recusa = motivo.texto;
@@ -150,7 +154,7 @@ class _RegistrarAbastecimentoState extends State<RegistrarAbastecimento> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
-          _Cartao(
+          CartaoDeSecao(
             icone: Icons.place_outlined,
             titulo: ponto.tipo.rotulo,
             child: Column(
@@ -184,12 +188,17 @@ class _RegistrarAbastecimentoState extends State<RegistrarAbastecimento> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.my_location, size: 18, color: context.cores.principal),
+                      Icon(
+                        Icons.my_location,
+                        size: 18,
+                        color: context.cores.principal,
+                      ),
                       SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           'Ao confirmar, conferimos se você está no ponto. '
-                          'O abastecimento só vale a até 150 m dele, uma vez '
+                          'O abastecimento só vale a até '
+                          '${distanciaMaximaDoPonto.round()} m dele, uma vez '
                           'por dia.',
                           style: TextStyle(
                             fontSize: 13,
@@ -204,7 +213,7 @@ class _RegistrarAbastecimentoState extends State<RegistrarAbastecimento> {
               ],
             ),
           ),
-          _Cartao(
+          CartaoDeSecao(
             icone: Icons.photo_camera_outlined,
             titulo: 'Foto (opcional)',
             child: _foto == null
@@ -308,56 +317,6 @@ class _RegistrarAbastecimentoState extends State<RegistrarAbastecimento> {
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-// Cartão de seção do formulário: fundo de cartão, borda e título com ícone
-// na cor principal, no mesmo padrão do cadastro de animal
-class _Cartao extends StatelessWidget {
-  const _Cartao({
-    required this.icone,
-    required this.titulo,
-    required this.child,
-  });
-
-  final IconData icone;
-  final String titulo;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.cores.cartao,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.cores.borda),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Icon(icone, size: 18, color: context.cores.principal),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  titulo,
-                  style: TextStyle(
-                    color: context.cores.principal,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          child,
         ],
       ),
     );

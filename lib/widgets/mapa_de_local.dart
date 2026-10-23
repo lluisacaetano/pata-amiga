@@ -12,8 +12,8 @@ import 'package:latlong2/latlong.dart';
 
 // Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
-// Arquivo tela_mapa.dart: pino com patinha usado nos mapas.
-import '../telas/tela_mapa.dart';
+// Arquivo pino_da_patinha.dart: pino com patinha usado nos mapas.
+import 'pino_da_patinha.dart';
 
 // Indica execução em teste: nesse caso os blocos do mapa não são baixados
 // da internet

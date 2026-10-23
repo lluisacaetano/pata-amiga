@@ -13,21 +13,6 @@ import '../tema/cores.dart';
 class ConfiguracoesAparencia extends StatelessWidget {
   const ConfiguracoesAparencia({super.key});
 
-  // Executa a gravação e avisa com um SnackBar se ela falhar
-  Future<void> _salvar(
-    BuildContext context,
-    Future<void> Function() salvar,
-  ) async {
-    try {
-      await salvar();
-    } on Exception catch (_) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível salvar a aparência.')),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final preferencias = context.watch<PreferenciasAplicativoProvider>();
@@ -87,11 +72,13 @@ class ConfiguracoesAparencia extends StatelessWidget {
                         child: _OpcaoDeTema(
                           opcao: opcao,
                           escolhida: opcao == escolhido,
-                          aoTocar: () => _salvar(
+                          aoTocar: () => salvarPreferencia(
                             context,
                             () => context
                                 .read<PreferenciasAplicativoProvider>()
                                 .definirTema(opcao),
+                            mensagemDeErro:
+                                'Não foi possível salvar a aparência.',
                           ),
                         ),
                       ),
@@ -232,10 +219,14 @@ class _Miniatura extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fundo = escura ? const Color(0xFF101510) : Cores.fundo;
-    final cartao = escura ? const Color(0xFF1C241E) : Cores.cartao;
-    final principal = escura ? const Color(0xFF8DCEA0) : Cores.principal;
-    final linha = escura ? const Color(0xFF59645B) : Cores.borda;
+    // Lê a paleta do próprio tema, para a miniatura nunca divergir dele
+    final paleta = temaPataAmiga(
+      brilho: escura ? Brightness.dark : Brightness.light,
+    ).extension<PaletaPataAmiga>()!;
+    final fundo = paleta.fundo;
+    final cartao = paleta.cartao;
+    final principal = paleta.principal;
+    final linha = paleta.borda;
     return Container(
       color: fundo,
       padding: const EdgeInsets.all(8),

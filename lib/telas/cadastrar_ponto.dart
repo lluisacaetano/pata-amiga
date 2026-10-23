@@ -15,6 +15,8 @@ import '../services/alimentacao_service.dart';
 import '../services/localizacao_service.dart';
 // Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo cartao_de_secao.dart: cartão com título de seção do formulário.
+import '../widgets/cartao_de_secao.dart';
 // Arquivo escolha_de_tipo.dart: estilo das abas de escolha (estiloDasAbas).
 import '../widgets/escolha_de_tipo.dart';
 // Arquivo mapa_de_local.dart: coordenada do centro de Formiga.
@@ -91,6 +93,7 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
           agora: agora,
         );
         if (motivo != null) {
+          if (!mounted) return;
           setState(() {
             _salvando = false;
             _recusa =
@@ -108,8 +111,9 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
       }
     }
     if (!mounted) return;
+    final PontoDeAlimentacao ponto;
     try {
-      final ponto = await _servico.cadastrarPonto(
+      ponto = await _servico.cadastrarPonto(
         PontoDeAlimentacao(
           tipo: _tipo!,
           referencia: _referencia.text.trim(),
@@ -121,8 +125,18 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
           cadastradoEm: agora,
         ),
       );
-      estado.adicionarPonto(ponto);
-      if (_abasteciHoje && ponto.id != null) {
+    } on Exception {
+      if (!mounted) return;
+      setState(() => _salvando = false);
+      _avisar('Não foi possível cadastrar agora. Tente de novo.');
+      return;
+    }
+    estado.adicionarPonto(ponto);
+    // O ponto já está gravado: se só o abastecimento falhar, a tela fecha
+    // com o ponto, para que tentar de novo não crie um ponto repetido
+    var abastecimentoFalhou = false;
+    if (_abasteciHoje && ponto.id != null) {
+      try {
         estado.adicionarAbastecimento(
           await _servico.registrarAbastecimento(
             Abastecimento(
@@ -133,20 +147,25 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
             ),
           ),
         );
+      } on Exception {
+        abastecimentoFalhou = true;
       }
-      if (!mounted) return;
-      Navigator.pop(context, ponto);
-    } on Exception {
-      if (!mounted) return;
-      setState(() => _salvando = false);
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(
-            content: Text('Não foi possível cadastrar agora. Tente de novo.'),
-          ),
-        );
     }
+    if (!mounted) return;
+    if (abastecimentoFalhou) {
+      _avisar(
+        'Ponto cadastrado, mas o abastecimento não foi registrado. '
+        'Registre pelo ponto no mapa.',
+      );
+    }
+    Navigator.pop(context, ponto);
+  }
+
+  // Mostra um aviso curto na parte de baixo da tela
+  void _avisar(String texto) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(texto)));
   }
 
   @override
@@ -179,7 +198,7 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
-          _Cartao(
+          CartaoDeSecao(
             icone: Icons.place_outlined,
             titulo: 'O ponto',
             child: Column(
@@ -209,7 +228,10 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
                     padding: EdgeInsets.only(top: 5, left: 2),
                     child: Text(
                       'Escolha se é comedouro, bebedouro ou os dois.',
-                      style: TextStyle(fontSize: 12, color: context.cores.destaque),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.cores.destaque,
+                      ),
                     ),
                   ),
                 const SizedBox(height: 14),
@@ -246,7 +268,7 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
               ],
             ),
           ),
-          _Cartao(
+          CartaoDeSecao(
             icone: Icons.location_on_outlined,
             titulo: 'Onde fica',
             child: SeletorDeLocal(aoMudar: (local) => _local = local),
@@ -274,8 +296,12 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                 ),
                 subtitle: Text(
-                  'Conferimos se você está no ponto, a até 150 m.',
-                  style: TextStyle(fontSize: 13, color: context.cores.textoFraco),
+                  'Conferimos se você está no ponto, a até '
+                  '${distanciaMaximaDoPonto.round()} m.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: context.cores.textoFraco,
+                  ),
                 ),
               ),
             ),
@@ -314,54 +340,6 @@ class _CadastrarPontoState extends State<CadastrarPonto> {
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-// Cartão de seção do formulário: fundo de cartão, borda e título com ícone
-// na cor principal, no mesmo padrão do cadastro de animal
-class _Cartao extends StatelessWidget {
-  const _Cartao({
-    required this.icone,
-    required this.titulo,
-    required this.child,
-  });
-
-  final IconData icone;
-  final String titulo;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.cores.cartao,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.cores.borda),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Icon(icone, size: 18, color: context.cores.principal),
-              const SizedBox(width: 8),
-              Text(
-                titulo,
-                style: TextStyle(
-                  color: context.cores.principal,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          child,
         ],
       ),
     );

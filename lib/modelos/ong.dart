@@ -1,3 +1,8 @@
+// Arquivo json_da_api.dart: leitura e gravação do id da API.
+import 'json_da_api.dart';
+// Arquivo texto.dart: comparação de nomes sem acentos.
+import 'texto.dart';
+
 // Uma pessoa ligada à ONG: membro ou alguém que pediu para entrar. Como as
 // contas ficam só no aparelho de cada pessoa, a ONG guarda o nome e o
 // telefone junto do e-mail, para a administração saber quem é
@@ -33,7 +38,8 @@ class AvisoDaOng {
 // (responsavelEmail), e os animais da ONG são os publicados com o ongId dela.
 // O app não verifica se a conta pertence de fato a uma organização
 class Ong {
-  final int? id;
+  // O id gerado pela API, sempre em texto
+  final String? id;
   final String nome;
   final String descricao;
   final String politicaDeAdocao;
@@ -81,15 +87,7 @@ class Ong {
 
   // O nome normalizado para comparação: sem maiúsculas, acentos e espaços
   // repetidos. "Abrigo São Francisco" e "abrigo sao  francisco" são iguais
-  static String nomeComparavel(String nome) {
-    const de = 'áàâãäéèêëíìîïóòôõöúùûüç';
-    const para = 'aaaaaeeeeiiiiooooouuuuc';
-    final limpo = nome.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
-    return [
-      for (final letra in limpo.split(''))
-        de.contains(letra) ? para[de.indexOf(letra)] : letra,
-    ].join();
-  }
+  static String nomeComparavel(String nome) => semAcento(nome);
 
   // Se a ONG tem esse nome, pela comparação normalizada
   bool temNome(String outro) => nomeComparavel(nome) == nomeComparavel(outro);
@@ -268,7 +266,7 @@ class Ong {
 
   // Cria a ONG a partir do JSON da API; campos ausentes recebem um padrão
   factory Ong.fromJson(Map<String, dynamic> json) => Ong(
-    id: (json['id'] as num?)?.toInt(),
+    id: idDaApi(json['id']),
     nome: json['nome'] as String? ?? '',
     descricao: json['descricao'] as String? ?? '',
     politicaDeAdocao: json['politicaDeAdocao'] as String? ?? '',
@@ -291,7 +289,7 @@ class Ong {
   // Converte a ONG no JSON da API. Sem id, a ONG ainda não foi criada e a
   // API gera o id
   Map<String, dynamic> toJson() => {
-    if (id != null) 'id': id,
+    if (id != null) 'id': idParaApi(id!),
     'nome': nome,
     'descricao': descricao,
     'politicaDeAdocao': politicaDeAdocao,

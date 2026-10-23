@@ -32,21 +32,28 @@ class DetalhesDenuncia extends StatelessWidget {
 
   final Denuncia denuncia;
 
-  // Abre o ponto da denúncia no app de mapas do aparelho (URI geo:), já que
-  // denúncias não aparecem no mapa do app
+  // Abre o ponto da denúncia no app de mapas, já que denúncias não aparecem
+  // no mapa do app. Usa o link do Google Maps, que abre no app de mapas ou no
+  // navegador em qualquer plataforma
   Future<void> _abrirNoMapa(BuildContext context) async {
     final mensageiro = ScaffoldMessenger.of(context);
     final ponto = '${denuncia.latitude},${denuncia.longitude}';
-    final abriu = await launchUrl(
-      Uri.parse('geo:$ponto?q=$ponto'),
-      mode: LaunchMode.externalApplication,
-    );
+    bool abriu;
+    try {
+      abriu = await launchUrl(
+        Uri.parse('https://www.google.com/maps/search/?api=1&query=$ponto'),
+        mode: LaunchMode.externalApplication,
+      );
+    } on Exception {
+      // Sem aplicativo que trate o link, a plataforma lança exceção
+      abriu = false;
+    }
     if (!abriu) {
       mensageiro
         ..hideCurrentSnackBar()
         ..showSnackBar(
           const SnackBar(
-            content: Text('Nenhum app de mapas encontrado neste aparelho.'),
+            content: Text('Não foi possível abrir o mapa neste aparelho.'),
           ),
         );
     }
@@ -231,6 +238,8 @@ class _Ficha extends StatelessWidget {
           const _Divisoria(),
           const _Rotulo('Quem denunciou'),
           const SizedBox(height: 4),
+          // O app grava toda denúncia como anônima. O painel com nome e
+          // telefone atende registros antigos, feitos com identificação
           if (denuncia.anonima)
             Text(
               'Denúncia anônima: o registro não inclui o nome nem o telefone de quem denunciou.',

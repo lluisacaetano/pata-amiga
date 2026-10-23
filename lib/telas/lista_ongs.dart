@@ -17,6 +17,8 @@ import '../tema/cores.dart';
 import '../widgets/barra_inferior.dart';
 // Arquivo avatar_da_ong.dart: avatar da ONG com foto ou iniciais.
 import '../widgets/avatar_da_ong.dart';
+// Arquivo campo_de_busca.dart: campo de busca arredondado do topo da lista.
+import '../widgets/campo_de_busca.dart';
 
 // Lista das ONGs e abrigos, aberta pelo item "ONGs" da barra inferior. Dá
 // acesso ao perfil de cada ONG sem passar por um animal do feed
@@ -105,45 +107,36 @@ class _ListaOngsState extends State<ListaOngs> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           children: [
-            TextField(
+            CampoDeBusca(
               controller: _pesquisa,
-              onChanged: (texto) => setState(() => _busca = texto),
-              style: const TextStyle(fontSize: 15),
-              decoration: InputDecoration(
-                isDense: true,
-                filled: true,
-                fillColor: context.cores.cartao,
-                hintText: 'Buscar pelo nome da ONG',
-                hintStyle: TextStyle(
-                  fontSize: 14,
-                  color: context.cores.textoFraco,
-                ),
-                prefixIcon: Icon(Icons.search, color: context.cores.textoFraco),
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide(color: context.cores.borda),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide(
-                    color: context.cores.principal,
-                    width: 1.5,
-                  ),
-                ),
-              ),
+              dica: 'Buscar pelo nome da ONG',
+              aoMudar: (texto) => setState(() => _busca = texto),
             ),
             const SizedBox(height: 16),
-            if (_semConexao)
+            // Sem conexão mas com ONGs em memória: avisa que a lista pode
+            // estar desatualizada. Sem nenhuma, o aviso vem no lugar da lista
+            if (_semConexao && estado.ongs.isNotEmpty)
               Padding(
-                padding: EdgeInsets.only(bottom: 12),
-                child: Text(
-                  'Sem conexão: a lista pode estar desatualizada. Puxe para '
-                  'baixo para tentar de novo.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: context.cores.textoFraco,
-                  ),
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Sem conexão: a lista pode estar desatualizada.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: context.cores.textoFraco,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: _carregar,
+                      style: TextButton.styleFrom(
+                        foregroundColor: context.cores.principal,
+                      ),
+                      child: const Text('Tentar de novo'),
+                    ),
+                  ],
                 ),
               ),
             if (_carregando && estado.ongs.isEmpty)
@@ -156,7 +149,11 @@ class _ListaOngsState extends State<ListaOngs> {
                 ),
               )
             else if (ongs.isEmpty)
-              _ListaVazia(buscando: _busca.trim().isNotEmpty)
+              _ListaVazia(
+                buscando: _busca.trim().isNotEmpty,
+                semConexao: _semConexao && estado.ongs.isEmpty,
+                aoTentarDeNovo: _carregar,
+              )
             else
               for (final ong in ongs)
                 _CartaoDaOng(
@@ -282,11 +279,18 @@ class _CartaoDaOng extends StatelessWidget {
   }
 }
 
-// Aviso de lista vazia, com texto diferente para busca sem resultado
+// Aviso de lista vazia. Diferencia três casos: sem conexão (com o botão de
+// tentar de novo), busca sem resultado e nenhuma ONG cadastrada
 class _ListaVazia extends StatelessWidget {
-  const _ListaVazia({required this.buscando});
+  const _ListaVazia({
+    required this.buscando,
+    required this.semConexao,
+    required this.aoTentarDeNovo,
+  });
 
   final bool buscando;
+  final bool semConexao;
+  final VoidCallback aoTentarDeNovo;
 
   @override
   Widget build(BuildContext context) {
@@ -295,19 +299,37 @@ class _ListaVazia extends StatelessWidget {
       child: Column(
         children: [
           Icon(
-            Icons.volunteer_activism_outlined,
+            semConexao ? Icons.wifi_off : Icons.volunteer_activism_outlined,
             size: 44,
             color: context.cores.principal,
           ),
           const SizedBox(height: 12),
           Text(
-            buscando
+            semConexao
+                ? 'Não foi possível carregar as ONGs.'
+                : buscando
                 ? 'Nenhuma ONG com esse nome.'
                 : 'Nenhuma ONG cadastrada ainda.',
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
-          if (!buscando) ...[
+          if (semConexao) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Confira a conexão com a internet e tente de novo.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: context.cores.textoFraco),
+            ),
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: aoTentarDeNovo,
+              style: FilledButton.styleFrom(
+                backgroundColor: context.cores.principal,
+                foregroundColor: context.sobrePrincipal,
+              ),
+              child: const Text('Tentar de novo'),
+            ),
+          ] else if (!buscando) ...[
             const SizedBox(height: 6),
             Text(
               'Representa uma ONG ou abrigo? Crie o perfil dela em Editar '

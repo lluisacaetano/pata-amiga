@@ -1,7 +1,7 @@
 // Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
-// Pacote shared_preferences: guarda dados simples no aparelho (chave e valor).
-import 'package:shared_preferences/shared_preferences.dart';
+// Pacote provider: compartilha estado entre as telas e as reconstrói.
+import 'package:provider/provider.dart';
 
 // Arquivo auth_components.dart: logotipo da tela de carregamento.
 import 'screens/auth_components.dart';
@@ -13,6 +13,8 @@ import 'screens/de_volta_screen.dart';
 import '../telas/feed_adocao.dart';
 // Arquivo onboarding_screen.dart: onboarding e se ele já foi visto.
 import '../telas/onboarding_screen.dart';
+// Arquivo usuario_provider.dart: se há uma sessão aberta.
+import '../provider/usuario_provider.dart';
 
 // Primeira tela do app: decide para onde a pessoa vai ao abrir.
 // Sem sessão salva, mostra as boas-vindas; com sessão, mostra o onboarding
@@ -40,19 +42,17 @@ class _EstadoRoteadorAutenticacao extends State<RoteadorAutenticacao> {
     _verificarStatusLogin();
   }
 
-  // Lê o e-mail da sessão salva no aparelho. O onboarding só é consultado
-  // para quem está logado, porque quem não está passa antes pelo login
+  // Pergunta ao UsuarioProvider se há sessão (ele a restaura ao abrir o
+  // app). O onboarding só é consultado para quem está logado, porque quem
+  // não está passa antes pelo login
   Future<void> _verificarStatusLogin() async {
-    final preferencias = await SharedPreferences.getInstance();
-    final emailLogado = preferencias.getString('loggedInEmail');
-    final onboardingConcluido = emailLogado == null
-        ? true
-        : await OnboardingStorage.jaViu();
+    final logado = context.read<UsuarioProvider?>()?.estaLogado ?? false;
+    final onboardingConcluido = logado ? await OnboardingStorage.jaViu() : true;
     if (!mounted) return;
 
     setState(() {
-      _estaLogado = emailLogado != null;
-      _mostrarOnboarding = emailLogado != null && !onboardingConcluido;
+      _estaLogado = logado;
+      _mostrarOnboarding = logado && !onboardingConcluido;
       _estaCarregando = false;
     });
   }

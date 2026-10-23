@@ -83,7 +83,7 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
   // Remove dos curtidos e oferece "Desfazer", porque o coração sobre a foto
   // é fácil de tocar sem querer
   Future<void> _removerCurtida(EstadoPataAmiga estado, Animal animal) async {
-    await estado.removerCurtida(animal.nome);
+    await estado.removerCurtida(animal.chave);
     if (!mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -92,7 +92,7 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
           content: Text('${animal.nome} saiu dos seus curtidos.'),
           action: SnackBarAction(
             label: 'Desfazer',
-            onPressed: () => estado.alternarCurtida(animal.nome),
+            onPressed: () => estado.alternarCurtida(animal.chave),
           ),
         ),
       );
@@ -110,34 +110,38 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
     return [
       _TituloDoGrupo(titulo: titulo, quantidade: animais.length),
       // Grade de duas colunas, como a dos curtidos
-      GridView.count(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 0.66,
-        padding: const EdgeInsets.only(bottom: 12),
-        children: [
-          for (final animal in animais)
-            _CartaoDeRegistro(
-              animal: animal,
-              aoAbrir: () => _abrirDetalhes(animal),
-              ong: estado.ongDe(email)?.nome,
-              // Sem permissão para alterar (por exemplo, cadastro feito por
-              // outra conta no mesmo aparelho), o card só abre a ficha
-              aoEscolher: estado.podeMudarStatus(animal, email)
-                  ? (acao) => _agir(acao, animal)
-                  : null,
-            ),
-        ],
+      LayoutBuilder(
+        builder: (context, limites) => GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio:
+              _larguraDaColuna(limites.maxWidth) /
+              _alturaDoCartao(context, limites.maxWidth),
+          padding: const EdgeInsets.only(bottom: 12),
+          children: [
+            for (final animal in animais)
+              _CartaoDeRegistro(
+                animal: animal,
+                aoAbrir: () => _abrirDetalhes(animal),
+                ong: estado.ongDe(email)?.nome,
+                // Sem permissão para alterar (por exemplo, cadastro feito por
+                // outra conta no mesmo aparelho), o card só abre a ficha
+                aoEscolher: estado.podeMudarStatus(animal, email)
+                    ? (acao) => _agir(acao, animal)
+                    : null,
+              ),
+          ],
+        ),
       ),
     ];
   }
 
   // Executa a ação escolhida no menu do card
   Future<void> _agir(_AcaoDoRegistro acao, Animal animal) => switch (acao) {
-    _AcaoDoRegistro.editar => editarRegistro(context, animal, api: widget.api),
+    _AcaoDoRegistro.editar => editarRegistro(context, animal),
     _AcaoDoRegistro.mudarStatus => mudarStatus(
       context,
       animal,
@@ -332,8 +336,7 @@ class _PerfilUsuarioState extends State<PerfilUsuario> {
                     children: [
                       // Para quem faz parte de uma ONG, uma dica de que os
                       // registros podem ser transferidos para ela
-                      if (estado.ongDe(usuario.email) case final ong?
-                          when cadastros.isNotEmpty)
+                      if (estado.ongDe(usuario.email) case final ong?)
                         _DicaDaOng(ong: ong.nome),
                       for (final grupo in _gruposDeRegistro)
                         ..._grupo(
@@ -461,7 +464,11 @@ class _Avatar extends StatelessWidget {
         backgroundColor: context.cores.principalClara,
         backgroundImage: imagem,
         child: imagem == null
-            ? Icon(Icons.person_outline, size: 36, color: context.cores.principal)
+            ? Icon(
+                Icons.person_outline,
+                size: 36,
+                color: context.cores.principal,
+              )
             : null,
       ),
     );
@@ -537,27 +544,39 @@ class _GradeDeCurtidos extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: animais.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        mainAxisExtent: 240,
+    return LayoutBuilder(
+      builder: (context, limites) => GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: animais.length,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          mainAxisExtent: _alturaDoCartao(context, limites.maxWidth),
+        ),
+        itemBuilder: (context, indice) {
+          final animal = animais[indice];
+          return _CartaoCurtido(
+            animal: animal,
+            aoAbrir: () => aoAbrir(animal),
+            aoRemover: () => aoRemover(animal),
+          );
+        },
       ),
-      itemBuilder: (context, indice) {
-        final animal = animais[indice];
-        return _CartaoCurtido(
-          animal: animal,
-          aoAbrir: () => aoAbrir(animal),
-          aoRemover: () => aoRemover(animal),
-        );
-      },
     );
   }
 }
+
+// Largura de cada coluna das grades de duas colunas do perfil
+double _larguraDaColuna(double larguraDaGrade) => (larguraDaGrade - 12) / 2;
+
+// Altura de um card das grades do perfil: a foto acompanha a largura da
+// coluna e a área de texto cresce com a escala de fonte escolhida em
+// Acessibilidade, para o texto não estourar nem esmagar a foto
+double _alturaDoCartao(BuildContext context, double larguraDaGrade) =>
+    _larguraDaColuna(larguraDaGrade) +
+    MediaQuery.textScalerOf(context).scale(82);
 
 // Card de um curtido: foto com o botão de remover, nome, tipo, status e local
 class _CartaoCurtido extends StatelessWidget {
@@ -629,7 +648,10 @@ class _CartaoCurtido extends StatelessWidget {
                   comMaiuscula(animal.rotuloDoStatus),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: context.cores.textoFraco, fontSize: 12),
+                  style: TextStyle(
+                    color: context.cores.textoFraco,
+                    fontSize: 12,
+                  ),
                 ),
               ),
             ],
@@ -915,7 +937,9 @@ class _ListaVazia extends StatelessWidget {
           const SizedBox(height: 18),
           TextButton(
             onPressed: aoVerAnimais,
-            style: TextButton.styleFrom(foregroundColor: context.cores.principal),
+            style: TextButton.styleFrom(
+              foregroundColor: context.cores.principal,
+            ),
             child: const Text(
               'Ver animais no feed',
               style: TextStyle(fontWeight: FontWeight.w600),

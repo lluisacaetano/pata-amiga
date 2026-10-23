@@ -11,7 +11,7 @@ import '../../routes/route_names.dart';
 import '../../telas/onboarding_screen.dart';
 // Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../../tema/cores.dart';
-// Arquivo mascaras.dart: máscaras dos campos de e-mail e telefone.
+// Arquivo mascaras.dart: máscaras e validador de e-mail e telefone.
 import '../../widgets/mascaras.dart';
 // Arquivo usuario_provider.dart: registro da conta nova.
 import '../../provider/usuario_provider.dart';
@@ -26,7 +26,7 @@ import '../../widgets/escolha_de_ong.dart';
 
 // Tela de criação de conta: nome, e-mail, telefone, senha, a ONG de que a
 // pessoa faz parte (opcional) e o aceite dos termos. O perfil é salvo no
-// aparelho; a senha é só validada, não é guardada
+// aparelho e a senha é guardada apenas como resumo (ver UsuarioProvider)
 class RegisterScreen extends StatefulWidget {
   // Serviço de ONGs; quando nulo, usa o padrão (os testes passam um falso)
   final OngService? ongs;
@@ -49,6 +49,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _mostrarErroTermos = false;
   bool _mostrarSenha = false;
   bool _mostrarConfirmacao = false;
+  // Impede que um segundo toque crie a conta e peça entrada à ONG de novo
+  bool _salvando = false;
   // ONG escolhida no cadastro; ao criar a conta, vira um pedido de entrada
   Ong? _ong;
 
@@ -127,14 +129,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 keyboardType: TextInputType.emailAddress,
                 inputFormatters: [MascaraDeEmail()],
                 prefixIcon: Icons.mail_outline,
-                validator: (value) {
-                  final email = value?.trim() ?? '';
-                  if (email.isEmpty) return 'Informe seu e-mail.';
-                  if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
-                    return 'Digite um e-mail válido.';
-                  }
-                  return null;
-                },
+                validator: validarEmail,
               ),
               const SizedBox(height: 12),
               AuthField(
@@ -199,9 +194,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
               // Força a fonte Roboto, a mesma dos outros campos desta tela
               Theme(
                 data: Theme.of(context).copyWith(
-                  textTheme: Theme.of(
-                    context,
-                  ).textTheme.apply(fontFamily: 'Roboto'),
+                  textTheme: Theme.of(context).textTheme
+                      .apply(fontFamily: 'Roboto'),
                 ),
                 child: DefaultTextStyle.merge(
                   style: const TextStyle(fontFamily: 'Roboto'),
@@ -226,7 +220,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     padding: const EdgeInsets.only(top: 2),
                     child: Checkbox(
                       value: _aceitouTermos,
-                      activeColor: const Color(0xFF3F7D58),
+                      activeColor: context.cores.principal,
+                      checkColor: context.sobrePrincipal,
                       visualDensity: VisualDensity.compact,
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       onChanged: (value) {
@@ -263,37 +258,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ],
               ),
               if (_mostrarErroTermos)
-                const Padding(
-                  padding: EdgeInsets.only(left: 44, top: 4),
+                Padding(
+                  padding: const EdgeInsets.only(left: 44, top: 4),
                   child: Text(
                     'É necessário aceitar os termos para continuar.',
-                    style: TextStyle(color: Colors.red, fontSize: 12),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
               const SizedBox(height: 12),
               AuthButton(
-                label: 'Criar conta',
-                // Valida os campos e o aceite dos termos, salva o perfil,
-                // envia o pedido à ONG (se houver) e segue para o app
-                onPressed: () async {
-                  final camposValidos = _formKey.currentState!.validate();
-                  setState(() => _mostrarErroTermos = !_aceitouTermos);
-                  if (!camposValidos || !_aceitouTermos) return;
-                  await context.read<UsuarioProvider>().registrarUsuario(
-                    nome: _nomeController.text,
-                    email: _emailController.text,
-                    telefone: _telefoneController.text,
-                  );
-                  final ong = _ong;
-                  if (ong != null) await _pedirEntrada(ong);
-                  if (!context.mounted) return;
-                  await navegarAposAutenticacao(context);
-                },
+                label: _salvando ? 'Criando conta…' : 'Criar conta',
+                carregando: _salvando,
+                onPressed: _salvando ? null : _criarConta,
               ),
               const SizedBox(height: 8),
               Center(
                 child: TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  // Vai para o login mesmo quando o cadastro foi aberto
+                  // pelas boas-vindas
+                  onPressed: () =>
+                      Navigator.of(context)
+                          .pushReplacementNamed(AppRoutes.login),
                   child: const Text(
                     'Já tem conta? Entrar',
                     style: TextStyle(fontSize: 16),
@@ -305,6 +293,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
       ),
     );
+  }
+
+  // Valida os campos e o aceite dos termos, salva o perfil com a senha,
+  // envia o pedido à ONG (se houver) e segue para o app
+  Future<void> _criarConta() async {
+    final camposValidos = _formKey.currentState!.validate();
+    setState(() => _mostrarErroTermos = !_aceitouTermos);
+    if (!camposValidos || !_aceitouTermos) return;
+    setState(() => _salvando = true);
+    await context.read<UsuarioProvider>().registrarUsuario(
+      nome: _nomeController.text,
+      email: _emailController.text,
+      telefone: _telefoneController.text,
+      senha: _senhaController.text,
+    );
+    if (!mounted) return;
+    final ong = _ong;
+    if (ong != null) await _pedirEntrada(ong);
+    if (!mounted) return;
+    await navegarAposAutenticacao(context);
   }
 
   // Texto sublinhado que abre os Termos de Uso ou a Política de Privacidade

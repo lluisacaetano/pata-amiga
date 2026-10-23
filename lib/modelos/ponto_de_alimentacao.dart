@@ -1,6 +1,9 @@
 // Biblioteca dart:math: seno, cosseno e raiz, usados no cálculo de distância.
 import 'dart:math' as math;
 
+// Arquivo json_da_api.dart: leitura e gravação do id da API.
+import 'json_da_api.dart';
+
 // Comedouros e bebedouros públicos da cidade e o registro de quem os
 // abasteceu, para indicar quais precisam de comida ou água
 
@@ -21,7 +24,8 @@ extension RotuloDoPonto on TipoDePonto {
 
 // Um comedouro ou bebedouro público, com a localização e quem o cadastrou
 class PontoDeAlimentacao {
-  final int? id;
+  // O id gerado pela API, sempre em texto
+  final String? id;
   final TipoDePonto tipo;
   // Referência para achar o ponto no local, como "perto do banco da praça"
   final String referencia;
@@ -44,9 +48,11 @@ class PontoDeAlimentacao {
     required this.cadastradoEm,
   });
 
+  // Cria o ponto a partir do JSON da API. Tipo, coordenadas e data do
+  // cadastro são obrigatórios; sem eles, gera erro
   factory PontoDeAlimentacao.fromJson(Map<String, dynamic> json) =>
       PontoDeAlimentacao(
-        id: (json['id'] as num?)?.toInt(),
+        id: idDaApi(json['id']),
         tipo: TipoDePonto.values.byName(json['tipo'] as String),
         referencia: json['referencia'] as String? ?? '',
         rua: json['rua'] as String? ?? '',
@@ -58,7 +64,7 @@ class PontoDeAlimentacao {
       );
 
   Map<String, dynamic> toJson() => {
-    if (id != null) 'id': id,
+    if (id != null) 'id': idParaApi(id!),
     'tipo': tipo.name,
     'referencia': referencia,
     'rua': rua,
@@ -76,9 +82,10 @@ class PontoDeAlimentacao {
 
 // O registro de que alguém abasteceu um ponto em uma data
 class Abastecimento {
-  final int? id;
+  // O id gerado pela API, sempre em texto
+  final String? id;
   // O id do ponto abastecido
-  final int ponto;
+  final String ponto;
   final DateTime data;
   final String registradoPor;
   // O e-mail de quem registrou; identifica a pessoa, já que nomes se repetem
@@ -95,9 +102,11 @@ class Abastecimento {
     this.foto = '',
   });
 
+  // Cria o abastecimento a partir do JSON da API. O ponto e a data são
+  // obrigatórios; sem eles, gera erro
   factory Abastecimento.fromJson(Map<String, dynamic> json) => Abastecimento(
-    id: (json['id'] as num?)?.toInt(),
-    ponto: (json['ponto'] as num).toInt(),
+    id: idDaApi(json['id']),
+    ponto: idDaApi(json['ponto'])!,
     data: DateTime.parse(json['data'] as String),
     registradoPor: json['registradoPor'] as String? ?? '',
     email: json['email'] as String? ?? '',
@@ -105,8 +114,8 @@ class Abastecimento {
   );
 
   Map<String, dynamic> toJson() => {
-    if (id != null) 'id': id,
-    'ponto': ponto,
+    if (id != null) 'id': idParaApi(id!),
+    'ponto': idParaApi(ponto),
     'data': data.toIso8601String(),
     'registradoPor': registradoPor,
     'email': email,
@@ -156,7 +165,7 @@ extension TextoDoMotivo on MotivoDaRecusa {
 MotivoDaRecusa? verificarAbastecimento({
   required double latitudeDoPonto,
   required double longitudeDoPonto,
-  required int? idDoPonto,
+  required String? idDoPonto,
   required double latitudeDaPessoa,
   required double longitudeDaPessoa,
   required String email,
@@ -176,18 +185,20 @@ MotivoDaRecusa? verificarAbastecimento({
   return null;
 }
 
-// Se a pessoa já registrou o abastecimento deste ponto hoje
+// Se a pessoa já registrou o abastecimento deste ponto hoje. O e-mail é
+// comparado sem diferenciar maiúsculas nem espaços nas pontas
 bool jaAbasteceuHoje(
-  int? idDoPonto,
+  String? idDoPonto,
   String email,
   Iterable<Abastecimento> abastecimentos,
   DateTime agora,
 ) {
-  if (idDoPonto == null || email.isEmpty) return false;
+  final quem = email.trim().toLowerCase();
+  if (idDoPonto == null || quem.isEmpty) return false;
   return abastecimentos.any(
     (item) =>
         item.ponto == idDoPonto &&
-        item.email == email &&
+        item.email.trim().toLowerCase() == quem &&
         item.data.year == agora.year &&
         item.data.month == agora.month &&
         item.data.day == agora.day,
@@ -231,14 +242,4 @@ SituacaoDoPonto situacaoDoPonto(Abastecimento? ultimo, DateTime agora) {
   if (dias <= 2) return SituacaoDoPonto.abastecido;
   if (dias <= 6) return SituacaoDoPonto.abastecerLogo;
   return SituacaoDoPonto.precisa;
-}
-
-// Há quanto tempo foi a data: "hoje", "ontem" ou "há 3 dias"
-String haQuantoTempo(DateTime data, DateTime agora) {
-  final hoje = DateTime(agora.year, agora.month, agora.day);
-  final dia = DateTime(data.year, data.month, data.day);
-  final dias = hoje.difference(dia).inDays;
-  if (dias <= 0) return 'hoje';
-  if (dias == 1) return 'ontem';
-  return 'há $dias dias';
 }

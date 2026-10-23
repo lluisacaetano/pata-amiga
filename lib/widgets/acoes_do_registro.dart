@@ -13,6 +13,8 @@ import '../routes/route_names.dart';
 import '../services/animal_service.dart';
 // Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo painel_de_confirmacao.dart: painel inferior de confirmação.
+import 'painel_de_confirmacao.dart';
 
 // Ações do dono sobre o próprio registro: encerrar ou reabrir, editar,
 // transferir para uma ONG e, após um resgate, publicar para adoção. São
@@ -42,7 +44,7 @@ Future<void> mudarStatus(
     context: context,
     backgroundColor: context.cores.cartao,
     showDragHandle: true,
-    builder: (painel) => _ConfirmarStatus(
+    builder: (painel) => PainelDeConfirmacao(
       titulo: voltando
           ? 'Retornar ${atual.nome} para "$textoNovo"?'
           : 'Marcar ${atual.nome} como $textoNovo?',
@@ -50,7 +52,10 @@ Future<void> mudarStatus(
           ? 'O animal voltará a ser exibido no feed e no mapa.'
           : 'O animal deixará de ser exibido no feed e no mapa. A alteração '
                 'pode ser revertida a qualquer momento.',
-      aoConfirmar: () => Navigator.pop(painel, true),
+      rotuloPrincipal: 'Confirmar',
+      aoPrincipal: () => Navigator.pop(painel, true),
+      rotuloSecundario: 'Cancelar',
+      aoSecundario: () => Navigator.pop(painel, false),
     ),
   );
   if (confirmou != true || !context.mounted) return;
@@ -88,13 +93,16 @@ Future<void> enviarParaOng(
     context: context,
     backgroundColor: context.cores.cartao,
     showDragHandle: true,
-    builder: (painel) => _ConfirmarStatus(
+    builder: (painel) => PainelDeConfirmacao(
       titulo: 'Transferir ${atual.nome} para ${ong.nome}?',
       texto:
           'O animal passa a aparecer no perfil da ONG, com o contato dela, e '
           'sai de Meus registros. Qualquer pessoa da ONG poderá atualizar o '
           'status e o registro dele.',
-      aoConfirmar: () => Navigator.pop(painel, true),
+      rotuloPrincipal: 'Confirmar',
+      aoPrincipal: () => Navigator.pop(painel, true),
+      rotuloSecundario: 'Cancelar',
+      aoSecundario: () => Navigator.pop(painel, false),
     ),
   );
   if (confirmou != true || !context.mounted) return;
@@ -130,11 +138,7 @@ Future<void> enviarParaOng(
 
 // Abre o cadastro preenchido para edição. O formulário já grava na API antes
 // de fechar; aqui o estado local é atualizado com o registro devolvido
-Future<void> editarRegistro(
-  BuildContext context,
-  Animal atual, {
-  AnimalService? api,
-}) async {
+Future<void> editarRegistro(BuildContext context, Animal atual) async {
   final estado = PataAmigaScope.of(context);
   final mensageiro = ScaffoldMessenger.of(context);
   final editado = await Navigator.pushNamed(
@@ -159,9 +163,17 @@ Future<void> _oferecerAdocao(
     context: context,
     backgroundColor: context.cores.cartao,
     showDragHandle: true,
-    builder: (painel) => _OfertaDeAdocao(
-      nome: atual.nome,
-      aoPublicar: () => Navigator.pop(painel, true),
+    builder: (painel) => PainelDeConfirmacao(
+      icone: Icons.check_circle,
+      titulo: 'Resgate concluído',
+      texto:
+          'Deseja publicar ${atual.nome} para adoção? O cadastro será aberto '
+          'com os dados e as fotos do resgate para você completar.',
+      rotuloPrincipal: 'Publicar para adoção',
+      iconeDoPrincipal: Icons.favorite_border,
+      aoPrincipal: () => Navigator.pop(painel, true),
+      rotuloSecundario: 'Agora não',
+      aoSecundario: () => Navigator.pop(painel, false),
     ),
   );
   if (publicar == true && context.mounted) {
@@ -204,127 +216,4 @@ Future<void> publicarParaAdocao(
         ),
       ),
     );
-}
-
-// Painel inferior de confirmação com título, explicação e os botões
-// Confirmar e Cancelar
-class _ConfirmarStatus extends StatelessWidget {
-  const _ConfirmarStatus({
-    required this.titulo,
-    required this.texto,
-    required this.aoConfirmar,
-  });
-
-  final String titulo;
-  final String texto;
-  final VoidCallback aoConfirmar;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              titulo,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              texto,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: context.cores.textoFraco,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: aoConfirmar,
-              style: FilledButton.styleFrom(
-                backgroundColor: context.cores.principal,
-                minimumSize: const Size.fromHeight(48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              child: const Text('Confirmar'),
-            ),
-            const SizedBox(height: 6),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              style: TextButton.styleFrom(foregroundColor: context.cores.textoFraco),
-              child: const Text('Cancelar'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// Painel inferior exibido após o resgate, com o convite para publicar o
-// animal para adoção
-class _OfertaDeAdocao extends StatelessWidget {
-  const _OfertaDeAdocao({required this.nome, required this.aoPublicar});
-
-  final String nome;
-  final VoidCallback aoPublicar;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Icon(Icons.check_circle, size: 40, color: context.cores.principal),
-            const SizedBox(height: 10),
-            const Text(
-              'Resgate concluído',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Deseja publicar $nome para adoção? O cadastro será aberto com '
-              'os dados e as fotos do resgate para você completar.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: context.cores.textoFraco,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: aoPublicar,
-              icon: const Icon(Icons.favorite_border, size: 18),
-              label: const Text('Publicar para adoção'),
-              style: FilledButton.styleFrom(
-                backgroundColor: context.cores.principal,
-                minimumSize: const Size.fromHeight(48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-            ),
-            const SizedBox(height: 6),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              style: TextButton.styleFrom(foregroundColor: context.cores.textoFraco),
-              child: const Text('Agora não'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

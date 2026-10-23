@@ -1,3 +1,6 @@
+// Arquivo texto.dart: comparação de nomes sem acentos.
+import '../modelos/texto.dart';
+
 // As raças oferecidas no cadastro, separadas por espécie, com "Sem raça
 // definida" primeiro por ser a mais comum entre os animais para adoção. A raça
 // ausente é informada pela opção "Outra".
@@ -221,12 +224,12 @@ List<String> racasDa(String? especie) => switch (especie?.toLowerCase()) {
 // O nome oficial da raça, de qualquer espécie, sem ligar para maiúsculas e
 // acentos e aceitando os apelidos; null se não for nenhuma raça da lista
 String? racaConhecida(String nome) {
-  final busca = _semAcento(nome);
+  final busca = semAcento(nome);
   if (busca.isEmpty) return null;
   final apelido = _apelidos[busca];
   if (apelido != null) return apelido;
   for (final raca in [...racasDeCachorro, ...racasDeGato]) {
-    if (_semAcento(raca) == busca) return raca;
+    if (semAcento(raca) == busca) return raca;
   }
   return null;
 }
@@ -244,21 +247,7 @@ Iterable<String> filtrarRacas(String? especie, String digitado) =>
 // As raças da lista cujo nome contém o que foi digitado, sem ligar para
 // maiúsculas e acentos
 Iterable<String> buscarNaLista(Iterable<String> racas, String digitado) {
-  final busca = _semAcento(digitado);
+  final busca = semAcento(digitado);
   if (busca.isEmpty) return racas;
-  return racas.where((raca) => _semAcento(raca).contains(busca));
-}
-
-// O texto em minúsculas, sem acentos e sem espaços repetidos, para comparar
-// nomes de raças
-String _semAcento(String texto) {
-  const de = 'áàâãäéèêëíìîïóòôõöúùûüç';
-  const para = 'aaaaaeeeeiiiiooooouuuuc';
-  final saida = StringBuffer();
-  final limpo = texto.toLowerCase().trim().replaceAll(RegExp(r'\s+'), ' ');
-  for (final letra in limpo.split('')) {
-    final i = de.indexOf(letra);
-    saida.write(i < 0 ? letra : para[i]);
-  }
-  return saida.toString();
+  return racas.where((raca) => semAcento(raca).contains(busca));
 }

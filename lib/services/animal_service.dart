@@ -6,33 +6,32 @@ import 'package:http/http.dart' as http;
 
 // Arquivo animal.dart: modelo do animal.
 import '../modelos/animal.dart';
+// Arquivo json_da_api.dart: leitura da lista sem os itens com defeito.
+import '../modelos/json_da_api.dart';
 // Arquivo endereco_da_api.dart: endereço base da API.
 import 'endereco_da_api.dart';
 
 // Leitura e gravação dos animais na API
 class AnimalService {
-  static final _baseUrl = enderecoDaApi;
-
-  // Todos os animais da API; lança exceção se a resposta não for 200
+  // Todos os animais da API; lança exceção se a resposta não for 200. Um
+  // animal com defeito no JSON fica de fora, sem derrubar a lista
   Future<List<Animal>> buscarAnimais() async {
     final resp = await http
-        .get(Uri.parse('$_baseUrl/animais'))
+        .get(Uri.parse('$enderecoDaApi/animais'))
         .timeout(const Duration(seconds: 8));
 
     if (resp.statusCode != 200) {
       throw Exception('Erro ${resp.statusCode}');
     }
     final lista = jsonDecode(utf8.decode(resp.bodyBytes)) as List;
-    return lista
-        .map((e) => Animal.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return itensValidos(lista, Animal.fromJson);
   }
 
   // Publica um animal novo na API
   Future<void> criarAnimal(Animal animal) async {
     final resp = await http
         .post(
-          Uri.parse('$_baseUrl/animais'),
+          Uri.parse('$enderecoDaApi/animais'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode(animal.toJson()),
         )
@@ -50,7 +49,7 @@ class AnimalService {
     if (id == null) return;
     final resp = await http
         .patch(
-          Uri.parse('$_baseUrl/animais/$id'),
+          Uri.parse('$enderecoDaApi/animais/$id'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({'status': novo.name}),
         )
@@ -67,7 +66,7 @@ class AnimalService {
     if (id == null) return;
     final resp = await http
         .put(
-          Uri.parse('$_baseUrl/animais/$id'),
+          Uri.parse('$enderecoDaApi/animais/$id'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode(animal.toJson()),
         )

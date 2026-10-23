@@ -48,6 +48,8 @@ class _EscolhaDeOngState extends State<EscolhaDeOng> {
   void initState() {
     super.initState();
     _busca.text = widget.escolhida?.nome ?? '';
+    // Já nasce com uma ONG escolhida: carrega a lista para poder trocá-la
+    if (_fazParte) _carregar();
   }
 
   @override
@@ -61,8 +63,8 @@ class _EscolhaDeOngState extends State<EscolhaDeOng> {
       .where((ong) => Ong.nomeComparavel(ong.nome) == Ong.nomeComparavel(texto))
       .firstOrNull;
 
-  // Busca as ONGs na API e ordena pelo nome. Só é chamada após o "Sim",
-  // para não carregar a lista sem necessidade
+  // Busca as ONGs na API e ordena pelo nome. Só é chamada após o "Sim" ou
+  // quando já há uma ONG escolhida, para não carregar a lista sem necessidade
   Future<void> _carregar() async {
     setState(() => _semConexao = false);
     try {

@@ -1,9 +1,13 @@
 // Biblioteca dart:convert: converte texto JSON em objetos e vice-versa.
 import 'dart:convert';
+
 // Pacote shared_preferences: guarda dados simples no aparelho (chave e valor).
 import 'package:shared_preferences/shared_preferences.dart';
+
 // Arquivo animal.dart: modelo do animal guardado no cache.
 import '../modelos/animal.dart';
+// Arquivo json_da_api.dart: leitura da lista sem os itens com defeito.
+import '../modelos/json_da_api.dart';
 
 // Cópia local da lista de animais, usada para mostrar o feed sem internet
 class CacheService {
@@ -27,9 +31,7 @@ class CacheService {
     if (texto == null) return null;
     try {
       final lista = jsonDecode(texto) as List;
-      return lista
-          .map((e) => Animal.fromJson(e as Map<String, dynamic>))
-          .toList();
+      return itensValidos(lista, Animal.fromJson);
     } catch (_) {
       // Cópia corrompida é tratada como inexistente
       return null;

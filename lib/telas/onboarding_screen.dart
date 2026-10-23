@@ -77,7 +77,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
     OnboardingPage(
       title: 'Adote com carinho',
-      description: 'Converse com os responsáveis e encontre seu novo amigo.',
+      description:
+          'Fale com os responsáveis pelo WhatsApp e encontre seu novo amigo.',
       icon: Icons.favorite_border,
       imageAsset: 'assets/desenhos/carrosel_boas.png',
     ),
@@ -247,9 +248,12 @@ class _PaginaView extends StatelessWidget {
             Text(
               pagina.title,
               textAlign: TextAlign.center,
+              // Tamanho que mantém o título em até duas linhas num celular
+              // estreito
               style: const TextStyle(
                 fontFamily: 'Nunito',
-                fontSize: 50,
+                fontSize: 34,
+                height: 1.15,
                 fontWeight: FontWeight.w800,
               ),
             ),
