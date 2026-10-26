@@ -29,7 +29,7 @@ void main() {
       scrollable: find.byType(Scrollable).last,
     );
 
-    expect(find.text('Política de Privacidade'), findsWidgets);
+    expect(find.text('POLÍTICA DE PRIVACIDADE'), findsOneWidget);
     expect(
       find.textContaining('O cadastro solicita nome, e-mail e telefone'),
       findsOneWidget,
@@ -57,7 +57,7 @@ void main() {
       scrollable: find.byType(Scrollable).last,
     );
 
-    expect(find.text('Termos de Uso'), findsWidgets);
+    expect(find.text('TERMOS DE USO'), findsOneWidget);
     expect(
       find.textContaining('Você é responsável pela exatidão'),
       findsOneWidget,
