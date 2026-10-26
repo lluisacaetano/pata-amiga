@@ -13,6 +13,8 @@ import '../routes/route_names.dart';
 import '../services/ong_service.dart';
 // Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo etiqueta.dart: etiquetas das finalidades da ONG.
+import '../widgets/etiqueta.dart';
 // Arquivo barra_inferior.dart: barra de navegação inferior.
 import '../widgets/barra_inferior.dart';
 // Arquivo avatar_da_ong.dart: avatar da ONG com foto ou iniciais.
@@ -201,8 +203,8 @@ class _ListaOngsState extends State<ListaOngs> {
   }
 }
 
-// Card de uma ONG: avatar (foto ou iniciais), nome, bairro e quantos animais
-// dela estão em aberto. O toque abre o perfil da ONG
+// Card de uma ONG: avatar (foto ou iniciais), nome, bairro, finalidades e
+// quantos animais dela estão em aberto. O toque abre o perfil da ONG
 class _CartaoDaOng extends StatelessWidget {
   const _CartaoDaOng({required this.ong, required this.emAberto});
 
@@ -271,6 +273,8 @@ class _CartaoDaOng extends StatelessWidget {
                               ],
                             ),
                           ],
+                          const SizedBox(height: 8),
+                          FinalidadesDaOng(ong),
                         ],
                       ),
                     ),

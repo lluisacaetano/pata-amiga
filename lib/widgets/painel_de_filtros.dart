@@ -92,10 +92,19 @@ class _PainelDeFiltrosState extends State<PainelDeFiltros> {
   }
 
   // ONGs com pelo menos um animal no feed, em ordem alfabética. As demais
-  // ficam de fora porque não trariam nenhum resultado
+  // ficam de fora porque não trariam nenhum resultado, e as que só recebem
+  // denúncias também, porque não publicam animais
   List<Ong> get _ongsDisponiveis {
     final comAnimais = opcoesDe(GrupoDeFiltro.ong, widget.animais).toSet();
-    return widget.ongs.where((ong) => comAnimais.contains('${ong.id}')).toList()
+    return widget.ongs
+        .where(
+          (ong) =>
+              comAnimais.contains('${ong.id}') &&
+              ong.finalidades.any(
+                (finalidade) => finalidade != FinalidadeDaOng.denuncias,
+              ),
+        )
+        .toList()
       ..sort(
         (a, b) =>
             Ong.nomeComparavel(a.nome).compareTo(Ong.nomeComparavel(b.nome)),

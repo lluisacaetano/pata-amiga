@@ -343,6 +343,30 @@
       "longitude": -45.4264,
       "responsavelEmail": "ong@example.org",
       "criadaEm": "2026-10-01T09:00:00.000"
+    },
+    {
+      "id": 2,
+      "nome": "APAF Formiga",
+      "descricao": "Associação Protetora dos Animais de Formiga, entidade sem fins lucrativos fundada em 2011 e reconhecida de utilidade pública municipal pela Lei nº 4825/2013. Atua na defesa dos cães e gatos de rua e semidomiciliados de Formiga, com caráter zoófilo, educacional, assistencial e fiscalizador. Recebe denúncias de maus-tratos pelo aplicativo.",
+      "politicaDeAdocao": "A adoção passa por entrevista e análise do perfil do adotante, que deve ser maior de idade e apresentar documento com foto e comprovante de residência. A entrega é formalizada por um termo de responsabilidade, com o animal vacinado, vermifugado e, sempre que possível, castrado. Após a adoção, a APAF acompanha a adaptação do animal.",
+      "telefone": "37991263306",
+      "chavePix": "apaformiga@gmail.com",
+      "foto": "",
+      "rua": "Rua Expedicionário Jorge Alvarenga, 35",
+      "bairro": "Sagrado Coração de Jesus",
+      "latitude": -20.4582821,
+      "longitude": -45.4359432,
+      "responsavelEmail": "malvesfor@gmail.com",
+      "criadaEm": "2011-08-18T09:00:00.000",
+      "finalidades": [
+        "adocao",
+        "perdidos",
+        "resgate",
+        "denuncias"
+      ],
+      "membros": [],
+      "pedidos": [],
+      "avisos": []
     }
   ],
   "denuncias": []

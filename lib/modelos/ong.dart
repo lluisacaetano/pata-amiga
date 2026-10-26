@@ -34,6 +34,28 @@ class AvisoDaOng {
   const AvisoDaOng({required this.email, required this.tipo, this.em});
 }
 
+// O que a organização faz. Só [denuncias] muda o funcionamento do app: a
+// organização passa a receber denúncias de maus-tratos
+enum FinalidadeDaOng { adocao, perdidos, resgate, denuncias }
+
+extension RotuloDaFinalidade on FinalidadeDaOng {
+  // Texto exibido no cadastro e nas etiquetas do perfil
+  String get rotulo => switch (this) {
+    FinalidadeDaOng.adocao => 'Adoção',
+    FinalidadeDaOng.perdidos => 'Perdidos',
+    FinalidadeDaOng.resgate => 'Resgate',
+    FinalidadeDaOng.denuncias => 'Recebe denúncias',
+  };
+}
+
+// Finalidades de uma ONG gravada antes de o campo existir: as três abas do
+// feed, sem receber denúncias
+const finalidadesPadrao = {
+  FinalidadeDaOng.adocao,
+  FinalidadeDaOng.perdidos,
+  FinalidadeDaOng.resgate,
+};
+
 // Uma ONG ou abrigo. A conta que cria o perfil passa a administrá-lo
 // (responsavelEmail), e os animais da ONG são os publicados com o ongId dela.
 // O app não verifica se a conta pertence de fato a uma organização
@@ -53,6 +75,8 @@ class Ong {
   final double? longitude;
   final String responsavelEmail;
   final DateTime criadaEm;
+  // O que a organização faz; pelo menos uma finalidade
+  final Set<FinalidadeDaOng> finalidades;
   // Os membros, além de quem administra; podem publicar em nome da ONG
   final List<PessoaDaOng> membros;
   // Os pedidos de entrada aguardando resposta da administração
@@ -74,10 +98,14 @@ class Ong {
     this.longitude,
     required this.responsavelEmail,
     required this.criadaEm,
+    this.finalidades = finalidadesPadrao,
     this.membros = const [],
     this.pedidos = const [],
     this.avisos = const [],
   });
+
+  // Se a organização recebe denúncias de maus-tratos pelo app
+  bool get recebeDenuncias => finalidades.contains(FinalidadeDaOng.denuncias);
 
   // Se a ONG tem as duas coordenadas para aparecer no mapa
   bool get temLocal => latitude != null && longitude != null;
@@ -264,6 +292,18 @@ class Ong {
       email.trim().isNotEmpty &&
       responsavelEmail.trim().toLowerCase() == email.trim().toLowerCase();
 
+  // Lê as finalidades gravadas, ignorando valores desconhecidos. Sem o
+  // campo, ou sem nenhuma finalidade válida, vale o padrão
+  static Set<FinalidadeDaOng> _finalidades(Object? valor) {
+    final lidas = {
+      if (valor is List)
+        for (final item in valor)
+          for (final finalidade in FinalidadeDaOng.values)
+            if (finalidade.name == item) finalidade,
+    };
+    return lidas.isEmpty ? finalidadesPadrao : lidas;
+  }
+
   // Cria a ONG a partir do JSON da API; campos ausentes recebem um padrão
   factory Ong.fromJson(Map<String, dynamic> json) => Ong(
     id: idDaApi(json['id']),
@@ -281,6 +321,7 @@ class Ong {
     criadaEm:
         DateTime.tryParse(json['criadaEm'] as String? ?? '') ??
         DateTime.fromMillisecondsSinceEpoch(0),
+    finalidades: _finalidades(json['finalidades']),
     membros: _pessoas(json['membros']),
     pedidos: _pessoas(json['pedidos']),
     avisos: _avisos(json['avisos']),
@@ -302,6 +343,7 @@ class Ong {
     'longitude': longitude,
     'responsavelEmail': responsavelEmail,
     'criadaEm': criadaEm.toIso8601String(),
+    'finalidades': [for (final finalidade in finalidades) finalidade.name],
     'membros': _pessoasEmJson(membros),
     'pedidos': _pessoasEmJson(pedidos),
     'avisos': _avisosEmJson(avisos),

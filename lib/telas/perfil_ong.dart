@@ -29,7 +29,7 @@ import '../tema/cores.dart';
 import '../widgets/avatar_da_ong.dart';
 // Arquivo escolha_de_tipo.dart: nome do tipo de registro no singular.
 import '../widgets/escolha_de_tipo.dart';
-// Arquivo etiqueta.dart: etiqueta arredondada do tipo do animal.
+// Arquivo etiqueta.dart: etiquetas do tipo do animal e das finalidades.
 import '../widgets/etiqueta.dart';
 // Arquivo foto_animal.dart: exibição da foto do animal.
 import '../widgets/foto_animal.dart';
@@ -175,61 +175,46 @@ class PerfilOng extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
-          // Cabeçalho: foto, nome e endereço da ONG
-          Row(
-            children: [
-              AvatarDaOng(ong: atual, raio: 38),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      atual.nome,
-                      style: TextStyle(
-                        fontSize: 21,
-                        fontWeight: FontWeight.w700,
-                        color: context.cores.texto,
-                        height: 1.2,
+          // Cabeçalho centralizado: foto, nome, finalidades e endereço
+          Center(child: AvatarDaOng(ong: atual, raio: 46)),
+          const SizedBox(height: 12),
+          Text(
+            atual.nome,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: context.cores.texto,
+              height: 1.2,
+            ),
+          ),
+          const SizedBox(height: 10),
+          FinalidadesDaOng(atual, centralizadas: true),
+          if (endereco.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            // O alfinete acompanha o texto, mesmo quando ele quebra a linha
+            Text.rich(
+              TextSpan(
+                children: [
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.middle,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: Icon(
+                        Icons.location_on_outlined,
+                        size: 16,
+                        color: context.cores.principal,
                       ),
                     ),
-                    if (endereco.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.location_on_outlined,
-                            size: 16,
-                            color: context.cores.principal,
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              endereco,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: context.cores.principal,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
+                  ),
+                  TextSpan(text: endereco),
+                ],
               ),
-            ],
-          ),
-          // Sem descrição, o espaço reservado a ela não aparece
-          if (atual.descricao.trim().isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Text(
-              atual.descricao,
-              style: const TextStyle(fontSize: 15, height: 1.45),
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: context.cores.textoFraco),
             ),
           ],
-          SizedBox(height: atual.descricao.trim().isNotEmpty ? 18 : 16),
+          const SizedBox(height: 18),
           SizedBox(
             height: 50,
             child: ElevatedButton.icon(
@@ -256,18 +241,33 @@ class PerfilOng extends StatelessWidget {
               aoCopiar: () => _copiarPix(context, atual),
             ),
           ],
+          // A descrição fica num cartão, como as demais informações da ONG
+          if (atual.descricao.trim().isNotEmpty)
+            _Cartao(
+              icone: Icons.info_outline,
+              titulo: 'Sobre a ONG',
+              child: Text(
+                atual.descricao,
+                style: const TextStyle(fontSize: 15, height: 1.45),
+              ),
+            ),
           // Animais da ONG: uma seção por tipo (adoção, resgate e perdidos),
           // só para os tipos com algum animal em aberto, e uma seção final
           // para os já finalizados
-          if (animais.isEmpty) ...[
-            const SizedBox(height: 26),
-            const _TituloDaSecao('Animais da ONG'),
-            const SizedBox(height: 10),
-            Text(
-              'A ONG ainda não cadastrou nenhum animal.',
-              style: TextStyle(fontSize: 14, color: context.cores.textoFraco),
+          if (animais.isEmpty)
+            _Cartao(
+              icone: Icons.pets_outlined,
+              titulo: 'Animais da ONG',
+              child: Text(
+                'Ainda não há animais publicados por esta ONG. Quando houver, '
+                'eles aparecem aqui, separados por adoção, resgate e perdidos.',
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.45,
+                  color: context.cores.textoFraco,
+                ),
+              ),
             ),
-          ],
           for (final (tipo, titulo) in const [
             (TipoRegistro.adocao, 'Para adoção'),
             (TipoRegistro.resgate, 'Resgates'),
