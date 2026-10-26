@@ -20,6 +20,10 @@ import '../modelos/ong.dart';
 import '../provider/usuario_provider.dart';
 // Arquivo route_names.dart: nomes das rotas de navegação.
 import '../routes/route_names.dart';
+// Arquivo animal.dart: modelo do animal.
+import '../modelos/animal.dart';
+// Arquivo animal_service.dart: grava na API os anúncios com o telefone novo.
+import '../services/animal_service.dart';
 // Arquivo ong_service.dart: serviço de ONGs da API.
 import '../services/ong_service.dart';
 // Arquivo cores.dart: paleta de cores do tema claro e escuro.
@@ -38,8 +42,11 @@ import '../widgets/proteger_alteracoes.dart';
 class EditarPerfil extends StatefulWidget {
   // Serviço injetável para os testes; sem ele, usa o OngService padrão
   final OngService? ongs;
+  // Serviço dos animais; quando nulo, usa o padrão (os testes passam um
+  // falso)
+  final AnimalService? animais;
 
-  const EditarPerfil({super.key, this.ongs});
+  const EditarPerfil({super.key, this.ongs, this.animais});
 
   @override
   State<EditarPerfil> createState() => _EditarPerfilState();
@@ -150,16 +157,37 @@ class _EditarPerfilState extends State<EditarPerfil> {
     }
     if (!mounted) return;
     var aviso = 'Alterações salvas.';
+    // O telefone novo passa a valer em todos os anúncios já publicados
+    final alterados =
+        await PataAmigaScope.talvez(context)?.trocarTelefoneDosCadastros(
+          provider.usuario.email,
+          provider.usuario.telefone,
+        ) ??
+        const <Animal>[];
+    try {
+      final servico = widget.animais ?? AnimalService();
+      for (final animal in alterados) {
+        await servico.atualizarAnimal(animal);
+      }
+    } on Exception {
+      aviso =
+          'Alterações salvas neste aparelho, mas o telefone dos seus '
+          'anúncios não foi atualizado para todos. Tente de novo.';
+    }
+    if (!mounted) return;
     final ong = _ong;
     if (ong != null) {
       final estado = PataAmigaScope.of(context);
       try {
         estado.salvarOng(
-          await (widget.ongs ?? OngService()).pedirEntrada(ong, PessoaDaOng(
-            email: provider.usuario.email,
-            nome: provider.usuario.nome,
-            telefone: provider.usuario.telefone,
-          )),
+          await (widget.ongs ?? OngService()).pedirEntrada(
+            ong,
+            PessoaDaOng(
+              email: provider.usuario.email,
+              nome: provider.usuario.nome,
+              telefone: provider.usuario.telefone,
+            ),
+          ),
         );
         aviso = 'Alterações salvas. Pedido enviado para ${ong.nome}.';
       } on JaFazParteDeOutra catch (erro) {
@@ -200,10 +228,7 @@ class _EditarPerfilState extends State<EditarPerfil> {
     String aviso;
     try {
       estado.salvarOng(
-        await (widget.ongs ?? OngService()).passarAdministracao(
-          ong,
-          escolhido,
-        ),
+        await (widget.ongs ?? OngService()).passarAdministracao(ong, escolhido),
       );
       aviso = '$nome agora administra ${ong.nome}, e você saiu da ONG.';
     } on NaoEMembro {
@@ -399,136 +424,138 @@ class _EditarPerfilState extends State<EditarPerfil> {
     return ProtegerAlteracoes(
       alterado: () => _houveMudanca && !_salvando,
       child: Scaffold(
-      appBar: AppBar(
-        backgroundColor: context.cores.fundo,
-        leadingWidth: 64,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 12),
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            tooltip: 'Voltar',
-            color: context.cores.principal,
-            onPressed: () => Navigator.maybePop(context),
-          ),
-        ),
-        centerTitle: true,
-        title: Text(
-          'EDITAR PERFIL',
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.8,
-            color: context.cores.principal,
-          ),
-        ),
-      ),
-      body: Form(
-        key: _formulario,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          children: [
-            Center(
-              child: _FotoEditavel(
-                imagem: imagem,
-                carregando: _selecionandoFoto,
-                aoTocar: _selecionarFoto,
-              ),
+        appBar: AppBar(
+          backgroundColor: context.cores.fundo,
+          leadingWidth: 64,
+          leading: Padding(
+            padding: const EdgeInsets.only(left: 12),
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              tooltip: 'Voltar',
+              color: context.cores.principal,
+              onPressed: () => Navigator.maybePop(context),
             ),
-            const SizedBox(height: 4),
-            Center(
-              child: TextButton(
-                onPressed: _selecionandoFoto ? null : _selecionarFoto,
-                style: TextButton.styleFrom(foregroundColor: context.cores.principal),
-                child: Text(
-                  imagem == null ? 'Escolher foto' : 'Trocar foto',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          centerTitle: true,
+          title: Text(
+            'EDITAR PERFIL',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.8,
+              color: context.cores.principal,
+            ),
+          ),
+        ),
+        body: Form(
+          key: _formulario,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            children: [
+              Center(
+                child: _FotoEditavel(
+                  imagem: imagem,
+                  carregando: _selecionandoFoto,
+                  aoTocar: _selecionarFoto,
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            _Cartao(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _Campo(
-                    rotulo: 'Nome',
-                    controlador: _nomeController,
-                    icone: Icons.person_outline,
-                    exemplo: 'Seu nome',
-                    capitalizacao: TextCapitalization.words,
-                    validador: (valor) => (valor ?? '').trim().isEmpty
-                        ? 'Informe seu nome.'
-                        : null,
+              const SizedBox(height: 4),
+              Center(
+                child: TextButton(
+                  onPressed: _selecionandoFoto ? null : _selecionarFoto,
+                  style: TextButton.styleFrom(
+                    foregroundColor: context.cores.principal,
                   ),
-                  const SizedBox(height: 16),
-                  _Campo(
-                    rotulo: 'Telefone',
-                    controlador: _telefoneController,
-                    icone: Icons.phone_outlined,
-                    exemplo: '(37) 90000-0000',
-                    teclado: TextInputType.phone,
-                    formatadores: [MascaraDeTelefone()],
-                    validador: (valor) {
-                      final digitos = (valor ?? '').replaceAll(
-                        RegExp(r'\D'),
-                        '',
-                      );
-                      if (digitos.isEmpty) return 'Informe seu telefone.';
-                      if (digitos.length < 10) {
-                        return 'Digite um telefone com DDD válido.';
-                      }
-                      return null;
-                    },
+                  child: Text(
+                    imagem == null ? 'Escolher foto' : 'Trocar foto',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
-                  if (usuario.email.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    _CampoFixo(
-                      rotulo: 'E-mail',
-                      icone: Icons.mail_outline,
-                      valor: usuario.email,
-                      explicacao: 'O e-mail identifica sua conta e não muda.',
+                ),
+              ),
+              const SizedBox(height: 16),
+              _Cartao(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _Campo(
+                      rotulo: 'Nome',
+                      controlador: _nomeController,
+                      icone: Icons.person_outline,
+                      exemplo: 'Seu nome',
+                      capitalizacao: TextCapitalization.words,
+                      validador: (valor) => (valor ?? '').trim().isEmpty
+                          ? 'Informe seu nome.'
+                          : null,
                     ),
+                    const SizedBox(height: 16),
+                    _Campo(
+                      rotulo: 'Telefone',
+                      controlador: _telefoneController,
+                      icone: Icons.phone_outlined,
+                      exemplo: '(37) 90000-0000',
+                      teclado: TextInputType.phone,
+                      formatadores: [MascaraDeTelefone()],
+                      validador: (valor) {
+                        final digitos = (valor ?? '').replaceAll(
+                          RegExp(r'\D'),
+                          '',
+                        );
+                        if (digitos.isEmpty) return 'Informe seu telefone.';
+                        if (digitos.length < 10) {
+                          return 'Digite um telefone com DDD válido.';
+                        }
+                        return null;
+                      },
+                    ),
+                    if (usuario.email.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      _CampoFixo(
+                        rotulo: 'E-mail',
+                        icone: Icons.mail_outline,
+                        valor: usuario.email,
+                        explicacao: 'O e-mail identifica sua conta e não muda.',
+                      ),
+                    ],
                   ],
-                ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              _Cartao(child: _secaoDaOng(usuario.email)),
+              const SizedBox(height: 12),
+              const _AvisoDeSenha(),
+            ],
+          ),
+        ),
+        bottomNavigationBar: SafeArea(
+          minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: FilledButton(
+            onPressed: _houveMudanca && !_salvando ? _salvar : null,
+            style: FilledButton.styleFrom(
+              backgroundColor: context.cores.principal,
+              disabledBackgroundColor: context.cores.borda,
+              disabledForegroundColor: context.cores.textoFraco,
+              minimumSize: const Size.fromHeight(52),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              textStyle: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 12),
-            _Cartao(child: _secaoDaOng(usuario.email)),
-            const SizedBox(height: 12),
-            const _AvisoDeSenha(),
-          ],
-        ),
-      ),
-      bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        child: FilledButton(
-          onPressed: _houveMudanca && !_salvando ? _salvar : null,
-          style: FilledButton.styleFrom(
-            backgroundColor: context.cores.principal,
-            disabledBackgroundColor: context.cores.borda,
-            disabledForegroundColor: context.cores.textoFraco,
-            minimumSize: const Size.fromHeight(52),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-            textStyle: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
+            child: _salvando
+                ? SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: context.sobrePrincipal,
+                    ),
+                  )
+                : const Text('Salvar alterações'),
           ),
-          child: _salvando
-              ? SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: context.sobrePrincipal,
-                  ),
-                )
-              : const Text('Salvar alterações'),
         ),
       ),
-    ),
     );
   }
 }
@@ -785,7 +812,11 @@ class _AvisoDeSenha extends StatelessWidget {
             child: Text(
               'A troca de senha fica disponível quando o login estiver '
               'conectado ao serviço de autenticação.',
-              style: TextStyle(fontSize: 13, color: context.cores.texto, height: 1.4),
+              style: TextStyle(
+                fontSize: 13,
+                color: context.cores.texto,
+                height: 1.4,
+              ),
             ),
           ),
         ],
@@ -926,9 +957,7 @@ class _EscolherNovaAdminState extends State<_EscolherNovaAdmin> {
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              child: Text(
-                membros.isEmpty ? 'Entendi' : 'Passar a ONG e sair',
-              ),
+              child: Text(membros.isEmpty ? 'Entendi' : 'Passar a ONG e sair'),
             ),
             if (membros.isNotEmpty) ...[
               const SizedBox(height: 6),

@@ -209,6 +209,25 @@ class EstadoPataAmiga extends ChangeNotifier {
       ..sort((a, b) => b.publicadoEm.compareTo(a.publicadoEm));
   }
 
+  // Troca o telefone de contato em todos os cadastros do e-mail (os mesmos
+  // de [cadastrosDe]), para o número novo do perfil valer nos anúncios já
+  // publicados. Devolve os animais alterados, para serem gravados na API
+  Future<List<Animal>> trocarTelefoneDosCadastros(
+    String email,
+    String telefone,
+  ) async {
+    final digitos = telefone.replaceAll(RegExp(r'\D'), '');
+    final alterados = [
+      for (final animal in cadastrosDe(email))
+        if (animal.dono.telefone.replaceAll(RegExp(r'\D'), '') != digitos)
+          animal.comTelefoneDoDono(digitos),
+    ];
+    for (final animal in alterados) {
+      await substituirAnimal(animal);
+    }
+    return alterados;
+  }
+
   // Diz se o e-mail pode alterar o status do animal:
   // - animal de ONG: qualquer pessoa que faça parte dela hoje;
   // - animal com responsável registrado: só esse responsável;

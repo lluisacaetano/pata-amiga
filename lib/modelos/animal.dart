@@ -235,6 +235,13 @@ class Animal {
   Animal comStatus(StatusAnimal novo) =>
       Animal.fromJson({...toJson(), 'status': novo.name});
 
+  // Uma cópia do animal com outro telefone de contato do responsável; o
+  // objeto original não muda
+  Animal comTelefoneDoDono(String telefone) => Animal.fromJson({
+    ...toJson(),
+    'dono': Dono(nome: dono.nome, telefone: telefone).toJson(),
+  });
+
   // Sexo, porte e idade, exibidos abaixo do nome no card do feed
   String get resumo =>
       [sexo, 'porte $porte', idade].map(comMaiuscula).join(' · ');
