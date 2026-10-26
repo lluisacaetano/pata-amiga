@@ -44,7 +44,7 @@
 - `CacheService` serializa animais no `SharedPreferences`; preserve a leitura, gravação e tratamento de cache inválido.
 - O feed diferencia carregamento, cache, atualização e erro. Não remova esses estados nem mude o comportamento offline para simplificar testes.
 - Curtidas, os cadastros feitos no aparelho e os protocolos das denúncias feitas no aparelho (que alimentam "Minhas denúncias") também são persistidos no `SharedPreferences`.
-- `UsuarioProvider` grava no `SharedPreferences` o e-mail da sessão e o perfil (nome, e-mail, telefone e foto). A senha nunca é gravada: só um resumo SHA-256 com sal (pacote `crypto`), conferido em `entrar`, que devolve `ResultadoDoLogin`. O e-mail é normalizado (minúsculas) no registro, no login e nas chaves. A conta existe só no aparelho, então não há recuperação de senha por e-mail.
+- `UsuarioProvider` grava no `SharedPreferences` o e-mail da sessão e o perfil (nome, e-mail, telefone e foto). A senha nunca é gravada: só um resumo SHA-256 com sal (pacote `crypto`), conferido em `entrar`, que devolve `ResultadoDoLogin`. O e-mail é normalizado (minúsculas) no registro, no login e nas chaves. A conta existe só no aparelho, então não há recuperação de senha por e-mail. `registrarUsuario` devolve `false`, sem alterar nada, quando o e-mail já tem conta, e a tela de cadastro mostra o erro no campo de e-mail. A senha esquecida é redefinida em `redefinirSenha`, que confere o e-mail e o telefone do perfil e devolve `ResultadoDaRedefinicao`.
 - Curtidas e cadastros locais são identificados por `animal.chave`, nunca pelo nome do animal.
 - Os serviços externos são o OpenStreetMap (blocos do mapa, com o crédito obrigatório na tela), o serviço de endereços do aparelho (`geocoding`) e o ViaCEP. Toda chamada a eles tem prazo (`timeout`), para a tela não travar sem internet.
 - Para testes de dependências externas, use dados controlados e evite chamadas à API real. Se faltar um ponto de substituição, prefira uma injeção pequena e local à tarefa; não crie repositório, service locator ou camada genérica sem necessidade.
@@ -60,7 +60,7 @@
 - O encaminhamento da denúncia é feito pela própria pessoa, pelo compartilhar do celular (`share_plus`), com o texto e as fotos juntos. Não troque por link do WhatsApp (`wa.me`): o link não leva fotos e a APAF não acessa o app. Não há envio por e-mail.
 - A raça é escolhida da lista de `lib/dados/racas.dart`; `racaPadrao` (em `filtros_do_feed.dart`) traz para o nome da lista as raças antigas escritas à mão.
 - `TipoRegistro` atualmente contempla adoção, perdido e resgate; não adicione valores ou comportamentos sem requisito.
-- `Dono` contém dados de contato. Trate telefone e demais dados pessoais com cuidado.
+- `Dono` contém dados de contato. Trate telefone e demais dados pessoais com cuidado. Ao salvar o perfil, `EstadoPataAmiga.trocarTelefoneDosCadastros` leva o telefone novo a todos os cadastros do e-mail, e o Editar perfil grava esses animais na API.
 - `Usuario` contém um campo de senha; não grave credenciais em texto simples nem adicione persistência de senha insegura.
 
 ## Convenções de implementação
