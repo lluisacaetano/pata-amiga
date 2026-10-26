@@ -1,19 +1,35 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote flutter_test: ferramentas de teste de widgets e de unidade do Flutter.
 import 'package:flutter_test/flutter_test.dart';
+// Pacote geocoding: converte coordenadas em endereço e endereço em coordenadas.
 import 'package:geocoding/geocoding.dart';
+// Pacote geocoding_platform_interface: base do serviço de endereços falso.
 import 'package:geocoding_platform_interface/geocoding_platform_interface.dart'
     as pi;
+// Pacote plugin_platform_interface: permite registrar implementações falsas.
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+// Pacote image_picker_platform_interface: base para substituir a galeria.
 import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
+// Pacote shared_preferences: guarda dados simples no aparelho (chave e valor).
 import 'package:shared_preferences/shared_preferences.dart';
+// Arquivo denuncia.dart: modelo da denúncia, protocolo e data por extenso.
 import 'package:pata_amiga/modelos/denuncia.dart';
+// Arquivo app_router.dart: rotas do app.
 import 'package:pata_amiga/routes/app_router.dart';
+// Arquivo denuncia_service.dart: serviço substituído pelo falso.
 import 'package:pata_amiga/services/denuncia_service.dart';
+// Arquivo minhas_denuncias.dart: lista das denúncias do aparelho.
 import 'package:pata_amiga/telas/minhas_denuncias.dart';
+// Arquivo reportar.dart: formulário de denúncia.
 import 'package:pata_amiga/telas/reportar.dart';
+// Arquivo barra_inferior.dart: barra de navegação com a opção Reportar.
 import 'package:pata_amiga/widgets/barra_inferior.dart';
+// Arquivo painel_de_filtros_de_denuncia.dart: painel com os filtros da lista.
+import 'package:pata_amiga/widgets/painel_de_filtros_de_denuncia.dart';
 
-// Serviço falso: grava na memória, como a API, e guarda o protocolo
+// Serviço de denúncias falso: grava na memória, como a API, e guarda o
+// protocolo no aparelho
 class _DenunciasFalsas extends DenunciaService {
   final gravadas = <Denuncia>[];
 
@@ -35,6 +51,7 @@ class _DenunciasFalsas extends DenunciaService {
   }
 }
 
+// Galeria falsa que sempre devolve uma foto
 class _GaleriaComUmaFoto extends ImagePickerPlatform {
   @override
   Future<List<XFile>> getMultiImageWithOptions({
@@ -42,7 +59,8 @@ class _GaleriaComUmaFoto extends ImagePickerPlatform {
   }) async => [XFile('/tmp/denuncia.jpg')];
 }
 
-// O serviço de endereços do aparelho, falso: o pino cai sempre no Centro
+// Serviço de endereços falso: a busca não acha nada e o pino cai sempre na
+// Praça Olegário Maciel, no Centro
 class _EnderecoFalso extends pi.Geocoding with MockPlatformInterfaceMixin {
   _EnderecoFalso() : super.implementation(pi.GeocodingCreationParams());
 
@@ -66,6 +84,7 @@ class _EnderecoFalso extends pi.Geocoding with MockPlatformInterfaceMixin {
   ];
 }
 
+// Fábrica que entrega o serviço de endereços falso ao pacote geocoding
 class _FabricaFalsa extends pi.GeocodingPlatformFactory
     with MockPlatformInterfaceMixin {
   @override
@@ -73,6 +92,8 @@ class _FabricaFalsa extends pi.GeocodingPlatformFactory
       _EnderecoFalso();
 }
 
+// Abre a tela informada numa janela alta, com as rotas do app e o serviço
+// de endereços falso
 Future<void> _abrir(WidgetTester tester, Widget tela) async {
   pi.GeocodingPlatformFactory.instance = _FabricaFalsa();
   tester.view.physicalSize = const Size(1200, 4000);
@@ -85,8 +106,10 @@ Future<void> _abrir(WidgetTester tester, Widget tela) async {
 }
 
 void main() {
+  // Cada teste começa sem protocolos guardados no aparelho
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
+  // O item Reportar da barra abre o formulário com o quadro da lei
   testWidgets('opção Reportar abre a tela de denúncia', (tester) async {
     await _abrir(
       tester,
@@ -103,6 +126,7 @@ void main() {
     expect(find.text('Lei nº 9.605/1998, art. 32'), findsOneWidget);
   });
 
+  // Sem os campos obrigatórios e sem foto, nada é enviado
   testWidgets('sem os obrigatórios, a denúncia não é registrada', (
     tester,
   ) async {
@@ -112,16 +136,18 @@ void main() {
     await tester.tap(find.text('Registrar denúncia'));
     await tester.pumpAndSettle();
 
-    // Só os campos em vermelho, como nos outros formulários
+    // O erro aparece nos campos (organização, espécie, porte, sexo, tipo e
+    // descrição), sem SnackBar
     expect(find.byType(SnackBar), findsNothing);
-    expect(find.text('Campo obrigatório'), findsNWidgets(2));
+    expect(find.text('Campo obrigatório'), findsNWidgets(6));
     expect(find.text('Adicione pelo menos uma foto.'), findsOneWidget);
     expect(servico.gravadas, isEmpty);
 
-    // A denúncia é sempre anônima: o formulário não pede identificação
-    expect(find.text('Enviar sem me identificar'), findsNothing);
+    // O anonimato é uma escolha, ligada de início
+    expect(find.text('Denunciar de forma anônima'), findsOneWidget);
   });
 
+  // A denúncia anônima não envia nome nem telefone de quem denunciou
   test('a anônima não leva quem denunciou para a API', () {
     final denuncia = Denuncia(
       protocolo: 'PA-20261022-0001',
@@ -143,6 +169,7 @@ void main() {
     expect(Denuncia.fromJson(json).protocolo, 'PA-20261022-0001');
   });
 
+  // O protocolo segue o formato PA-AAAAMMDD-NNNN
   test('o protocolo leva a data e quatro dígitos', () {
     expect(
       Denuncia.novoProtocolo(DateTime(2026, 10, 22)),
@@ -150,6 +177,7 @@ void main() {
     );
   });
 
+  // A denúncia registrada aparece em Minhas denúncias com a situação
   testWidgets('a denúncia registrada aparece em Minhas denúncias', (
     tester,
   ) async {
@@ -171,6 +199,7 @@ void main() {
     expect(find.text('Recebida'), findsOneWidget);
   });
 
+  // A foto escolhida na galeria entra no formulário, com o botão de remover
   testWidgets('a foto entra pela galeria', (tester) async {
     ImagePickerPlatform.instance = _GaleriaComUmaFoto();
     await _abrir(tester, ReportarScreen(servico: _DenunciasFalsas()));
@@ -179,6 +208,7 @@ void main() {
     expect(find.bySemanticsLabel('Remover foto'), findsOneWidget);
   });
 
+  // A data do registro aparece como hoje, ontem ou a data completa
   test('a data do registro sai como se fala', () {
     final agora = DateTime(2026, 10, 22, 18);
     expect(quandoFoi(DateTime(2026, 10, 22, 14, 19), agora), 'hoje às 14:19');
@@ -189,6 +219,8 @@ void main() {
     );
   });
 
+  // A busca encontra pelo protocolo, ignora hífens e espaços e avisa quando
+  // não acha
   testWidgets('a busca acha a denúncia pelo protocolo, sem hífen', (
     tester,
   ) async {
@@ -221,9 +253,61 @@ void main() {
 
     await tester.enterText(find.byType(TextField), '9999');
     await tester.pumpAndSettle();
-    expect(find.text('Nenhuma denúncia com esse protocolo.'), findsOneWidget);
+    expect(find.text('Nenhuma denúncia encontrada.'), findsOneWidget);
+
+    // A busca também procura na descrição, sem ligar para acentos
+    await tester.enterText(find.byType(TextField), 'relato');
+    await tester.pumpAndSettle();
+    expect(find.text('Protocolo PA-20261022-0042'), findsOneWidget);
+    expect(find.text('Protocolo PA-20261022-7777'), findsOneWidget);
   });
 
+  // O filtro do painel deixa só as denúncias do tipo e da espécie marcados,
+  // e o número de filtros aparece no botão
+  testWidgets('o filtro deixa só as denúncias que combinam', (tester) async {
+    final servico = _DenunciasFalsas();
+    for (final (protocolo, tipo, especie) in [
+      ('PA-20261022-0001', TipoDeDenuncia.mausTratos, 'Cachorro'),
+      ('PA-20261022-0002', TipoDeDenuncia.mausTratos, 'Gato'),
+      ('PA-20261022-0003', TipoDeDenuncia.abandono, 'Cachorro'),
+    ]) {
+      await servico.registrar(
+        Denuncia(
+          protocolo: protocolo,
+          tipo: tipo,
+          descricao: 'Relato.',
+          especie: especie,
+          porte: 'médio',
+          sexo: 'não sei',
+          rua: 'Rua Pará de Minas',
+          bairro: 'Centro',
+          registradaEm: DateTime.now(),
+        ),
+      );
+    }
+    await _abrir(tester, MinhasDenuncias(servico: servico));
+
+    await tester.tap(find.byTooltip('Filtros'));
+    await tester.pumpAndSettle();
+    // No painel, as opções ficam dentro das abas
+    final painel = find.byType(PainelDeFiltrosDeDenuncia);
+    await tester.tap(
+      find.descendant(of: painel, matching: find.text('Maus-tratos')),
+    );
+    await tester.tap(
+      find.descendant(of: painel, matching: find.text('Cachorro')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mostrar 1 denúncia'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Protocolo PA-20261022-0001'), findsOneWidget);
+    expect(find.text('Protocolo PA-20261022-0002'), findsNothing);
+    expect(find.text('Protocolo PA-20261022-0003'), findsNothing);
+    expect(find.text('2'), findsOneWidget);
+  });
+
+  // Tocar na denúncia abre os detalhes com o relato e o aviso de anonimato
   testWidgets('tocar na denúncia abre os detalhes', (tester) async {
     final servico = _DenunciasFalsas();
     await servico.registrar(

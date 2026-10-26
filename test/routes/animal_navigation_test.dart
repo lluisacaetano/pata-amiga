@@ -1,57 +1,111 @@
+// Biblioteca dart:convert: converte texto JSON em objetos e vice-versa.
 import 'dart:convert';
+// Biblioteca dart:io: File, para ler o banco de exemplo da API.
 import 'dart:io';
 
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote flutter/services: canal da plataforma, para simular área de
+// transferência e vibração.
 import 'package:flutter/services.dart';
+// Pacote geocoding: converte coordenadas em endereço e endereço em coordenadas.
 import 'package:geocoding/geocoding.dart';
+// Pacote geocoding_platform_interface: base para o serviço de endereços falso.
 import 'package:geocoding_platform_interface/geocoding_platform_interface.dart'
     as pi;
+// Pacote geolocator: lê a localização atual do aparelho e pede a permissão.
 import 'package:geolocator/geolocator.dart';
+// Pacote plugin_platform_interface: permite registrar plataformas falsas nos
+// testes.
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+// Pacote flutter_map: mapa interativo com os blocos do OpenStreetMap.
 import 'package:flutter_map/flutter_map.dart';
+// Pacote flutter_test: ferramentas de teste de widgets e de unidade do Flutter.
 import 'package:flutter_test/flutter_test.dart';
+// Pacote image_picker_platform_interface: base para a galeria falsa.
 import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
+// Pacote provider: compartilha estado entre as telas e as reconstrói.
 import 'package:provider/provider.dart';
+// Pacote shared_preferences: guarda dados simples no aparelho (chave e valor).
 import 'package:shared_preferences/shared_preferences.dart';
 
+// Arquivo de_volta_screen.dart: recepção de quem reabre o app logado.
 import 'package:pata_amiga/auth/screens/de_volta_screen.dart';
+// Arquivo animais_mock.dart: animais de exemplo usados nos testes.
 import 'package:pata_amiga/dados/animais_mock.dart';
+// Arquivo bairros_formiga.dart: lista e busca dos bairros de Formiga.
 import 'package:pata_amiga/dados/bairros_formiga.dart';
+// Arquivo racas.dart: listas de raças de cachorro e de gato.
 import 'package:pata_amiga/dados/racas.dart';
+// Arquivo avistamento.dart: modelo do avistamento e o último avistamento.
 import 'package:pata_amiga/modelos/avistamento.dart';
+// Arquivo camadas_do_mapa.dart: pinos do mapa e cálculo do que está por perto.
 import 'package:pata_amiga/modelos/camadas_do_mapa.dart';
+// Arquivo filtros_do_feed.dart: filtros do feed e padronização das raças.
 import 'package:pata_amiga/modelos/filtros_do_feed.dart';
+// Arquivo ong.dart: modelo da ONG, membros e pedidos de entrada.
 import 'package:pata_amiga/modelos/ong.dart';
+// Arquivo ponto_de_alimentacao.dart: pontos de alimentação e abastecimentos.
 import 'package:pata_amiga/modelos/ponto_de_alimentacao.dart';
+// Arquivo estado_pata_amiga.dart: estado compartilhado do app.
 import 'package:pata_amiga/estado/estado_pata_amiga.dart';
+// Arquivo animal.dart: modelo do animal, tipo e status do registro.
 import 'package:pata_amiga/modelos/animal.dart';
+// Arquivo usuario_provider.dart: sessão e perfil da conta logada.
 import 'package:pata_amiga/provider/usuario_provider.dart';
+// Arquivo app_router.dart: rotas do app e os nomes delas.
 import 'package:pata_amiga/routes/app_router.dart';
+// Arquivo alimentacao_service.dart: serviço de pontos de alimentação da API.
 import 'package:pata_amiga/services/alimentacao_service.dart';
+// Arquivo animal_service.dart: serviço de animais da API.
 import 'package:pata_amiga/services/animal_service.dart';
+// Arquivo avistamento_service.dart: serviço de avistamentos da API.
 import 'package:pata_amiga/services/avistamento_service.dart';
+// Arquivo bairro_service.dart: descoberta do bairro pela rua no ViaCEP.
 import 'package:pata_amiga/services/bairro_service.dart';
+// Arquivo localizacao_service.dart: posição atual do aparelho.
 import 'package:pata_amiga/services/localizacao_service.dart';
+// Arquivo ong_service.dart: serviço de ONGs da API e os erros de pedido.
 import 'package:pata_amiga/services/ong_service.dart';
+// Arquivo cadastrar_ponto.dart: tela de cadastrar ponto de alimentação.
 import 'package:pata_amiga/telas/cadastrar_ponto.dart';
+// Arquivo cadastro_animal.dart: tela de cadastro e edição de animal.
 import 'package:pata_amiga/telas/cadastro_animal.dart';
+// Arquivo cadastro_ong.dart: tela de cadastro e edição da ONG.
 import 'package:pata_amiga/telas/cadastro_ong.dart';
+// Arquivo lista_ongs.dart: lista das ONGs e abrigos.
 import 'package:pata_amiga/telas/lista_ongs.dart';
+// Arquivo perfil_ong.dart: perfil público da ONG.
 import 'package:pata_amiga/telas/perfil_ong.dart';
+// Arquivo detalhes_animal.dart: ficha do animal.
 import 'package:pata_amiga/telas/detalhes_animal.dart';
+// Arquivo tela_mapa.dart: tela do mapa com as camadas.
 import 'package:pata_amiga/telas/tela_mapa.dart';
+// Arquivo feed_adocao.dart: feed de animais.
 import 'package:pata_amiga/telas/feed_adocao.dart';
+// Arquivo editar_perfil.dart: tela de editar o perfil.
 import 'package:pata_amiga/telas/editar_perfil.dart';
+// Arquivo perfil_usuario.dart: tela Meu perfil.
 import 'package:pata_amiga/telas/perfil_usuario.dart';
+// Arquivo registrar_abastecimento.dart: tela de registrar abastecimento.
 import 'package:pata_amiga/telas/registrar_abastecimento.dart';
+// Arquivo registrar_avistamento.dart: tela de registrar avistamento.
 import 'package:pata_amiga/telas/registrar_avistamento.dart';
+// Arquivo acoes_do_registro.dart: ações sobre um registro de animal.
 import 'package:pata_amiga/widgets/acoes_do_registro.dart';
+// Arquivo avatar_da_ong.dart: avatar da ONG com foto ou iniciais.
 import 'package:pata_amiga/widgets/avatar_da_ong.dart';
+// Arquivo barra_inferior.dart: barra de navegação inferior.
 import 'package:pata_amiga/widgets/barra_inferior.dart';
+// Arquivo foto_animal.dart: foto do animal.
 import 'package:pata_amiga/widgets/foto_animal.dart';
+// Arquivo mapa_de_local.dart: mapa de marcar o local e o centro de Formiga.
 import 'package:pata_amiga/widgets/mapa_de_local.dart';
+// Arquivo mascaras.dart: formatação do telefone.
 import 'package:pata_amiga/widgets/mascaras.dart';
+// Arquivo painel_de_filtros.dart: painel de filtros do feed.
 import 'package:pata_amiga/widgets/painel_de_filtros.dart';
+// Arquivo sino_de_notificacoes.dart: sino de notificações da conta.
 import 'package:pata_amiga/widgets/sino_de_notificacoes.dart';
 
 // Galeria que devolve uma foto, para o cadastro de animal, em que a foto é
@@ -69,6 +123,7 @@ class _GaleriaComUmaFoto extends ImagePickerPlatform {
   }) async => XFile('/tmp/animal-de-teste.jpg');
 }
 
+// Galeria falsa em que a pessoa cancela a escolha: não devolve foto
 class _GaleriaVazia extends ImagePickerPlatform {
   @override
   Future<XFile?> getImageFromSource({
@@ -238,6 +293,7 @@ final _naPraca = Position(
   speedAccuracy: 0,
 );
 
+// GPS falso: localização ligada, permissão concedida e posição fixa na praça
 class _GpsFalso extends GeolocatorPlatform with MockPlatformInterfaceMixin {
   @override
   Future<bool> isLocationServiceEnabled() async => true;
@@ -260,6 +316,9 @@ class _GpsFalso extends GeolocatorPlatform with MockPlatformInterfaceMixin {
 const _latDaRua = -20.4697811;
 const _lonDaRua = -45.4216775;
 
+// Serviço de endereços falso: devolve o ponto fixo da rua buscada (ou nada,
+// se [achaRua] é falso) e a Praça Olegário Maciel para qualquer coordenada,
+// no bairro informado. Guarda o último endereço buscado para conferência
 class _EnderecoFalso extends pi.Geocoding with MockPlatformInterfaceMixin {
   _EnderecoFalso(this.bairro, {this.achaRua = true})
     : super.implementation(pi.GeocodingCreationParams());
@@ -299,6 +358,7 @@ class _EnderecoFalso extends pi.Geocoding with MockPlatformInterfaceMixin {
   ];
 }
 
+// Fábrica que entrega o serviço de endereços falso ao pacote geocoding
 class _FabricaFalsa extends pi.GeocodingPlatformFactory
     with MockPlatformInterfaceMixin {
   _FabricaFalsa({this.bairro = 'Centro', this.achaRua = true});
@@ -311,7 +371,35 @@ class _FabricaFalsa extends pi.GeocodingPlatformFactory
       _EnderecoFalso(bairro, achaRua: achaRua);
 }
 
+// Testes de navegação e de fluxo das telas, com API, GPS e serviço de
+// endereços falsos
+// Marca a finalidade no select do cadastro de ONG, obrigatório para salvar
+Future<void> marcarFinalidade(
+  WidgetTester tester, [
+  String rotulo = 'Adoção',
+]) async {
+  final campo = find.byType(TextField).at(5);
+  await tester.ensureVisible(campo);
+  await tester.tap(campo);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(rotulo).last);
+  await tester.pumpAndSettle();
+  FocusManager.instance.primaryFocus?.unfocus();
+  await tester.pumpAndSettle();
+}
+
+// Escreve a observação obrigatória no painel de mudança de situação
+Future<void> escreverObservacao(
+  WidgetTester tester, [
+  String texto = 'Observação do teste.',
+]) async {
+  await tester.enterText(find.byType(TextField).last, texto);
+  await tester.pump();
+}
+
 void main() {
+  // Abre a ficha pelo feed, curte o animal, volta sem aviso extra e confere a
+  // barra inferior e o botão de cadastrar animal
   testWidgets('feed envia e recebe o animal pela tela de detalhes', (
     tester,
   ) async {
@@ -389,6 +477,8 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  // O perfil abre na aba Curtidos; remover um curtido mostra a aba vazia e
+  // "Desfazer" devolve o animal à lista
   testWidgets('perfil abre nos curtidos, remove e desfaz a remoção', (
     tester,
   ) async {
@@ -414,6 +504,7 @@ void main() {
     expect(find.text(animal.nome.toUpperCase()), findsOneWidget);
   });
 
+  // Animal curtido que já foi adotado deixa de aparecer nos curtidos
   testWidgets('curtido adotado sai da lista do perfil', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final estado = EstadoPataAmiga();
@@ -430,6 +521,8 @@ void main() {
     expect(find.text('Nenhum animal curtido ainda'), findsOneWidget);
   });
 
+  // A aba Meus registros mostra o animal cadastrado neste aparelho e há quanto
+  // tempo foi publicado
   testWidgets('meus registros lista o animal registrado no aparelho', (
     tester,
   ) async {
@@ -447,6 +540,8 @@ void main() {
     expect(find.text('Publicado há 2 dias'), findsOneWidget);
   });
 
+  // Editar perfil, aberto pelo menu de três pontos, só habilita o botão de
+  // salvar depois de uma mudança e volta ao perfil com o nome novo
   testWidgets('editar perfil só salva com mudança e volta ao perfil', (
     tester,
   ) async {
@@ -484,6 +579,8 @@ void main() {
     expect(find.text('Alterações salvas.'), findsOneWidget);
   });
 
+  // O nome é obrigatório: com o campo vazio, o perfil não é salvo e o erro
+  // aparece
   testWidgets('editar perfil não salva com o nome vazio', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final estado = EstadoPataAmiga();
@@ -509,6 +606,8 @@ void main() {
     expect(usuario.usuario.nome, 'Luisa');
   });
 
+  // A recepção de quem reabre o app usa só o primeiro nome e termina sozinha
+  // depois do tempo de exibição
   testWidgets('recepção cumprimenta pelo primeiro nome e segue sozinha', (
     tester,
   ) async {
@@ -534,6 +633,7 @@ void main() {
     expect(terminou, 1);
   });
 
+  // Um toque encerra a recepção, e o temporizador não a encerra de novo depois
   testWidgets('um toque pula a recepção uma vez só', (tester) async {
     var terminou = 0;
     SharedPreferences.setMockInitialValues({});
@@ -551,8 +651,8 @@ void main() {
     expect(terminou, 1);
   });
 
-  // US 05: o animal cadastrado aparece na listagem logo depois de salvo,
-  // mesmo vindo de outra aba e com uma busca digitada
+  // Abre o feed na aba Adoção com uma busca digitada e cadastra um animal
+  // por um formulário falso que devolve [novo] na hora
   Future<void> cadastrarPeloFeed(
     WidgetTester tester, {
     required _ApiFalsa api,
@@ -586,6 +686,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  // Animal perdido recém-publicado, usado para conferir o retorno ao feed
   Animal perdidoNovo() => Animal.fromJson({
     ...animaisMock.first.toJson(),
     'nome': 'Pipoca',
@@ -593,6 +694,8 @@ void main() {
     'publicadoEm': DateTime.now().toIso8601String(),
   });
 
+  // Animal salvo na API aparece no feed logo após o cadastro, na aba do tipo
+  // dele, mesmo com uma busca digitada
   testWidgets('animal salvo na API aparece na hora, na aba do tipo dele', (
     tester,
   ) async {
@@ -604,6 +707,8 @@ void main() {
     expect(find.text('Pipoca foi salvo na API.'), findsOneWidget);
   });
 
+  // Sem API, o animal cadastrado fica só no aparelho, aparece no feed e o aviso
+  // explica que não foi enviado
   testWidgets('sem API, o animal fica no aparelho e aparece na hora', (
     tester,
   ) async {
@@ -638,6 +743,7 @@ void main() {
     },
   );
 
+  // O item Mapa da barra inferior abre o mapa a partir de outra tela da barra
   testWidgets('Mapa abre o mapa a partir de qualquer tela da barra', (
     tester,
   ) async {
@@ -652,6 +758,7 @@ void main() {
     expect(find.text('Esta tela entra em uma próxima sprint.'), findsNothing);
   });
 
+  // O item Início desempilha as telas abertas e volta ao feed
   testWidgets('Início volta ao feed mesmo com outras telas no caminho', (
     tester,
   ) async {
@@ -667,7 +774,8 @@ void main() {
     expect(find.text('PERFIL FALSO'), findsNothing);
   });
 
-  // US 20: o cadastro de animal lê quem está logado direto do estado
+  // Abre o cadastro de animal numa tela grande e escolhe o tipo Perdido,
+  // que libera os campos de contato
   Future<void> abrirCadastro(WidgetTester tester, Widget app) async {
     tester.view.physicalSize = const Size(1200, 3000);
     tester.view.devicePixelRatio = 1;
@@ -678,6 +786,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  // O cadastro de animal já vem com o nome e o telefone da conta logada
   testWidgets('cadastro de animal já vem com o contato de quem está logado', (
     tester,
   ) async {
@@ -701,6 +810,7 @@ void main() {
     expect(find.text('(37) 99999-0000'), findsOneWidget);
   });
 
+  // Sem conta logada, o contato do cadastro começa vazio e a tela abre sem erro
   testWidgets('sem ninguém logado, o contato do cadastro começa vazio', (
     tester,
   ) async {
@@ -712,6 +822,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  // Campo de busca do select de bairro do cadastro
   final campoDoBairro = find.byWidgetPredicate(
     (w) =>
         w is TextField &&
@@ -730,7 +841,10 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  // Fundação do mapa: o cadastro guarda de onde o animal foi registrado
+  // Preenche e envia o cadastro de um animal perdido, com GPS e serviço de
+  // endereços falsos. Os parâmetros escolhem entre usar a mira, digitar a
+  // rua e o bairro ou escolher "Outro bairro". Devolve o animal criado, ou
+  // nulo se o cadastro não foi enviado
   Future<Animal?> cadastrarPerdido(
     WidgetTester tester, {
     bool usarMira = true,
@@ -837,6 +951,7 @@ void main() {
     return devolvido;
   }
 
+  // Com a mira, o cadastro grava rua, bairro, cidade e a coordenada do aparelho
   testWidgets(
     'com a mira, o animal sai com rua, bairro, Formiga e a coordenada',
     (tester) async {
@@ -851,6 +966,7 @@ void main() {
     },
   );
 
+  // Se a rua é trocada depois da mira, a coordenada passa a ser a da rua nova
   testWidgets('rua trocada depois da mira usa o ponto da rua nova', (
     tester,
   ) async {
@@ -864,6 +980,7 @@ void main() {
     expect(animal.longitude, _lonDaRua);
   });
 
+  // Sem a mira, o endereço digitado é buscado e o animal fica no ponto da rua
   testWidgets('sem a mira, o animal é fixado num ponto da rua digitada', (
     tester,
   ) async {
@@ -884,6 +1001,8 @@ void main() {
     expect(animal.longitude, _lonDaRua);
   });
 
+  // Se o ponto encontrado para a rua cai em outro bairro, o animal é salvo sem
+  // coordenada, para não aparecer no lugar errado do mapa
   testWidgets('ponto da rua fora do bairro escolhido não vai para o mapa', (
     tester,
   ) async {
@@ -902,6 +1021,7 @@ void main() {
     expect(animal.temPonto, isFalse);
   });
 
+  // Rua não encontrada pelo serviço de endereços: o cadastro sai sem coordenada
   testWidgets('se a rua não for encontrada, o cadastro sai sem ponto', (
     tester,
   ) async {
@@ -917,12 +1037,14 @@ void main() {
     expect(animal!.temPonto, isFalse);
   });
 
+  // A mira preenche o bairro com o nome da lista de bairros
   testWidgets('a mira já escolhe o bairro da lista', (tester) async {
     final animal = await cadastrarPerdido(tester);
 
     expect(animal!.bairro, 'Centro');
   });
 
+  // Bairro do GPS que não está na lista é salvo como "Outro", com o nome lido
   testWidgets('bairro do GPS fora da lista vai para Outro com o nome dele', (
     tester,
   ) async {
@@ -932,6 +1054,7 @@ void main() {
     expect(animal.temPonto, isTrue);
   });
 
+  // Escolher à mão o bairro que o GPS não identificou mantém a coordenada
   testWidgets('escolher o bairro que o GPS não achou mantém a coordenada', (
     tester,
   ) async {
@@ -945,6 +1068,7 @@ void main() {
     expect(animal.temPonto, isTrue);
   });
 
+  // A opção "Outro bairro" abre um campo livre e salva o nome escrito
   testWidgets('Outro bairro abre um campo e salva o que foi escrito', (
     tester,
   ) async {
@@ -959,6 +1083,7 @@ void main() {
     expect(animal.cidade, 'Formiga');
   });
 
+  // Busca sem resultado na lista de bairros ainda oferece "Outro bairro"
   testWidgets('bairro que não está na lista ainda mostra Outro bairro', (
     tester,
   ) async {
@@ -973,6 +1098,7 @@ void main() {
     expect(find.text('QUAL É O BAIRRO?'), findsOneWidget);
   });
 
+  // Sem rua ou sem bairro, o cadastro não é enviado e a tela continua aberta
   testWidgets('sem rua ou sem bairro o cadastro não sai', (tester) async {
     final semBairro = await cadastrarPerdido(
       tester,
@@ -983,25 +1109,30 @@ void main() {
     expect(find.text('CADASTRAR ANIMAL'), findsOneWidget);
   });
 
-  // A lista de bairros, testada como lógica pura
+  // Busca e normalização da lista de bairros de Formiga
   group('bairros de Formiga', () {
+    // A busca de bairros ignora maiúsculas e acentos
     test('a busca ignora maiúsculas e acentos', () {
       expect(filtrarBairros('agua'), contains('Água Vermelha'));
       expect(filtrarBairros('ROSARIO'), contains('Rosário'));
     });
 
+    // A busca de bairros devolve só os que contêm o trecho digitado
     test('a busca filtra pelo pedaço digitado', () {
       final achados = filtrarBairros('santa');
       expect(achados, contains('Santa Luzia'));
       expect(achados, isNot(contains('Centro')));
     });
 
+    // O nome vindo do GPS é convertido para a grafia da lista, ou nulo se não
+    // existe
     test('o nome do GPS acha o bairro com a grafia da lista', () {
       expect(bairroDaLista('centro'), 'Centro');
       expect(bairroDaLista('Agua Vermelha'), 'Água Vermelha');
       expect(bairroDaLista('Bairro Inventado'), isNull);
     });
 
+    // Quando o serviço devolve a cidade no lugar do bairro, o bairro fica vazio
     test('cidade no lugar do bairro conta como bairro desconhecido', () {
       expect(bairroDoServico('Formiga', 'Formiga'), '');
       expect(bairroDoServico('Formiga', null), '');
@@ -1009,6 +1140,7 @@ void main() {
       expect(bairroDoServico(null, 'Formiga'), '');
     });
 
+    // A lista de bairros não tem nomes repetidos e usa a grafia oficial
     test('a lista está em ordem alfabética e sem repetição', () {
       expect(bairrosDeFormiga.toSet().length, bairrosDeFormiga.length);
       expect(bairrosDeFormiga, contains('Ponte Vila'));
@@ -1017,7 +1149,7 @@ void main() {
     });
   });
 
-  // A rua aparece na ficha de perdido e resgate, nunca na de adoção
+  // Abre a ficha do animal numa tela grande, com o estado do app
   Future<void> abrirFicha(WidgetTester tester, Animal animal) async {
     SharedPreferences.setMockInitialValues({});
     tester.view.physicalSize = const Size(1200, 3000);
@@ -1034,6 +1166,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  // Animal de exemplo do tipo informado, com rua, bairro e cidade
   Animal comRua(TipoRegistro tipo) => Animal.fromJson({
     ...animaisMock.first.toJson(),
     'tipo': tipo.name,
@@ -1042,12 +1175,15 @@ void main() {
     'cidade': 'Formiga',
   });
 
+  // A ficha de animal perdido mostra a rua, o bairro e a cidade
   testWidgets('a ficha de perdido mostra a rua', (tester) async {
     await abrirFicha(tester, comRua(TipoRegistro.perdido));
     expect(find.text('Praça Olegário Maciel, 155'), findsOneWidget);
     expect(find.text('Centro, Formiga'), findsOneWidget);
   });
 
+  // A ficha de adoção mostra só bairro e cidade, sem a rua, para proteger o
+  // endereço de quem doa
   testWidgets('a ficha de adoção não mostra a rua', (tester) async {
     await abrirFicha(tester, comRua(TipoRegistro.adocao));
     expect(find.text('Centro'), findsOneWidget);
@@ -1055,18 +1191,22 @@ void main() {
     expect(find.textContaining('Olegário'), findsNothing);
   });
 
+  // Formatação do telefone para exibição
   group('telefone formatado', () {
+    // Telefone só com dígitos, como vem da API, é exibido com a máscara
     test('telefone sem máscara, como vem da API, sai formatado', () {
       expect(formatarTelefone('13999991111'), '(13) 99999-1111');
       expect(formatarTelefone('3732221234'), '(37) 3222-1234');
     });
 
+    // O código do país é retirado, e um telefone já formatado não muda
     test('o 55 do país sai, e o que já está formatado não muda', () {
       expect(formatarTelefone('5537999990000'), '(37) 99999-0000');
       expect(formatarTelefone('(37) 99999-0000'), '(37) 99999-0000');
     });
   });
 
+  // A ficha mostra o nome do responsável e o telefone com a máscara
   testWidgets('a ficha mostra nome e telefone formatado do responsável', (
     tester,
   ) async {
@@ -1085,6 +1225,8 @@ void main() {
     expect(find.text('13999991111'), findsNothing);
   });
 
+  // Confere os dados de exemplo da API: todo animal tem rua, bairro da lista,
+  // cidade Formiga e coordenada dentro da área urbana
   test('todo animal de exemplo da API tem endereço completo em Formiga', () {
     final banco = jsonDecode(File('api/db.json').readAsStringSync()) as Map;
     final animais = (banco['animais'] as List)
@@ -1102,7 +1244,7 @@ void main() {
     }
   });
 
-  // US 08: o mapa mostra perdidos e resgates com localização
+  // Animal de exemplo do tipo informado, com ou sem coordenada no mapa
   Animal noMapa(String nome, TipoRegistro tipo, {bool comPonto = true}) =>
       Animal.fromJson({
         ...animaisMock.first.toJson(),
@@ -1115,16 +1257,19 @@ void main() {
         'longitude': comPonto ? -45.4216 : null,
       });
 
+  // Regras que decidem quais animais viram pinos no mapa
   group('camadas do mapa', () {
     final perdido = noMapa('Nina', TipoRegistro.perdido);
     final resgate = noMapa('Mel', TipoRegistro.resgate);
     final adocao = noMapa('Thor', TipoRegistro.adocao);
     final semPonto = noMapa('Bidu', TipoRegistro.perdido, comPonto: false);
     final todos = [perdido, resgate, adocao, semPonto];
+    // Animais que viram pinos com as camadas informadas ligadas
     List<Animal> noMapaCom(Set<TipoRegistro> ligadas) => [
       for (final pino in pinosDoMapa(todos, const [], ligadas)) pino.animal,
     ];
 
+    // Animais para adoção nunca aparecem no mapa
     test('adoção nunca vai para o mapa', () {
       expect(
         noMapaCom(TipoRegistro.values.toSet()),
@@ -1132,10 +1277,12 @@ void main() {
       );
     });
 
+    // Animal sem coordenada não vira pino
     test('animal sem coordenada fica fora do mapa', () {
       expect(noMapaCom(camadasDoMapa.toSet()), isNot(contains(semPonto)));
     });
 
+    // Só os tipos com a camada ligada aparecem no mapa
     test('só aparecem as camadas ligadas', () {
       expect(noMapaCom({TipoRegistro.perdido}), [perdido]);
       expect(noMapaCom({TipoRegistro.resgate}), [resgate]);
@@ -1144,6 +1291,8 @@ void main() {
   });
 
 
+  // Abre a tela do mapa, sem os blocos do OpenStreetMap, com os animais
+  // informados no estado
   Future<void> abrirMapa(WidgetTester tester, List<Animal> animais) async {
     SharedPreferences.setMockInitialValues({});
     tester.view.physicalSize = const Size(1080, 2400);
@@ -1166,6 +1315,8 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  // O mapa mostra perdidos e resgates, esconde a adoção e some com cada tipo ao
+  // desligar a camada; sem camada ligada, mostra a orientação
   testWidgets('o mapa mostra perdidos e resgates e desliga cada camada', (
     tester,
   ) async {
@@ -1195,6 +1346,8 @@ void main() {
     );
   });
 
+  // Tocar no pino abre o resumo com foto, nome e lugar, que leva à ficha
+  // completa
   testWidgets('tocar no pino mostra foto, nome, lugar e leva à ficha', (
     tester,
   ) async {
@@ -1211,7 +1364,7 @@ void main() {
     expect(find.text('DETALHES'), findsOneWidget);
   });
 
-  // US 12: registro de avistamento
+  // Avistamento de exemplo de um animal, na data e no bairro informados
   Avistamento visto(
     String animal,
     DateTime data, {
@@ -1228,6 +1381,7 @@ void main() {
     registradoEm: registradoEm ?? data,
   );
 
+  // Modelo de avistamento e as regras do último avistamento
   group('avistamentos', () {
     final simba = Animal.fromJson({
       ...animaisMock.first.toJson(),
@@ -1236,6 +1390,7 @@ void main() {
       'tipo': 'perdido',
     });
 
+    // O avistamento convertido para JSON e lido de volta mantém todos os dados
     test('o avistamento vai e volta da API sem perder nada', () {
       final original = visto('4', DateTime(2026, 10, 18));
       final lido = Avistamento.fromJson(original.toJson());
@@ -1244,6 +1399,7 @@ void main() {
       expect(lido.lugar, 'Rua do Expedicionário, Quartéis');
     });
 
+    // O último avistamento é o de data mais recente entre os do próprio animal
     test('o último avistamento é o de data mais recente, só do animal', () {
       final todos = [
         visto('4', DateTime(2026, 10, 15), bairro: 'Centro'),
@@ -1253,6 +1409,7 @@ void main() {
       expect(ultimoAvistamento(simba, todos)!.bairro, 'Rosário');
     });
 
+    // Com dois avistamentos no mesmo dia, vale o registrado por último
     test('no mesmo dia, vale o que foi registrado por último', () {
       final todos = [
         visto(
@@ -1271,6 +1428,7 @@ void main() {
       expect(ultimoAvistamento(simba, todos)!.bairro, 'Rosário');
     });
 
+    // A mensagem pronta para o tutor informa quando e onde o animal foi visto
     test('a mensagem ao tutor diz quando e onde', () {
       final mensagem = mensagemParaOTutor(
         simba,
@@ -1284,6 +1442,7 @@ void main() {
       );
     });
 
+    // No mapa, o animal perdido aparece no ponto do último avistamento
     test('no mapa, o perdido aparece no último avistamento', () {
       final semPontoNoCadastro = Animal.fromJson({
         ...simba.toJson(),
@@ -1301,6 +1460,8 @@ void main() {
     });
   });
 
+  // Abre a ficha do animal com a rota de registrar avistamento ligada ao
+  // serviço falso
   Future<void> abrirFichaComAvistamento(
     WidgetTester tester,
     Animal animal,
@@ -1329,6 +1490,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  // Animal perdido de exemplo com coordenada no mapa
   Animal perdidoComPonto() => Animal.fromJson({
     ...animaisMock.first.toJson(),
     'id': 4,
@@ -1338,6 +1500,7 @@ void main() {
     'longitude': -45.4299570,
   });
 
+  // Só a ficha de animal perdido tem o botão de registrar avistamento
   testWidgets('só animal perdido tem o botão de registrar avistamento', (
     tester,
   ) async {
@@ -1354,6 +1517,8 @@ void main() {
     expect(find.textContaining('Ninguém registrou'), findsOneWidget);
   });
 
+  // Registrar o avistamento grava o ponto do pino e oferece avisar o tutor pelo
+  // WhatsApp; a ficha passa a mostrar que o animal foi visto hoje
   testWidgets('registrar grava o ponto do pino e oferece avisar o tutor', (
     tester,
   ) async {
@@ -1382,6 +1547,8 @@ void main() {
     expect(find.text('Visto hoje'), findsOneWidget);
   });
 
+  // Sem conexão, o registro do avistamento mostra o erro e a tela continua
+  // aberta
   testWidgets('sem conexão, o registro avisa e a tela continua aberta', (
     tester,
   ) async {
@@ -1402,6 +1569,7 @@ void main() {
     expect(find.text('REGISTRAR AVISTAMENTO'), findsOneWidget);
   });
 
+  // Buscar um endereço move o pino para a rua encontrada
   testWidgets('escrever o endereço leva o pino até a rua buscada', (
     tester,
   ) async {
@@ -1431,6 +1599,7 @@ void main() {
     expect(servico.gravados.single.longitude, _lonDaRua);
   });
 
+  // A mira move o pino para a posição atual do aparelho
   testWidgets('a mira leva o pino até onde a pessoa está', (tester) async {
     GeolocatorPlatform.instance = _GpsFalso();
     pi.GeocodingPlatformFactory.instance = _FabricaFalsa();
@@ -1451,6 +1620,7 @@ void main() {
     expect(servico.gravados.single.longitude, -45.4267);
   });
 
+  // A prévia do mapa na ficha abre o mapa já com o resumo do animal aberto
   testWidgets('a prévia do mapa na ficha abre o mapa com o animal em foco', (
     tester,
   ) async {
@@ -1487,6 +1657,7 @@ void main() {
     expect(find.text('Ver ficha completa'), findsOneWidget);
   });
 
+  // A ficha de adoção não mostra a prévia do mapa
   testWidgets('ficha de adoção não tem prévia do mapa', (tester) async {
     await abrirFicha(
       tester,
@@ -1500,7 +1671,9 @@ void main() {
     expect(find.text('Ver no mapa'), findsNothing);
   });
 
+  // Descoberta do bairro pela rua, com os resultados do ViaCEP
   group('bairro pelo ViaCEP', () {
+    // A consulta ao ViaCEP usa só o nome da rua, sem o tipo de via e o número
     test('a busca usa só o nome da rua, sem tipo de via nem número', () {
       expect(
         nomeDaRuaParaBusca('Rua do Expedicionário, 155'),
@@ -1513,6 +1686,7 @@ void main() {
       );
     });
 
+    // Rua que fica em um único bairro devolve esse bairro
     test('rua de um bairro só devolve esse bairro', () {
       final resultados = [
         {'logradouro': 'Rua do Expedicionário', 'bairro': 'Quartéis'},
@@ -1520,6 +1694,7 @@ void main() {
       expect(bairroUnicoDaRua(resultados, 'do Expedicionário'), 'Quartéis');
     });
 
+    // Rua que passa por mais de um bairro não define o bairro
     test('rua que atravessa dois bairros não escolhe nenhum', () {
       final resultados = [
         {'logradouro': 'Rua Presidente Hermes', 'bairro': 'Vila São Vicente'},
@@ -1528,6 +1703,7 @@ void main() {
       expect(bairroUnicoDaRua(resultados, 'Presidente Hermes'), isNull);
     });
 
+    // Resultados de ruas com nome parecido não contam para escolher o bairro
     test('resultado de outra rua com nome parecido não conta', () {
       final resultados = [
         {'logradouro': 'Rua Presidente Hermes', 'bairro': 'Vila São Vicente'},
@@ -1540,7 +1716,7 @@ void main() {
     });
   });
 
-  // US 14: comedouros e bebedouros
+  // Ponto de alimentação de exemplo na Praça Ferreira Pires
   PontoDeAlimentacao ponto({
     int id = 1,
     TipoDePonto tipo = TipoDePonto.comedouro,
@@ -1555,11 +1731,14 @@ void main() {
     cadastradoEm: DateTime(2026, 10, 1),
   );
 
+  // Situação dos pontos de alimentação e leitura do último abastecimento
   group('pontos de alimentação', () {
     final hoje = DateTime(2026, 10, 19, 15);
+    // Abastecimento de exemplo de um ponto na data informada
     Abastecimento em(DateTime data, {int ponto = 1}) =>
         Abastecimento(ponto: '$ponto', data: data, registradoPor: 'Ana');
 
+    // A situação do ponto muda conforme os dias desde o último abastecimento
     test('a situação segue os dias desde o último abastecimento', () {
       expect(
         situacaoDoPonto(em(DateTime(2026, 10, 17)), hoje),
@@ -1580,6 +1759,8 @@ void main() {
       expect(situacaoDoPonto(null, hoje), SituacaoDoPonto.precisa);
     });
 
+    // O último abastecimento é o mais recente do próprio ponto, ou nulo se não
+    // há
     test('o último abastecimento é o mais recente daquele ponto', () {
       final todos = [
         em(DateTime(2026, 10, 12)),
@@ -1590,6 +1771,7 @@ void main() {
       expect(ultimoAbastecimento(ponto(id: 9), todos), isNull);
     });
 
+    // O ponto convertido para JSON e lido de volta mantém tipo e endereço
     test('o ponto vai e volta da API sem perder nada', () {
       final lido = PontoDeAlimentacao.fromJson(
         ponto(tipo: TipoDePonto.ambos).toJson(),
@@ -1599,6 +1781,8 @@ void main() {
     });
   });
 
+  // Abre o mapa só com a camada de alimentação e um ponto, com ou sem conta
+  // logada. Devolve o serviço falso para conferir o que foi gravado
   Future<_AlimentacaoFalsa> abrirMapaComPontos(
     WidgetTester tester, {
     required bool logado,
@@ -1652,6 +1836,8 @@ void main() {
     return servico;
   }
 
+  // O resumo do ponto mostra a situação e o último abastecimento; sem conta
+  // logada, não oferece abastecer nem cadastrar ponto
   testWidgets('o pino do ponto mostra a situação e o último abastecimento', (
     tester,
   ) async {
@@ -1682,6 +1868,7 @@ void main() {
     expect(find.byTooltip('Cadastrar ponto de alimentação'), findsNothing);
   });
 
+  // Toca no ponto e abre a tela de registrar abastecimento
   Future<void> abrirConfirmacao(WidgetTester tester) async {
     await tester.tap(
       find.bySemanticsLabel('Comedouro Praça Ferreira Pires, Centro'),
@@ -1692,6 +1879,8 @@ void main() {
     expect(find.text('REGISTRAR ABASTECIMENTO'), findsOneWidget);
   }
 
+  // Quem está no ponto registra o abastecimento, e o resumo passa a impedir um
+  // segundo registro no mesmo dia
   testWidgets('no ponto, o abastecimento vale e só uma vez por dia', (
     tester,
   ) async {
@@ -1715,6 +1904,7 @@ void main() {
     expect(find.text('Você já registrou hoje'), findsOneWidget);
   });
 
+  // Longe do ponto, o abastecimento é recusado e nada é gravado
   testWidgets('longe do ponto, o abastecimento não vale', (tester) async {
     // Praça Olegário Maciel, a mais de 500 m da Praça Ferreira Pires
     final servico = await abrirMapaComPontos(
@@ -1733,9 +1923,11 @@ void main() {
     expect(servico.abastecimentos, isEmpty);
   });
 
+  // Regras que validam um abastecimento: distância e um registro por dia
   group('verificação do abastecimento', () {
     final agora = DateTime(2026, 10, 19, 15);
 
+    // O cálculo de distância entre duas praças conhecidas dá o valor esperado
     test('a distância entre duas praças do Centro passa de 150 m', () {
       final metros = distanciaEmMetros(
         -20.4613736,
@@ -1747,6 +1939,8 @@ void main() {
       expect(metros, lessThan(800));
     });
 
+    // Verifica um abastecimento no ponto de exemplo, a partir da posição da
+    // pessoa e dos abastecimentos anteriores
     MotivoDaRecusa? verificar({
       double latitude = -20.4613736,
       double longitude = -45.432412,
@@ -1762,15 +1956,19 @@ void main() {
       agora: agora,
     );
 
+    // Perto do ponto e sem registro no dia, o abastecimento é aceito
     test('perto do ponto, pela primeira vez no dia, vale', () {
       // Uns 50 m ao norte
       expect(verificar(latitude: -20.4609236), isNull);
     });
 
+    // A mais de 150 m do ponto, o abastecimento é recusado
     test('a mais de 150 m não vale', () {
       expect(verificar(latitude: -20.4600), MotivoDaRecusa.longeDoPonto);
     });
 
+    // A mesma pessoa não registra o mesmo ponto duas vezes no dia; registros de
+    // outra pessoa ou de outro dia não impedem
     test('a mesma pessoa não registra o mesmo ponto duas vezes no dia', () {
       final hojeCedo = Abastecimento(
         ponto: '1',
@@ -1792,6 +1990,8 @@ void main() {
     });
   });
 
+  // Cadastrar ponto exige o tipo e, com a localização, grava o ponto e o
+  // primeiro abastecimento
   testWidgets('cadastrar ponto grava o ponto e o abastecimento de hoje', (
     tester,
   ) async {
@@ -1833,7 +2033,7 @@ void main() {
     expect(estado.pontos, hasLength(1));
   });
 
-  // Perto de você: o GPS falso está na Praça Olegário Maciel
+  // Lista "Perto de você": distância máxima, ordem e texto da distância
   group('perto de você', () {
     final pertinho = PontoDeAlimentacao(
       id: '7',
@@ -1852,6 +2052,7 @@ void main() {
       cadastradoEm: DateTime(2026, 10, 1),
     );
 
+    // Só entram itens a até 1 km, ordenados do mais perto ao mais longe
     test('fica só o que está a até 1 km, do mais perto ao mais longe', () {
       final ferreira = ponto();
       final itens = pertoDe(
@@ -1863,12 +2064,15 @@ void main() {
       expect(itens.map((item) => item.ponto), [pertinho, ferreira]);
     });
 
+    // A distância é exibida em metros até 1 km e em quilômetros depois disso
     test('a distância aparece em metros até 1 km e depois em km', () {
       expect(textoDaDistancia(347), '350 m');
       expect(textoDaDistancia(1240), '1,2 km');
     });
   });
 
+  // A mira abre o "Perto de você" só com o que está nas camadas ligadas e a até
+  // 1 km; desligar a camada tira o item da lista
   testWidgets('a mira abre o perto de você com o que está nas camadas', (
     tester,
   ) async {
@@ -1906,9 +2110,12 @@ void main() {
     );
   });
 
-  group('status do animal (US 03)', () {
+  // Mudança de status do animal (adotado, encontrado, resgatado) e quem pode
+  // fazer essa mudança
+  group('status do animal', () {
     const email = 'luisa@pata.com';
 
+    // Animal de exemplo cadastrado pela conta de teste
     Animal meu(TipoRegistro tipo, {String status = 'disponivel'}) =>
         Animal.fromJson({
           ...animaisMock.first.toJson(),
@@ -1919,6 +2126,7 @@ void main() {
           'responsavelEmail': email,
         });
 
+    // O desfecho e o rótulo do status dependem do tipo do registro
     test('o desfecho e o rótulo seguem o tipo do registro', () {
       expect(meu(TipoRegistro.adocao).desfecho, StatusAnimal.adotado);
       expect(meu(TipoRegistro.perdido).desfecho, StatusAnimal.encontrado);
@@ -1931,6 +2139,8 @@ void main() {
       );
     });
 
+    // Só o e-mail de quem cadastrou, sem diferenciar maiúsculas, é o
+    // responsável
     test('só o e-mail de quem cadastrou é responsável', () {
       final animal = meu(TipoRegistro.adocao);
       expect(animal.eDoResponsavel('Luisa@Pata.com '), isTrue);
@@ -1939,6 +2149,7 @@ void main() {
       expect(animaisMock.first.eDoResponsavel(''), isFalse);
     });
 
+    // Animal com desfecho deixa de aparecer no mapa
     test('animal com desfecho sai dos pinos do mapa', () {
       final perdido = Animal.fromJson({
         ...meu(TipoRegistro.perdido).toJson(),
@@ -1957,6 +2168,8 @@ void main() {
       );
     });
 
+    // Abre a ficha do animal com a conta informada logada. Devolve a API falsa
+    // para conferir o que foi gravado
     Future<_ApiFalsa> abrirMinhaFicha(
       WidgetTester tester,
       EstadoPataAmiga estado,
@@ -1990,6 +2203,7 @@ void main() {
       return api;
     }
 
+    // Rola até o botão do controle de status e toca nele
     Future<void> tocarNoControle(WidgetTester tester, String texto) async {
       final botao = find.text(texto);
       await tester.ensureVisible(botao);
@@ -1998,6 +2212,7 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    // Outra conta não vê o controle de status na ficha
     testWidgets('só quem cadastrou vê o controle de status', (tester) async {
       SharedPreferences.setMockInitialValues({});
       final estado = EstadoPataAmiga();
@@ -2012,6 +2227,8 @@ void main() {
       expect(find.text('Marcar como adotado'), findsNothing);
     });
 
+    // Cadastro feito neste aparelho sem e-mail também mostra o controle; animal
+    // que não está nos cadastros do aparelho não pode ser alterado
     testWidgets('cadastro do aparelho sem e-mail também mostra o controle', (
       tester,
     ) async {
@@ -2032,6 +2249,8 @@ void main() {
       expect(estado.podeMudarStatus(deOutro, email), isFalse);
     });
 
+    // Animal da API cadastrado com o e-mail da conta logada entra nos cadastros
+    // dela
     test('animal da API no e-mail de quem está logado entra nos cadastros', () {
       final estado = EstadoPataAmiga();
       addTearDown(estado.dispose);
@@ -2048,6 +2267,8 @@ void main() {
       expect(estado.cadastrosDe('ninguem@pata.com'), isEmpty);
     });
 
+    // Marcar como adotado pede confirmação, grava na API, tira o animal do feed
+    // e pode ser desfeito
     testWidgets('marcar como adotado confirma, grava e tira do feed', (
       tester,
     ) async {
@@ -2068,6 +2289,7 @@ void main() {
       expect(api.statusGravados, isEmpty);
 
       await tocarNoControle(tester, 'Marcar como adotado');
+      await escreverObservacao(tester);
       await tester.tap(find.text('Confirmar'));
       await tester.pumpAndSettle();
 
@@ -2082,12 +2304,14 @@ void main() {
 
       // E dá para desfazer
       await tocarNoControle(tester, 'Voltar para disponível');
+      await escreverObservacao(tester);
       await tester.tap(find.text('Confirmar'));
       await tester.pumpAndSettle();
       expect(estado.atual(animal).status, StatusAnimal.disponivel);
       expect(find.text('Marcar como adotado'), findsOneWidget);
     });
 
+    // Animal perdido pode ser marcado como encontrado
     testWidgets('perdido vira encontrado', (tester) async {
       SharedPreferences.setMockInitialValues({});
       final estado = EstadoPataAmiga();
@@ -2097,12 +2321,14 @@ void main() {
       final api = await abrirMinhaFicha(tester, estado, animal);
 
       await tocarNoControle(tester, 'Marcar como encontrado');
+      await escreverObservacao(tester);
       await tester.tap(find.text('Confirmar'));
       await tester.pumpAndSettle();
       expect(api.statusGravados, [StatusAnimal.encontrado]);
       expect(find.text('Voltar para procurando'), findsOneWidget);
     });
 
+    // Sem conexão, o status continua o mesmo e o erro aparece
     testWidgets('sem conexão, o status não muda e avisa', (tester) async {
       SharedPreferences.setMockInitialValues({});
       final estado = EstadoPataAmiga();
@@ -2112,6 +2338,7 @@ void main() {
       await abrirMinhaFicha(tester, estado, animal, fora: true);
 
       await tocarNoControle(tester, 'Marcar como adotado');
+      await escreverObservacao(tester);
       await tester.tap(find.text('Confirmar'));
       await tester.pumpAndSettle();
       expect(
@@ -2121,6 +2348,8 @@ void main() {
       expect(estado.atual(animal).status, StatusAnimal.disponivel);
     });
 
+    // Ao marcar como resgatado, o app oferece publicar para adoção e abre o
+    // cadastro já preenchido com os dados do animal
     testWidgets('resgatado oferece publicar para adoção com os dados', (
       tester,
     ) async {
@@ -2132,6 +2361,7 @@ void main() {
       await abrirMinhaFicha(tester, estado, animal);
 
       await tocarNoControle(tester, 'Marcar como resgatado');
+      await escreverObservacao(tester);
       await tester.tap(find.text('Confirmar'));
       await tester.pumpAndSettle();
       expect(find.text('Resgate concluído'), findsOneWidget);
@@ -2145,6 +2375,7 @@ void main() {
       expect(find.widgetWithText(TextField, 'Paçoca'), findsOneWidget);
     });
 
+    // Recusar a oferta de adoção mantém o botão de publicar no quadro da ficha
     testWidgets('a oferta pode ser recusada e continua no quadro', (
       tester,
     ) async {
@@ -2156,6 +2387,7 @@ void main() {
       await abrirMinhaFicha(tester, estado, animal);
 
       await tocarNoControle(tester, 'Marcar como resgatado');
+      await escreverObservacao(tester);
       await tester.tap(find.text('Confirmar'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Agora não'));
@@ -2165,9 +2397,11 @@ void main() {
     });
   });
 
-  group('meus registros (US 09)', () {
+  // Aba Meus registros: grupos por situação, menu de ações e edição
+  group('meus registros', () {
     const email = 'luisa@pata.com';
 
+    // Registro de exemplo com endereço, contato e coordenada completos
     Animal registro(
       String nome,
       TipoRegistro tipo, {
@@ -2189,6 +2423,8 @@ void main() {
       'longitude': -45.4267,
     });
 
+    // Abre o perfil na aba Meus registros, com a rota de edição ligada à API
+    // falsa
     Future<_ApiFalsa> abrirRegistros(
       WidgetTester tester,
       EstadoPataAmiga estado, {
@@ -2229,6 +2465,7 @@ void main() {
       return api;
     }
 
+    // Abre o menu de ações de um registro e escolhe a opção
     Future<void> escolherNoMenu(
       WidgetTester tester,
       String nome,
@@ -2240,6 +2477,7 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    // Os registros são separados por situação, e grupo sem animal não aparece
     testWidgets('separa os registros por situação e esconde grupo vazio', (
       tester,
     ) async {
@@ -2268,6 +2506,8 @@ void main() {
       );
     });
 
+    // Encerrar pelo menu move o registro para o grupo do desfecho, e o menu
+    // permite desfazer
     testWidgets('encerrar pelo menu leva o registro para o grupo do desfecho', (
       tester,
     ) async {
@@ -2279,6 +2519,7 @@ void main() {
       expect(find.text('Adotados'), findsNothing);
 
       await escolherNoMenu(tester, 'Paçoca', 'Marcar como adotado');
+      await escreverObservacao(tester);
       await tester.tap(find.text('Confirmar'));
       await tester.pumpAndSettle();
 
@@ -2288,11 +2529,14 @@ void main() {
 
       // E o menu oferece desfazer
       await escolherNoMenu(tester, 'Paçoca', 'Voltar para disponível');
+      await escreverObservacao(tester);
       await tester.tap(find.text('Confirmar'));
       await tester.pumpAndSettle();
       expect(find.text('Em aberto'), findsOneWidget);
     });
 
+    // Editar abre o formulário preenchido e grava a mudança, mantendo os dados
+    // que o formulário não exibe
     testWidgets('editar abre o registro inteiro e grava o que mudou', (
       tester,
     ) async {
@@ -2349,6 +2593,7 @@ void main() {
       expect(gravado.latitude, -20.4642);
     });
 
+    // Sem conexão, a edição mostra o erro e a tela continua aberta
     testWidgets('sem conexão, a edição avisa e a tela continua aberta', (
       tester,
     ) async {
@@ -2372,6 +2617,8 @@ void main() {
       expect(find.text('EDITAR REGISTRO'), findsOneWidget);
     });
 
+    // Cadastro feito por outra conta no mesmo aparelho aparece sem o menu de
+    // ações
     testWidgets('cadastro de outra conta no aparelho não tem o menu', (
       tester,
     ) async {
@@ -2387,6 +2634,7 @@ void main() {
       expect(find.byTooltip('Opções de Bolinha'), findsNothing);
     });
 
+    // A ficha do animal também oferece editar o registro
     testWidgets('a ficha também abre a edição', (tester) async {
       SharedPreferences.setMockInitialValues({});
       tester.view.physicalSize = const Size(1200, 2800);
@@ -2425,7 +2673,9 @@ void main() {
     });
   });
 
-  group('filtros do feed (US 06)', () {
+  // Filtros do feed: padronização de raças, combinação de opções e o painel
+  group('filtros do feed', () {
+    // Animal para adoção com as características usadas pelos filtros
     Animal bicho(
       String nome, {
       String especie = 'cachorro',
@@ -2470,6 +2720,7 @@ void main() {
     );
     final bob = bicho('Bob', raca: 'SRD');
 
+    // Raças escritas de formas diferentes são padronizadas para o nome da lista
     test('a raça escrita de jeitos diferentes vira uma só', () {
       expect(racaPadrao('vira-lata'), semRacaDefinida);
       expect(racaPadrao(' SRD '), semRacaDefinida);
@@ -2483,6 +2734,8 @@ void main() {
       ]);
     });
 
+    // Opções do mesmo grupo somam resultados; grupos diferentes restringem
+    // juntos
     test('opções no mesmo grupo somam; grupos diferentes se combinam', () {
       final cachorroSemRaca = const FiltrosDoFeed()
           .alternar(GrupoDeFiltro.especie, 'cachorro')
@@ -2495,6 +2748,7 @@ void main() {
       expect([thor, mel, bob].where(pequenoOuGrande.combina), [thor, mel]);
     });
 
+    // No grupo de saúde, marcar dois cuidados exige que o animal tenha os dois
     test('na saúde, marcar dois cuidados pede os dois', () {
       final vacinado = const FiltrosDoFeed().alternar(
         GrupoDeFiltro.saude,
@@ -2508,6 +2762,8 @@ void main() {
       expect([thor, mel, bob].where(vacinadoECastrado.combina), [thor]);
     });
 
+    // As opções de bairro vêm dos animais do feed, em ordem alfabética com
+    // acento
     test('os bairros saem do feed em ordem, sem tropeçar no acento', () {
       final zona = bicho('Zeca', bairro: 'Vila Ferreira');
       expect(opcoesDe(GrupoDeFiltro.bairro, [zona, mel, thor]), [
@@ -2517,6 +2773,8 @@ void main() {
       ]);
     });
 
+    // A raça escrita é convertida para a opção da lista da espécie, ou nula se
+    // não existe nela
     test('a raça escrita acha a opção da lista da espécie', () {
       expect(racaDaLista('cachorro', 'labrador'), 'Labrador Retriever');
       expect(racaDaLista('cachorro', 'Spitz Alemão'), 'Lulu da Pomerânia');
@@ -2531,6 +2789,8 @@ void main() {
       }
     });
 
+    // No cadastro, a raça só é escolhida depois da espécie e é apagada quando a
+    // espécie muda para uma que não a tem
     testWidgets('a raça é escolhida da lista da espécie e some ao trocá-la', (
       tester,
     ) async {
@@ -2583,6 +2843,7 @@ void main() {
     final rex = bicho('Rex', tipo: 'perdido');
     final tom = bicho('Tom', especie: 'gato', tipo: 'perdido');
 
+    // Abre o feed com os animais de exemplo dos filtros
     Future<void> abrirFeed(WidgetTester tester) async {
       SharedPreferences.setMockInitialValues({});
       tester.view.physicalSize = const Size(1200, 2800);
@@ -2601,6 +2862,7 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    // Campo de texto identificado pela dica
     Finder campo(String dica) => find.byWidgetPredicate(
       (w) => w is TextField && w.decoration?.hintText == dica,
     );
@@ -2622,6 +2884,8 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    // O painel de filtros mostra quantos animais combinam, aplica ao confirmar,
+    // permite tirar um filtro pela etiqueta e limpar todos
     testWidgets('o painel conta, aplica, tira um filtro e limpa todos', (
       tester,
     ) async {
@@ -2673,6 +2937,8 @@ void main() {
       expect(find.byType(InputChip), findsNothing);
     });
 
+    // O filtro de raça lista só as raças presentes no feed, mais as opções
+    // fixas
     testWidgets('o select de raça do filtro só tem raças cadastradas', (
       tester,
     ) async {
@@ -2701,6 +2967,7 @@ void main() {
       expect(find.text('Mostrar 2 animais'), findsOneWidget);
     });
 
+    // Escolher a raça marca a espécie dela, e trocar a espécie remove a raça
     testWidgets('escolher a raça marca a espécie; trocar a espécie a apaga', (
       tester,
     ) async {
@@ -2738,6 +3005,8 @@ void main() {
       );
     });
 
+    // O filtro aceita mais de uma raça, cada uma como etiqueta que pode ser
+    // tirada
     testWidgets('dá para escolher mais de uma raça no filtro', (tester) async {
       await abrirFeed(tester);
       await tester.tap(find.byTooltip('Filtros'));
@@ -2776,6 +3045,8 @@ void main() {
       expect(find.text('Mostrar 1 animal'), findsOneWidget);
     });
 
+    // Os filtros continuam ligados ao trocar de aba, e o painel conta pela aba
+    // atual
     testWidgets('os filtros continuam valendo ao trocar de aba', (
       tester,
     ) async {
@@ -2802,6 +3073,7 @@ void main() {
       expect(find.text('Mostrar 1 animal'), findsOneWidget);
     });
 
+    // Sem animal que combine com os filtros, o botão de aplicar fica desativado
     testWidgets('sem nenhum animal que combine, o botão fica desativado', (
       tester,
     ) async {
@@ -2827,6 +3099,7 @@ void main() {
       expect(botao.onPressed, isNull);
     });
 
+    // Quando o filtro esvazia outra aba, o feed mostra o aviso e oferece limpar
     testWidgets('filtro que esvazia outra aba, o feed oferece limpar', (
       tester,
     ) async {
@@ -2852,9 +3125,11 @@ void main() {
     });
   });
 
-  group('perfil de ONG (US 13)', () {
+  // Perfil de ONG: modelo, lista, cadastro, edição, pedidos de entrada e sino
+  group('perfil de ONG', () {
     const emailDaOng = 'ong@example.org';
 
+    // ONG de exemplo, com dados fictícios
     Ong ongDeExemplo({int? id = 1, String email = emailDaOng}) => Ong(
       id: id?.toString(),
       nome: 'Abrigo Focinhos (exemplo)',
@@ -2870,6 +3145,7 @@ void main() {
       criadaEm: DateTime(2026, 10, 1),
     );
 
+    // Animal publicado em nome da ONG de exemplo, na data informada
     Animal daOng(
       String nome,
       DateTime publicado, {
@@ -2883,6 +3159,7 @@ void main() {
       'publicadoEm': publicado.toIso8601String(),
     });
 
+    // Monta a tela informada com uma conta logada e as rotas do app
     Future<void> montar(
       WidgetTester tester, {
       required EstadoPataAmiga estado,
@@ -2913,6 +3190,8 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    // A ONG convertida para JSON e lida de volta é igual; antes de existir na
+    // API, vai sem id
     test('a ONG vai e volta da API sem perder nada', () {
       final ong = ongDeExemplo();
       final volta = Ong.fromJson(ong.toJson());
@@ -2921,12 +3200,16 @@ void main() {
       expect(ongDeExemplo(id: null).toJson().containsKey('id'), isFalse);
     });
 
+    // As iniciais do avatar ignoram palavras de ligação e o texto entre
+    // parênteses
     test('as iniciais pulam as ligações e o que está entre parênteses', () {
       expect(iniciaisDa('Abrigo Focinhos (exemplo)'), 'AF');
       expect(iniciaisDa('Associação dos Amigos dos Animais'), 'AA');
       expect(iniciaisDa(''), isEmpty);
     });
 
+    // A ONG da conta é encontrada pelo e-mail de quem a criou, sem diferenciar
+    // maiúsculas nem espaços
     test('a ONG é achada pelo e-mail de quem a criou, sem ligar para '
         'maiúsculas', () {
       final estado = EstadoPataAmiga();
@@ -2937,6 +3220,7 @@ void main() {
       expect(estado.ongDe(''), isNull);
     });
 
+    // Salvar uma ONG que já existe substitui a anterior em vez de duplicar
     test('editar troca a ONG em vez de criar outra', () {
       final estado = EstadoPataAmiga();
       addTearDown(estado.dispose);
@@ -2947,6 +3231,7 @@ void main() {
       expect(estado.ongs.single.nome, 'Novo nome');
     });
 
+    // Os animais da ONG são listados do mais recente para o mais antigo
     test('o animal cadastrado por último é o primeiro da ONG', () {
       final estado = EstadoPataAmiga();
       addTearDown(estado.dispose);
@@ -2966,6 +3251,9 @@ void main() {
       ]);
     });
 
+    // A lista de ONGs fica em ordem alfabética e busca pelo nome; o perfil
+    // mostra os animais por seção, esconde o editar de quem não administra e
+    // copia o Pix
     testWidgets('a lista do menu abre o perfil, com os animais e o Pix', (
       tester,
     ) async {
@@ -3032,7 +3320,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Para adoção'), findsOneWidget);
       expect(find.text('Resgates'), findsOneWidget);
-      expect(find.text('Perdidos'), findsNothing);
+      // "Perdidos" aparece só na etiqueta da finalidade: a ONG não tem
+      // animal perdido, então não há a seção de perdidos
+      expect(find.text('Perdidos'), findsOneWidget);
       expect(find.text('AMORA'), findsOneWidget);
       expect(find.text('THOR'), findsOneWidget);
       expect(find.text('Já encontraram um desfecho'), findsOneWidget);
@@ -3050,6 +3340,7 @@ void main() {
       );
     });
 
+    // Só quem administra a ONG vê o botão de editar no perfil dela
     testWidgets('só quem criou a ONG vê o editar no perfil dela', (
       tester,
     ) async {
@@ -3073,6 +3364,8 @@ void main() {
       expect(find.text('Abrigo Focinhos (exemplo)'), findsWidgets);
     });
 
+    // Criar a ONG exige os campos obrigatórios e liga a ONG à conta de quem
+    // criou
     testWidgets('criar a ONG pede os obrigatórios e a liga a quem criou', (
       tester,
     ) async {
@@ -3097,8 +3390,9 @@ void main() {
       await tester.ensureVisible(find.text('Criar perfil da ONG'));
       await tester.tap(find.text('Criar perfil da ONG'));
       await tester.pumpAndSettle();
-      // Nome, descrição, política, telefone e Pix: só a foto é opcional
-      expect(find.text('Campo obrigatório'), findsNWidgets(5));
+      // Nome, descrição, política, telefone, Pix e finalidades: só a foto é
+      // opcional
+      expect(find.text('Campo obrigatório'), findsNWidgets(6));
       expect(find.byType(SnackBar), findsNothing);
       expect(servico.salvas, isEmpty);
 
@@ -3108,6 +3402,7 @@ void main() {
       await tester.enterText(campos.at(2), 'Visita e termo de adoção.');
       await tester.enterText(campos.at(3), '37988887777');
       await tester.enterText(campos.at(4), 'pix@example.org');
+      await marcarFinalidade(tester);
       await tester.ensureVisible(find.text('Criar perfil da ONG'));
       await tester.tap(find.text('Criar perfil da ONG'));
       await tester.pumpAndSettle();
@@ -3120,6 +3415,8 @@ void main() {
       expect(estado.ongDe('luisa@pata.com')?.id, salva.id);
     });
 
+    // Quem já administra uma ONG abre o cadastro em modo de edição e grava por
+    // cima da mesma ONG
     testWidgets('quem já tem ONG abre o cadastro editando a que existe', (
       tester,
     ) async {
@@ -3143,6 +3440,8 @@ void main() {
       expect(servico.ongs, hasLength(1));
     });
 
+    // ONG da conta que só existe na API impede criar outra; o formulário passa
+    // a editar a existente
     testWidgets('a ONG criada em outro aparelho impede criar a segunda', (
       tester,
     ) async {
@@ -3163,6 +3462,7 @@ void main() {
       await tester.enterText(campos.at(1), 'Outra descrição.');
       await tester.enterText(campos.at(2), 'Visita e termo de adoção.');
       await tester.enterText(campos.at(4), 'pix@example.org');
+      await marcarFinalidade(tester);
       await tester.ensureVisible(find.text('Criar perfil da ONG'));
       await tester.tap(find.text('Criar perfil da ONG'));
       await tester.pumpAndSettle();
@@ -3184,6 +3484,7 @@ void main() {
       );
     });
 
+    // Pedir entrada, aprovar e recusar alteram a lista de membros e de pedidos
     test('pedir, aprovar e recusar mudam quem faz parte', () {
       const maria = PessoaDaOng(
         email: 'maria@pata.com',
@@ -3211,6 +3512,8 @@ void main() {
       expect(Ong.fromJson(depois.toJson()).membros.single.nome, 'Maria');
     });
 
+    // Dois nomes de ONG são iguais mesmo com diferenças de maiúsculas, acentos
+    // e espaços
     test('nomes iguais sem ligar para maiúsculas, acentos e espaços', () {
       final ong = ongDeExemplo();
       expect(ong.temNome('  abrigo focinhos   (EXEMPLO) '), isTrue);
@@ -3222,6 +3525,8 @@ void main() {
       expect(ong.temNome('Abrigo Focinhos de Formiga'), isFalse);
     });
 
+    // Quem administra a ONG vê o pedido de entrada no sino, consulta o perfil
+    // de quem pediu e aprova
     testWidgets('quem criou a ONG vê o pedido no sino e aprova', (
       tester,
     ) async {
@@ -3285,6 +3590,7 @@ void main() {
       );
     });
 
+    // Quem não administra a ONG não vê o sino de pedidos
     testWidgets('quem não criou a ONG não vê o sino', (tester) async {
       SharedPreferences.setMockInitialValues({});
       final estado = EstadoPataAmiga();
@@ -3312,6 +3618,8 @@ void main() {
       expect(find.byType(IconButton), findsNothing);
     });
 
+    // Em Editar perfil, a pessoa escolhe a ONG na lista e envia o pedido de
+    // entrada; o pedido não dá acesso antes da aprovação
     testWidgets('no editar perfil, quem faz parte escolhe a ONG e pede', (
       tester,
     ) async {
@@ -3354,6 +3662,7 @@ void main() {
       expect(estado.ongPedidaPor('luisa@pata.com')?.nome, 'Lar dos Bichos');
     });
 
+    // Membro aprovado vê a ONG no perfil, mas não pode editá-la
     testWidgets('quem entrou por aprovação não edita a ONG', (tester) async {
       SharedPreferences.setMockInitialValues({});
       final estado = EstadoPataAmiga();
@@ -3375,6 +3684,7 @@ void main() {
       expect(find.byTooltip('Editar perfil da ONG'), findsNothing);
     });
 
+    // Não deixa criar ONG com o nome de outra já existente; mudar o nome libera
     testWidgets('não cria ONG com o nome de outra', (tester) async {
       SharedPreferences.setMockInitialValues({});
       pi.GeocodingPlatformFactory.instance = _FabricaFalsa();
@@ -3391,6 +3701,7 @@ void main() {
       await tester.enterText(campos.at(1), 'Outra descrição.');
       await tester.enterText(campos.at(2), 'Visita e termo de adoção.');
       await tester.enterText(campos.at(4), 'pix@example.org');
+      await marcarFinalidade(tester);
       await tester.ensureVisible(find.text('Criar perfil da ONG'));
       await tester.tap(find.text('Criar perfil da ONG'));
       await tester.pumpAndSettle();
@@ -3407,6 +3718,8 @@ void main() {
       expect(servico.salvas.single.nome, 'Abrigo Focinhos de Formiga');
     });
 
+    // Sair do cadastro de ONG sem mudanças volta direto; com algo preenchido,
+    // pergunta antes e permite continuar editando ou descartar
     testWidgets('voltar com algo preenchido pergunta antes de sair', (
       tester,
     ) async {
@@ -3457,6 +3770,8 @@ void main() {
       ('editar perfil', AppRoutes.editarPerfil, 'Luisa Araujo'),
       ('cadastro de animal', AppRoutes.registerAnimal, 'Thor'),
     ]) {
+      // Editar perfil e cadastro de animal também perguntam antes de sair com
+      // alterações não salvas
       testWidgets('$nome também pergunta antes de sair sem salvar', (
         tester,
       ) async {
@@ -3491,6 +3806,8 @@ void main() {
       });
     }
 
+    // Membro da ONG transfere o próprio animal para ela: o registro passa a ser
+    // da ONG e sai de Meus registros
     testWidgets('quem entrou na ONG transfere o próprio animal para ela', (
       tester,
     ) async {
@@ -3549,6 +3866,7 @@ void main() {
       expect(estado.animaisDa(ong).single.nome, 'Pipoca');
     });
 
+    // Mover apenas o pino do mapa também conta como alteração não salva
     testWidgets('mexer só no pino do mapa também pergunta antes de sair', (
       tester,
     ) async {
@@ -3579,6 +3897,8 @@ void main() {
       expect(find.text('Sair sem salvar?'), findsOneWidget);
     });
 
+    // O mapa de marcar o local começa travado e só aceita arrastar depois de
+    // destravado
     testWidgets('o mapa de marcar o local começa travado', (tester) async {
       var arrastou = false;
       await tester.pumpWidget(
@@ -3606,6 +3926,7 @@ void main() {
       expect(arrastou, isTrue);
     });
 
+    // O filtro por ONG traz só os animais das ONGs marcadas, sem os de pessoas
     test('o filtro de ONG traz só os animais das ONGs marcadas', () {
       final daUm = daOng('Thor', DateTime(2026, 10, 10));
       final daDois = Animal.fromJson({
@@ -3620,6 +3941,8 @@ void main() {
       expect(filtros.alternar(GrupoDeFiltro.ong, '2').combina(daDois), isTrue);
     });
 
+    // O filtro de ONG lista só as que têm animais, em ordem alfabética, e
+    // permite marcar e desmarcar todas
     testWidgets('o painel filtra por ONG, marca todas e desmarca todas', (
       tester,
     ) async {
@@ -3696,6 +4019,8 @@ void main() {
       expect(aplicados?.de(GrupoDeFiltro.ong), {'2'});
     });
 
+    // Pedido de quem já é de outra ONG não pode ser aprovado, mas pode ser
+    // recusado
     test('não aprova quem já faz parte de outra ONG', () async {
       const bia = PessoaDaOng(email: 'bia@pata.com', nome: 'Bia', telefone: '');
       final outra = Ong.fromJson({
@@ -3717,6 +4042,7 @@ void main() {
       expect(recusada.pedidos, isEmpty);
     });
 
+    // Quem tem pedido de entrada pendente não pode criar outra ONG
     testWidgets('quem espera resposta de uma ONG não cria outra', (
       tester,
     ) async {
@@ -3739,6 +4065,7 @@ void main() {
       await tester.enterText(campos.at(1), 'Abrigo de cães idosos.');
       await tester.enterText(campos.at(2), 'Visita e termo de adoção.');
       await tester.enterText(campos.at(4), 'pix@example.org');
+      await marcarFinalidade(tester);
       await tester.ensureVisible(find.text('Criar perfil da ONG'));
       await tester.tap(find.text('Criar perfil da ONG'));
       await tester.pumpAndSettle();
@@ -3749,6 +4076,7 @@ void main() {
       );
     });
 
+    // Monta uma barra com o sino da conta informada e abre o painel
     Future<void> abrirSino(
       WidgetTester tester,
       EstadoPataAmiga estado,
@@ -3769,6 +4097,8 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    // No sino, o pedido de quem já é de outra ONG mostra o aviso e o botão de
+    // aprovar fica desativado
     testWidgets('o pedido de quem já está em outra ONG avisa e não aprova', (
       tester,
     ) async {
@@ -3793,6 +4123,7 @@ void main() {
       expect(aprovar.onPressed, isNull);
     });
 
+    // Quem pediu entrada vê no sino que o pedido aguarda aprovação
     testWidgets('quem pediu para entrar vê no sino que o pedido aguarda', (
       tester,
     ) async {
@@ -3818,6 +4149,8 @@ void main() {
       );
     });
 
+    // Membro sai da ONG pelo Editar perfil, e a pergunta sobre ONG volta a
+    // aparecer
     testWidgets('o membro sai da ONG pelo editar perfil; quem criou não', (
       tester,
     ) async {
@@ -3851,6 +4184,8 @@ void main() {
       );
     });
 
+    // Quem administra a ONG sem outros membros não consegue sair e recebe a
+    // explicação de que precisa aprovar alguém antes
     testWidgets('quem criou a ONG não tem a opção de sair', (tester) async {
       SharedPreferences.setMockInitialValues({});
       final estado = EstadoPataAmiga();
@@ -3872,6 +4207,7 @@ void main() {
       expect(estado.ongDe('luisa@pata.com'), isNotNull);
     });
 
+    // Quem administra passa a ONG para um membro escolhido e sai dela
     testWidgets('a admin passa a ONG para um membro e sai', (tester) async {
       SharedPreferences.setMockInitialValues({});
       final estado = EstadoPataAmiga();
@@ -3907,6 +4243,8 @@ void main() {
       expect(estado.ongDe('luisa@pata.com'), isNull);
     });
 
+    // Quem administra vê os membros no perfil da ONG e pode remover um, com
+    // confirmação
     testWidgets('quem criou vê as pessoas da ONG e remove uma', (tester) async {
       SharedPreferences.setMockInitialValues({});
       final estado = EstadoPataAmiga();
@@ -3942,6 +4280,7 @@ void main() {
       expect(estado.ongDe('bia@pata.com'), isNull);
     });
 
+    // Quem não administra a ONG não vê a seção de membros
     testWidgets('quem não criou a ONG não vê as pessoas dela', (tester) async {
       SharedPreferences.setMockInitialValues({});
       final estado = EstadoPataAmiga();
@@ -3956,6 +4295,8 @@ void main() {
       expect(find.text('Membros'), findsNothing);
     });
 
+    // Qualquer membro da ONG pode mudar o status dos animais dela; quem não faz
+    // parte, não
     test('qualquer pessoa da ONG cuida dos animais da ONG', () {
       final estado = EstadoPataAmiga();
       addTearDown(estado.dispose);
@@ -3971,6 +4312,7 @@ void main() {
       expect(estado.podeMudarStatus(thor, 'joao@pata.com'), isFalse);
     });
 
+    // As notificações de pedido contam só as ONGs que a pessoa administra
     test('só os pedidos das ONGs que a pessoa administra contam', () {
       final minha = ongDeExemplo(email: 'luisa@pata.com')
           .comPedidoDe(const PessoaDaOng(email: 'bia@pata.com', nome: 'Bia'));
@@ -3981,6 +4323,8 @@ void main() {
       });
     });
 
+    // Com o app aberto, a verificação periódica faz o aparelho vibrar quando
+    // chega um pedido novo, e não vibra sem novidade
     testWidgets('com o app aberto, pedido novo faz o celular vibrar', (
       tester,
     ) async {
@@ -4016,6 +4360,8 @@ void main() {
       expect(estado.ongs.single.pedidos.single.nome, 'Bia');
     });
 
+    // Quem deixou a ONG perde a permissão sobre os animais que cadastrou em
+    // nome dela
     test('quem saiu da ONG deixa de cuidar dos animais dela', () {
       final estado = EstadoPataAmiga();
       addTearDown(estado.dispose);
@@ -4029,6 +4375,7 @@ void main() {
       expect(estado.podeMudarStatus(thor, emailDaOng), isTrue);
     });
 
+    // Animal publicado em nome da própria pessoa não mostra o atalho para a ONG
     testWidgets('o animal pessoal de quem faz parte da ONG não leva à ONG', (
       tester,
     ) async {
@@ -4047,6 +4394,8 @@ void main() {
       expect(find.text('Ver perfil da ONG'), findsNothing);
     });
 
+    // O horário do pedido de entrada é mantido na API; sem horário, recebe o
+    // atual
     test('o horário do pedido vai e volta da API', () {
       final quando = DateTime(2026, 10, 22, 9, 30);
       final ong = ongDeExemplo().comPedidoDe(
@@ -4062,6 +4411,8 @@ void main() {
       expect(agora, isNotNull);
     });
 
+    // Responder a pedido inexistente ou passar a ONG para quem não é membro
+    // lança erro, em vez de concluir sem efeito
     test(
       'responder a um pedido que não existe mais avisa em vez de fingir',
       () {
@@ -4081,6 +4432,7 @@ void main() {
       },
     );
 
+    // Quem já tem pedido em uma ONG não consegue pedir entrada em outra
     test('quem já pediu para entrar numa ONG não pede em outra', () {
       const bia = PessoaDaOng(email: 'bia@pata.com', nome: 'Bia');
       final servico = _OngsFalsas([
@@ -4093,6 +4445,7 @@ void main() {
       );
     });
 
+    // Editar um animal da ONG mantém o vínculo com a ONG
     testWidgets('editar um animal da ONG não o tira da ONG', (tester) async {
       SharedPreferences.setMockInitialValues({});
       final estado = EstadoPataAmiga();
@@ -4119,6 +4472,8 @@ void main() {
       expect(api.editados.single.ongId, '1');
     });
 
+    // O item Início da barra também pergunta antes de sair de um formulário com
+    // alterações não salvas
     testWidgets('o Início também pergunta antes de largar um formulário', (
       tester,
     ) async {
@@ -4148,6 +4503,8 @@ void main() {
       expect(find.text('CADASTRAR ANIMAL'), findsOneWidget);
     });
 
+    // Quem pediu entrada recebe no sino o resultado (aprovado ou recusado), e
+    // "Entendi" dispensa o aviso
     testWidgets('quem pediu recebe no sino se foi aprovado ou recusado', (
       tester,
     ) async {
@@ -4188,6 +4545,8 @@ void main() {
       expect(servico.salvas, hasLength(1));
     });
 
+    // Quem foi removido da ONG recebe o aviso no sino e pode dispensá-lo; um
+    // novo pedido também apaga o aviso
     testWidgets('quem é removido recebe o aviso no sino e dispensa', (
       tester,
     ) async {
@@ -4221,6 +4580,8 @@ void main() {
       );
     });
 
+    // O cabeçalho do perfil mostra o vínculo com a ONG (pendente ou aprovado) e
+    // abre o perfil dela
     testWidgets('a ONG aparece no cabeçalho do perfil e abre o perfil dela', (
       tester,
     ) async {
@@ -4246,6 +4607,7 @@ void main() {
       expect(find.byTooltip('Editar perfil da ONG'), findsOneWidget);
     });
 
+    // Editar perfil oferece criar o perfil de uma ONG
     testWidgets('o editar perfil leva a criar o perfil de uma ONG', (
       tester,
     ) async {
@@ -4260,6 +4622,7 @@ void main() {
       expect(find.text('PERFIL DA ONG'), findsOneWidget);
     });
 
+    // A ficha de um animal da ONG tem o atalho para o perfil da ONG
     testWidgets('a ficha do animal da ONG leva ao perfil dela', (tester) async {
       SharedPreferences.setMockInitialValues({});
       final estado = EstadoPataAmiga();
@@ -4278,6 +4641,7 @@ void main() {
       expect(find.text('Resgata cães e gatos.'), findsOneWidget);
     });
 
+    // A ficha de animal publicado por pessoa não mostra o atalho para ONG
     testWidgets('a ficha de quem não é ONG não tem o atalho', (tester) async {
       SharedPreferences.setMockInitialValues({});
       final estado = EstadoPataAmiga();
@@ -4291,6 +4655,8 @@ void main() {
       expect(find.text('Ver perfil da ONG'), findsNothing);
     });
 
+    // Membro de ONG escolhe publicar em nome da ONG ou próprio, e o contato do
+    // formulário acompanha a escolha
     testWidgets('quem faz parte da ONG escolhe em nome de quem publica', (
       tester,
     ) async {
@@ -4322,6 +4688,7 @@ void main() {
       expect(campo('37999990000'), findsOneWidget);
     });
 
+    // Animal publicado em nome da ONG aparece só na ONG, não em Meus registros
     test('o animal da ONG não aparece também em Meus registros', () {
       final estado = EstadoPataAmiga();
       addTearDown(estado.dispose);
@@ -4341,6 +4708,7 @@ void main() {
       expect(estado.animaisDa(ong).map((a) => a.nome), ['Thor']);
     });
 
+    // A barra inferior tem os cinco itens na ordem certa, e ONGs abre a lista
     testWidgets('o menu tem ONGs entre Reportar e Perfil', (tester) async {
       SharedPreferences.setMockInitialValues({});
       final estado = EstadoPataAmiga();

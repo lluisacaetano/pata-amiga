@@ -1,18 +1,33 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote flutter_test: ferramentas de teste de widgets e de unidade do Flutter.
 import 'package:flutter_test/flutter_test.dart';
+// Pacote provider: compartilha estado entre as telas e as reconstrói.
 import 'package:provider/provider.dart';
+// Pacote shared_preferences: guarda dados simples no aparelho (chave e valor).
 import 'package:shared_preferences/shared_preferences.dart';
 
+// Arquivo estado_pata_amiga.dart: estado compartilhado exigido pelo perfil.
 import 'package:pata_amiga/estado/estado_pata_amiga.dart';
+// Arquivo main.dart: o aplicativo completo.
 import 'package:pata_amiga/main.dart';
+// Arquivo preferencias_aplicativo_provider.dart: tema e tamanho do texto.
 import 'package:pata_amiga/provider/preferencias_aplicativo_provider.dart';
+// Arquivo usuario_provider.dart: sessão e perfil da pessoa.
 import 'package:pata_amiga/provider/usuario_provider.dart';
+// Arquivo app_router.dart: rotas do app.
 import 'package:pata_amiga/routes/app_router.dart';
+// Arquivo configuracoes_acessibilidade.dart: tela de acessibilidade.
 import 'package:pata_amiga/telas/configuracoes_acessibilidade.dart';
+// Arquivo configuracoes_aparencia.dart: tela de aparência.
 import 'package:pata_amiga/telas/configuracoes_aparencia.dart';
+// Arquivo perfil_usuario.dart: tela Meu perfil, com o menu de opções.
 import 'package:pata_amiga/telas/perfil_usuario.dart';
+// Arquivo cores.dart: tema e paleta do app.
 import 'package:pata_amiga/tema/cores.dart';
 
+// App mínimo que aplica o tema escolhido nas preferências, com a tela
+// informada como inicial
 Widget _aplicativoDeTeste(
   PreferenciasAplicativoProvider preferencias,
   Widget tela,
@@ -35,10 +50,12 @@ Widget _aplicativoDeTeste(
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  // Cada teste começa com as preferências do aparelho vazias
   setUp(() {
     SharedPreferences.setMockInitialValues({});
   });
 
+  // Tema e tamanho do texto salvos voltam ao carregar de novo
   test('carrega e persiste tema e tamanho do texto', () async {
     final preferencias = PreferenciasAplicativoProvider();
     await preferencias.carregar();
@@ -53,6 +70,7 @@ void main() {
     expect(restauradas.escalaTexto, 1.4);
   });
 
+  // O tamanho do texto vale para o app inteiro, junto com o tema
   testWidgets('aplica acessibilidade à árvore inteira do aplicativo', (
     tester,
   ) async {
@@ -74,12 +92,10 @@ void main() {
     final contexto = tester.element(find.text('Pata Amiga'));
     final media = MediaQuery.of(contexto);
     expect(media.textScaler.scale(10), 12);
-    expect(
-      Theme.of(contexto).colorScheme.primary,
-      Cores.principal,
-    );
+    expect(Theme.of(contexto).colorScheme.primary, Cores.principal);
   });
 
+  // Escolher Modo escuro na Aparência troca o tema do app
   testWidgets('a tela de aparência troca o tema globalmente', (tester) async {
     final preferencias = PreferenciasAplicativoProvider();
     await preferencias.carregar();
@@ -102,6 +118,7 @@ void main() {
     );
   });
 
+  // A Acessibilidade salva o tamanho do texto e não mostra opções sem efeito
   testWidgets('a tela de acessibilidade salva tamanho e controles', (
     tester,
   ) async {
@@ -119,6 +136,7 @@ void main() {
     expect(find.text('Reduzir animações'), findsNothing);
   });
 
+  // O menu do perfil abre as telas de Aparência e de Acessibilidade
   testWidgets('perfil abre telas independentes de configuração', (
     tester,
   ) async {
@@ -146,7 +164,7 @@ void main() {
       ),
     );
 
-    // As opções ficam no menu de três pontinhos, no canto
+    // As opções ficam no menu de três pontos da barra superior
     await tester.tap(find.byTooltip('Mais opções'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Aparência'));
