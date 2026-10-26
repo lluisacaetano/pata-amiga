@@ -306,4 +306,4 @@ Sprint 4, com pelo menos uma entrada de cada integrante.
 | 1 | Primeiras Telas: telas do MVP, backlog no Issue Board e fluxo de Merge Request | Entregue |
 | 2 | Produto Conectado: rotas centralizadas, estado compartilhado, cadastro, login e perfil | Entregue |
 | 3 | Produto Resiliente: cache local, estados de conectividade na tela e preferência salva | Entregue |
-| 4 | Squad com IA: agente com o MCP do Flutter, arquivo de rules, funcionalidade e testes com IA | Em andamento |
+| 4 | Squad com IA: agente com o MCP do Flutter, arquivo de rules, funcionalidade e testes com IA | Entregue |
