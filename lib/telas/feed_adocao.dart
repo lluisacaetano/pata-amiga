@@ -44,6 +44,8 @@ import '../routes/app_router.dart';
 import '../services/alimentacao_service.dart';
 // Arquivo animal_service.dart: busca e cadastro de animais na API.
 import '../services/animal_service.dart';
+// Arquivo avistamento.dart: último avistamento, que ordena os perdidos.
+import '../modelos/avistamento.dart';
 // Arquivo avistamento_service.dart: avistamentos na API.
 import '../services/avistamento_service.dart';
 // Arquivo cache_service.dart: cache local dos animais do feed.
@@ -331,8 +333,19 @@ class _FeedAdocaoState extends State<FeedAdocao> {
   }
 
   // Animais da aba atual que combinam com os filtros e a pesquisa (nome,
-  // raça, espécie ou bairro), do mais recente ao mais antigo
+  // raça, espécie ou bairro), do mais recente ao mais antigo. Nos perdidos,
+  // vale a data do último avistamento, quando é mais nova que a publicação
   List<Animal> _visiveis(FiltrosDoFeed filtros) {
+    final avistamentos = PataAmigaScope.of(context).avistamentos;
+    DateTime recencia(Animal animal) {
+      final visto = animal.tipo == TipoRegistro.perdido
+          ? ultimoAvistamento(animal, avistamentos)
+          : null;
+      return visto != null && visto.data.isAfter(animal.publicadoEm)
+          ? visto.data
+          : animal.publicadoEm;
+    }
+
     final termo = _busca.trim().toLowerCase();
     final encontrados = _todosOsAnimais.where((animal) {
       // Animal com desfecho (adotado, encontrado ou resgatado) sai do feed
@@ -345,7 +358,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
           animal.especie.toLowerCase().contains(termo) ||
           animal.bairro.toLowerCase().contains(termo);
     }).toList();
-    encontrados.sort((a, b) => b.publicadoEm.compareTo(a.publicadoEm));
+    encontrados.sort((a, b) => recencia(b).compareTo(recencia(a)));
     return encontrados;
   }
 
