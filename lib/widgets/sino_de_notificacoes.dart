@@ -7,10 +7,14 @@ import 'package:url_launcher/url_launcher.dart';
 
 // Arquivo estado_pata_amiga.dart: estado global com ONGs, pedidos e avisos.
 import '../estado/estado_pata_amiga.dart';
+// Arquivo alertas_de_animais.dart: notificações de perdidos e avistamentos.
+import '../modelos/alertas_de_animais.dart';
 // Arquivo dono.dart: número do WhatsApp a partir do telefone.
 import '../modelos/dono.dart';
 // Arquivo ong.dart: modelo da ONG, dos membros, pedidos e avisos.
 import '../modelos/ong.dart';
+// Arquivo texto.dart: primeira letra maiúscula nos dados do animal.
+import '../modelos/texto.dart';
 // Arquivo ong_service.dart: serviço da API das ONGs (pedidos e avisos).
 import '../services/ong_service.dart';
 // Arquivo route_names.dart: nomes das rotas de navegação.
@@ -43,7 +47,9 @@ Future<void> avisarNovaNotificacao() => HapticFeedback.vibrate();
 // Sino de notificações do perfil, com contador. Reúne:
 // - para o responsável por uma ONG, os pedidos de entrada (aprovar/recusar);
 // - para quem pediu para entrar, o pedido aguardando resposta;
-// - os avisos de aprovação, recusa ou remoção, até serem dispensados.
+// - os avisos de aprovação, recusa ou remoção, até serem dispensados;
+// - os animais perdidos na região e os avistamentos dos animais do
+//   usuário, até serem dispensados ou abertos.
 // Sem nenhuma notificação possível, o sino não é exibido.
 class SinoDeNotificacoes extends StatefulWidget {
   final String email;
@@ -110,11 +116,15 @@ class _SinoDeNotificacoesState extends State<SinoDeNotificacoes> {
     final ong = _minhaOng(estado);
     final pedida = estado.ongPedidaPor(widget.email);
     final avisos = estado.avisosPara(widget.email);
-    if (ong == null && pedida == null && avisos.isEmpty) {
+    final alertas = estado.alertasPara(widget.email);
+    if (ong == null && pedida == null && avisos.isEmpty && alertas.isEmpty) {
       return const SizedBox.shrink();
     }
     final quantos =
-        (ong?.pedidos.length ?? 0) + (pedida != null ? 1 : 0) + avisos.length;
+        (ong?.pedidos.length ?? 0) +
+        (pedida != null ? 1 : 0) +
+        avisos.length +
+        alertas.length;
     return IconButton(
       tooltip: quantos == 0
           ? 'Notificações'
@@ -361,6 +371,9 @@ class _ListaDePedidosState extends State<_ListaDePedidos> {
                 ],
               ),
             ),
+          // Animais perdidos na região e avistamentos dos animais do usuário
+          for (final alerta in estado.alertasPara(widget.email))
+            (alerta.em, _notificacaoDoAlerta(estado, alerta, agora)),
           if (pedida != null)
             (
               meuPedido?.em,
@@ -478,6 +491,75 @@ class _ListaDePedidosState extends State<_ListaDePedidos> {
           ),
         ),
       ),
+    );
+  }
+
+  // Notificação de um animal: a foto como avatar, o que aconteceu e onde.
+  // Tocar tira a notificação do sino e abre o mapa no animal, junto com a
+  // posição do usuário; "Entendi" apenas a tira
+  Widget _notificacaoDoAlerta(
+    EstadoPataAmiga estado,
+    AlertaDeAnimal alerta,
+    DateTime agora,
+  ) {
+    final animal = alerta.animal;
+    // Concordância com o sexo do animal: "perdida", "vista"
+    final a = animal.sexo == 'fêmea' ? 'a' : 'o';
+    Future<void> dispensar() => estado.dispensarAlerta(widget.email, alerta);
+    return _Notificacao(
+      avatar: SizedBox.square(
+        dimension: 40,
+        child: FotoAnimal(
+          caminho: animal.foto,
+          altura: 40,
+          raio: BorderRadius.circular(20),
+        ),
+      ),
+      quando: alerta.em,
+      agora: agora,
+      texto: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(
+              text: animal.nome,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            TextSpan(
+              text: switch (alerta.tipo) {
+                TipoDeAlerta.perdidoPerto =>
+                  ' está perdid$a perto de você, no bairro '
+                      '${alerta.bairro}.',
+                TipoDeAlerta.avistado =>
+                  ' foi vist$a no bairro ${alerta.bairro}, '
+                      '${alerta.avistamento!.vistoHa(agora)}.',
+              },
+            ),
+          ],
+        ),
+      ),
+      detalhe: switch (alerta.tipo) {
+        TipoDeAlerta.perdidoPerto =>
+          [animal.especie, animal.sexo, 'porte ${animal.porte}']
+              .where((parte) => parte.trim().isNotEmpty)
+              .map(comMaiuscula)
+              .join(', '),
+        TipoDeAlerta.avistado => 'Toque para ver o avistamento no mapa.',
+      },
+      aoTocar: () {
+        final navegador = Navigator.of(context);
+        dispensar();
+        navegador
+          ..pop()
+          ..pushNamed(AppRoutes.mapa, arguments: animal);
+      },
+      acoes: [
+        const Spacer(),
+        TextButton(
+          onPressed: dispensar,
+          style: _estiloDoTexto(context.cores.principal),
+          child: const Text('Entendi'),
+        ),
+      ],
     );
   }
 

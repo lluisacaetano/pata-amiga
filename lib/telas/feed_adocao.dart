@@ -13,6 +13,8 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 // Pacote share_plus: abre o compartilhamento do sistema (WhatsApp etc.).
 import 'package:share_plus/share_plus.dart';
+// Pacote shared_preferences: guarda dados simples no aparelho (chave e valor).
+import 'package:shared_preferences/shared_preferences.dart';
 // Pacote url_launcher: abre WhatsApp, telefone e links no navegador.
 import 'package:url_launcher/url_launcher.dart';
 
@@ -34,6 +36,8 @@ import '../widgets/barra_inferior.dart';
 import '../widgets/aviso_no_centro.dart';
 // Arquivo card_animal.dart: card de cada animal do feed.
 import '../widgets/card_animal.dart';
+// Arquivo painel_de_confirmacao.dart: painel inferior do pedido de localização.
+import '../widgets/painel_de_confirmacao.dart';
 // Arquivo escolha_de_tipo.dart: abas de adoção, perdidos e resgates.
 import '../widgets/escolha_de_tipo.dart';
 // Arquivo painel_de_filtros.dart: painel inferior com os filtros.
@@ -50,6 +54,8 @@ import '../modelos/avistamento.dart';
 import '../services/avistamento_service.dart';
 // Arquivo cache_service.dart: cache local dos animais do feed.
 import '../services/cache_service.dart';
+// Arquivo localizacao_service.dart: posição do aparelho para as notificações.
+import '../services/localizacao_service.dart';
 // Arquivo ong_service.dart: ONGs na API.
 import '../services/ong_service.dart';
 // Arquivo usuario_provider.dart: usuário logado.
@@ -71,6 +77,7 @@ class FeedAdocao extends StatefulWidget {
   final AvistamentoService? avistamentos;
   final AlimentacaoService? alimentacao;
   final OngService? ongs;
+  final LocalizacaoService? localizacao;
 
   const FeedAdocao({
     super.key,
@@ -79,6 +86,7 @@ class FeedAdocao extends StatefulWidget {
     this.avistamentos,
     this.alimentacao,
     this.ongs,
+    this.localizacao,
   });
 
   @override
@@ -105,6 +113,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
   late final _avistamentos = widget.avistamentos ?? AvistamentoService();
   late final _alimentacao = widget.alimentacao ?? AlimentacaoService();
   late final _ongs = widget.ongs ?? OngService();
+  late final _localizacao = widget.localizacao ?? const LocalizacaoService();
 
   // Animais recebidos da API ou lidos do cache
   List<Animal> _animaisApi = [];
@@ -155,19 +164,20 @@ class _FeedAdocaoState extends State<FeedAdocao> {
     }
   }
 
-  // Verificação periódica das ONGs (a cada 30 segundos com o app aberto),
-  // para avisar quando chega um pedido de vínculo à ONG que o usuário
-  // administra
+  // Verificação periódica (a cada 30 segundos com o app aberto) das ONGs,
+  // dos animais, dos avistamentos e da posição do aparelho, para avisar
+  // quando chega uma notificação nova
   Timer? _vigia;
-  // Pedidos já conhecidos; nulo até a primeira busca, que só define a base
-  Set<String>? _pedidosConhecidos;
+  // Notificações já conhecidas; nulo até a primeira conferência, que só
+  // define a base
+  Set<String>? _notificacoesConhecidas;
   // Suspende a verificação com o app em segundo plano e retoma ao voltar
   AppLifecycleListener? _ciclo;
 
   // Inicia o timer da verificação, se ainda não estiver ativo
   void _vigiar() => _vigia ??= Timer.periodic(
     const Duration(seconds: 30),
-    (_) => _carregarOngs(),
+    (_) => _verificarNovidades(),
   );
 
   void _pararDeVigiar() {
@@ -175,22 +185,66 @@ class _FeedAdocaoState extends State<FeedAdocao> {
     _vigia = null;
   }
 
-  // Atualiza as ONGs no estado compartilhado e vibra o aparelho quando
-  // surge um pedido de vínculo que não existia na busca anterior
+  // Atualiza as ONGs no estado compartilhado
   Future<void> _carregarOngs() async {
     try {
       final ongs = await _ongs.buscarOngs();
       if (!mounted) return;
       PataAmigaScope.of(context).atualizarOngs(ongs);
-      final email = context.read<UsuarioProvider?>()?.usuario.email ?? '';
-      final pedidos = notificacoesPara(ongs, email);
-      final conhecidos = _pedidosConhecidos;
-      _pedidosConhecidos = pedidos;
-      if (conhecidos != null && !conhecidos.containsAll(pedidos)) {
-        await avisarNovaNotificacao();
-      }
     } on Exception {
       // Falha ignorada: mantém as ONGs já carregadas
+    }
+  }
+
+  // Busca os animais na API sem mexer no estado da tela, para que um
+  // animal perdido novo na região vire notificação
+  Future<void> _atualizarAnimais() async {
+    try {
+      final novos = await _api.buscarAnimais();
+      await _cache.salvarAnimais(novos);
+      if (!mounted) return;
+      setState(() => _animaisApi = novos);
+      PataAmigaScope.of(context)
+          .atualizarAnimais([..._animaisApi, ..._animaisCriados]);
+    } on Exception {
+      // Falha ignorada: mantém os animais já carregados
+    }
+  }
+
+  // Lê a posição do aparelho, sem pedir permissão, para as notificações de
+  // animais perdidos na região
+  Future<void> _atualizarPosicao() async {
+    final posicao = await _localizacao.posicaoSemPedir();
+    if (posicao == null || !mounted) return;
+    PataAmigaScope.of(context).atualizarPosicao(posicao);
+  }
+
+  // Busca tudo o que pode gerar notificação e confere se chegou alguma nova
+  Future<void> _verificarNovidades() async {
+    await Future.wait([
+      _carregarOngs(),
+      _carregarAvistamentos(),
+      _atualizarAnimais(),
+      _atualizarPosicao(),
+    ]);
+    await _conferirNotificacoes();
+  }
+
+  // Vibra o aparelho quando há uma notificação que não existia na última
+  // conferência: pedido ou aviso de ONG, animal perdido na região ou
+  // avistamento de um animal do usuário
+  Future<void> _conferirNotificacoes() async {
+    if (!mounted) return;
+    final estado = PataAmigaScope.of(context);
+    final email = context.read<UsuarioProvider?>()?.usuario.email ?? '';
+    final atuais = {
+      ...notificacoesPara(estado.ongs, email),
+      for (final alerta in estado.alertasPara(email)) alerta.chave,
+    };
+    final conhecidas = _notificacoesConhecidas;
+    _notificacoesConhecidas = atuais;
+    if (conhecidas != null && !conhecidas.containsAll(atuais)) {
+      await avisarNovaNotificacao();
     }
   }
 
@@ -222,14 +276,19 @@ class _FeedAdocaoState extends State<FeedAdocao> {
           .atualizarAnimais([..._animaisApi, ..._animaisCriados]);
     }
 
-    unawaited(_carregarAvistamentos());
+    // As cargas que geram notificações correm junto com a dos animais; a
+    // primeira conferência, ao fim de todas, só define a base
+    final notificacoes = Future.wait([
+      _carregarAvistamentos(),
+      _carregarOngs(),
+      _atualizarPosicao(),
+    ]);
     unawaited(_carregarAlimentacao());
-    unawaited(_carregarOngs());
     _vigiar();
     _ciclo ??= AppLifecycleListener(
       onPause: _pararDeVigiar,
       onResume: () {
-        _carregarOngs();
+        _verificarNovidades();
         _vigiar();
       },
     );
@@ -255,6 +314,49 @@ class _FeedAdocaoState extends State<FeedAdocao> {
         // Com cache, o estado continua "cache" e a faixa do topo
         // avisa que os dados podem estar desatualizados
       });
+    }
+    await notificacoes;
+    await _conferirNotificacoes();
+    await _pedirLocalizacaoUmaVez();
+  }
+
+  // Na primeira abertura do feed, explica para que serve a localização e,
+  // se a pessoa aceitar, abre o pedido de permissão do sistema. A pergunta
+  // é feita uma única vez; depois, a permissão pode ser dada pela mira do
+  // mapa
+  Future<void> _pedirLocalizacaoUmaVez() async {
+    const chave = 'localizacao_pedida';
+    final armazenamento = await SharedPreferences.getInstance();
+    if (armazenamento.getBool(chave) ?? false) return;
+    if (!await _localizacao.podePedirPermissao() || !mounted) return;
+    await armazenamento.setBool(chave, true);
+    if (!mounted) return;
+    final permitir = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: context.cores.cartao,
+      showDragHandle: true,
+      builder: (painel) => PainelDeConfirmacao(
+        icone: Icons.location_on_outlined,
+        titulo: 'Usar sua localização?',
+        texto:
+            'Ative a localização para ser avisado quando um animal se perder '
+            'perto de você e para ver onde você está no mapa.',
+        rotuloPrincipal: 'Permitir',
+        aoPrincipal: () => Navigator.pop(painel, true),
+        rotuloSecundario: 'Agora não',
+        aoSecundario: () => Navigator.pop(painel, false),
+      ),
+    );
+    if (permitir != true || !mounted) return;
+    try {
+      final posicao = await _localizacao.posicaoAtual();
+      if (!mounted) return;
+      PataAmigaScope.of(context).atualizarPosicao(posicao);
+    } on ErroDeLocalizacao catch (erro) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(erro.texto)));
     }
   }
 

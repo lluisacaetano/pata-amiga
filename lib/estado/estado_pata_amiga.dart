@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 // Pacote shared_preferences: guarda dados simples no aparelho (chave e valor).
 import 'package:shared_preferences/shared_preferences.dart';
 
+// Arquivo alertas_de_animais.dart: notificações de perdidos e avistamentos.
+import '../modelos/alertas_de_animais.dart';
 // Arquivo animal.dart: modelo do animal.
 import '../modelos/animal.dart';
 // Arquivo avistamento.dart: modelo do avistamento de animal perdido.
@@ -18,12 +20,14 @@ import '../modelos/ong.dart';
 import '../modelos/ponto_de_alimentacao.dart';
 
 // Estado compartilhado entre as telas: animais do feed, curtidas, cadastros
-// feitos neste aparelho, avistamentos, pontos de alimentação e ONGs. As
-// curtidas e os cadastros locais ficam salvos no aparelho
+// feitos neste aparelho, avistamentos, pontos de alimentação, ONGs e as
+// notificações de animais. As curtidas, os cadastros locais e as
+// notificações dispensadas ficam salvos no aparelho
 class EstadoPataAmiga extends ChangeNotifier {
   // Chaves de gravação no aparelho
   static const _chaveCurtidos = 'curtidos';
   static const _chaveMeusCadastros = 'meus_cadastros';
+  static const _chaveAlertasDispensados = 'alertas_dispensados';
 
   // Chaves dos animais curtidos ([Animal.chave]: o id ou, no animal só
   // local, o nome)
@@ -39,6 +43,47 @@ class EstadoPataAmiga extends ChangeNotifier {
 
   // Animais carregados pelo feed, compartilhados com as outras telas
   List<Animal> get animais => _animais;
+
+  // Última posição conhecida do aparelho, usada para notificar os animais
+  // perdidos na região; nula enquanto não houver permissão de localização
+  ({double latitude, double longitude})? _posicao;
+  ({double latitude, double longitude})? get posicao => _posicao;
+
+  void atualizarPosicao(({double latitude, double longitude}) posicao) {
+    _posicao = posicao;
+    notifyListeners();
+  }
+
+  // Notificações de animais dispensadas, no formato "e-mail|chave", para
+  // cada conta do aparelho ter as suas
+  final Set<String> _alertasDispensados = {};
+
+  // Notificações de animais ainda não dispensadas pelo e-mail
+  List<AlertaDeAnimal> alertasPara(String email) {
+    final prefixo = '${email.trim().toLowerCase()}|';
+    return alertasDeAnimais(
+      animais: [..._animais, ..._meusCadastros],
+      avistamentos: _avistamentos,
+      email: email,
+      posicao: _posicao,
+      dispensadas: {
+        for (final item in _alertasDispensados)
+          if (item.startsWith(prefixo)) item.substring(prefixo.length),
+      },
+      agora: DateTime.now(),
+    );
+  }
+
+  // Tira a notificação do sino do e-mail e salva a escolha no aparelho
+  Future<void> dispensarAlerta(String email, AlertaDeAnimal alerta) async {
+    _alertasDispensados.add('${email.trim().toLowerCase()}|${alerta.chave}');
+    notifyListeners();
+    final armazenamento = await SharedPreferences.getInstance();
+    await armazenamento.setStringList(
+      _chaveAlertasDispensados,
+      _alertasDispensados.toList(),
+    );
+  }
 
   // Avistamentos de animais perdidos; o mais recente define o pino no mapa
   List<Avistamento> _avistamentos = [];
@@ -241,14 +286,20 @@ class EstadoPataAmiga extends ChangeNotifier {
         _meusCadastros.any((item) => item.chave == animal.chave);
   }
 
-  // Lê do aparelho as curtidas e os cadastros locais. Se os cadastros
-  // salvos estiverem corrompidos, a lista local é zerada
+  // Lê do aparelho as curtidas, os cadastros locais e as notificações
+  // dispensadas. Se os cadastros salvos estiverem corrompidos, a lista local
+  // é zerada
   Future<void> carregarCurtidos() async {
     final armazenamento = await SharedPreferences.getInstance();
     if (_descartado) return;
     _curtidos
       ..clear()
       ..addAll(armazenamento.getStringList(_chaveCurtidos) ?? const []);
+    _alertasDispensados
+      ..clear()
+      ..addAll(
+        armazenamento.getStringList(_chaveAlertasDispensados) ?? const [],
+      );
     final registrosSalvos = armazenamento.getString(_chaveMeusCadastros);
     if (registrosSalvos != null) {
       try {

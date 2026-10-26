@@ -12,6 +12,8 @@ import 'package:latlong2/latlong.dart';
 
 // Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
+// Arquivo minha_posicao.dart: ponto azul com a posição atual do usuário.
+import 'minha_posicao.dart';
 // Arquivo pino_da_patinha.dart: pino com patinha usado nos mapas.
 import 'pino_da_patinha.dart';
 
@@ -91,6 +93,7 @@ class _MapaDeLocalState extends State<MapaDeLocal> {
                           'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                       userAgentPackageName: 'br.edu.ifmg.pata_amiga',
                     ),
+                  const CamadaDaMinhaPosicao(),
                   if (!_emTeste)
                     const RichAttributionWidget(
                       alignment: AttributionAlignment.bottomLeft,
@@ -228,6 +231,7 @@ class PreviaDoMapa extends StatelessWidget {
                               'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                           userAgentPackageName: 'br.edu.ifmg.pata_amiga',
                         ),
+                      const CamadaDaMinhaPosicao(),
                       MarkerLayer(
                         markers: [
                           Marker(

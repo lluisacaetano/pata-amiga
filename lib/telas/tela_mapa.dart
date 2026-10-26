@@ -15,6 +15,8 @@ import '../modelos/animal.dart';
 import '../modelos/avistamento.dart';
 // Arquivo camadas_do_mapa.dart: pinos do mapa e cálculo do que está por perto.
 import '../modelos/camadas_do_mapa.dart';
+// Arquivo minha_posicao.dart: ponto azul com a posição atual do usuário.
+import '../widgets/minha_posicao.dart';
 // Arquivo ponto_de_alimentacao.dart: ponto de alimentação e sua situação.
 import '../modelos/ponto_de_alimentacao.dart';
 // Arquivo texto.dart: o texto "hoje", "ontem" ou "há N dias".
@@ -300,7 +302,15 @@ class _TelaMapaState extends State<TelaMapa> {
     super.dispose();
   }
 
-  LatLng? _minhaPosicao;
+  // Posição do usuário, usada no "Perto de você" e para enquadrar o animal
+  // em destaque. Abre com a última posição conhecida; a mira a atualiza
+  late LatLng? _minhaPosicao = _posicaoConhecida();
+
+  LatLng? _posicaoConhecida() {
+    final posicao = PataAmigaScope.talvez(context)?.posicao;
+    return posicao == null ? null : LatLng(posicao.latitude, posicao.longitude);
+  }
+
   // O painel "Perto de você" aparece depois que o usuário toca na mira
   bool _mostrarPerto = false;
   bool _buscandoLocalizacao = false;
@@ -326,6 +336,8 @@ class _TelaMapaState extends State<TelaMapa> {
         _minhaPosicao = ponto;
         _mostrarPerto = true;
       });
+      // A posição vale para o ponto azul de todos os mapas
+      PataAmigaScope.talvez(context)?.atualizarPosicao(pos);
       _controller.move(ponto, 15);
     } on ErroDeLocalizacao catch (erro) {
       _aviso(erro.texto);
@@ -383,6 +395,16 @@ class _TelaMapaState extends State<TelaMapa> {
                 ? centroDeFormiga
                 : LatLng(_pinoEmFoco.latitude, _pinoEmFoco.longitude),
             initialZoom: _pinoEmFoco == null ? 14 : 17,
+            // Com um animal em destaque e a posição do usuário conhecida, o
+            // mapa abre enquadrando os dois, acima do resumo que sobe
+            initialCameraFit: switch ((_pinoEmFoco, _minhaPosicao)) {
+              (final pino?, final eu?) => CameraFit.coordinates(
+                coordinates: [LatLng(pino.latitude, pino.longitude), eu],
+                padding: const EdgeInsets.fromLTRB(60, 60, 60, 460),
+                maxZoom: 17,
+              ),
+              _ => null,
+            },
           ),
           children: [
             if (widget.comMapaDeFundo)
@@ -433,23 +455,7 @@ class _TelaMapaState extends State<TelaMapa> {
                     ),
                 ],
               ),
-            if (_minhaPosicao != null)
-              MarkerLayer(
-                markers: [
-                  Marker(
-                    point: _minhaPosicao!,
-                    width: 22,
-                    height: 22,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.blue,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 3),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            const CamadaDaMinhaPosicao(),
             // Crédito do OpenStreetMap, exigido pela política de uso dos
             // mapas. Aparece aberto ao entrar e se recolhe num botão "i"
             if (widget.comMapaDeFundo)

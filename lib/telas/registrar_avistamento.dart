@@ -124,7 +124,8 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
       return;
     }
     setState(() => _salvando = true);
-    final nome = context.read<UsuarioProvider?>()?.usuario.nome.trim() ?? '';
+    final usuario = context.read<UsuarioProvider?>()?.usuario;
+    final nome = usuario?.nome.trim() ?? '';
     final novo = Avistamento(
       animal: widget.animal.chave,
       data: _data,
@@ -134,6 +135,7 @@ class _RegistrarAvistamentoState extends State<RegistrarAvistamento> {
       bairro: _local.bairro,
       foto: _foto?.path ?? '',
       registradoPor: nome,
+      email: usuario?.email ?? '',
       registradoEm: DateTime.now(),
     );
     try {
