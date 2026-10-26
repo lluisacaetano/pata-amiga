@@ -10,8 +10,15 @@ import 'foto_animal.dart';
 class GaleriaAnimal extends StatefulWidget {
   final List<String> fotos;
   final double altura;
+  // Mostra cada foto inteira, sem cortar (ver FotoAnimal)
+  final bool inteira;
 
-  const GaleriaAnimal({super.key, required this.fotos, this.altura = 280});
+  const GaleriaAnimal({
+    super.key,
+    required this.fotos,
+    this.altura = 280,
+    this.inteira = false,
+  });
 
   @override
   State<GaleriaAnimal> createState() => _GaleriaAnimalState();
@@ -115,6 +122,7 @@ class _GaleriaAnimalState extends State<GaleriaAnimal> {
       return FotoAnimal(
         caminho: widget.fotos.isEmpty ? '' : widget.fotos.first,
         altura: widget.altura,
+        inteira: widget.inteira,
       );
     }
 
@@ -122,8 +130,11 @@ class _GaleriaAnimalState extends State<GaleriaAnimal> {
       controller: _paginas,
       itemCount: widget.fotos.length,
       onPageChanged: (indice) => setState(() => _atual = indice),
-      itemBuilder: (_, indice) =>
-          FotoAnimal(caminho: widget.fotos[indice], altura: widget.altura),
+      itemBuilder: (_, indice) => FotoAnimal(
+        caminho: widget.fotos[indice],
+        altura: widget.altura,
+        inteira: widget.inteira,
+      ),
     );
   }
 }

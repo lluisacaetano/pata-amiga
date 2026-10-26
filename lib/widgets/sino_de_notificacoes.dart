@@ -9,6 +9,10 @@ import 'package:url_launcher/url_launcher.dart';
 import '../estado/estado_pata_amiga.dart';
 // Arquivo alertas_de_animais.dart: notificações de perdidos e avistamentos.
 import '../modelos/alertas_de_animais.dart';
+// Arquivo avisos_de_denuncia.dart: notificações de denúncias.
+import '../modelos/avisos_de_denuncia.dart';
+// Arquivo denuncia.dart: rótulos do tipo e da situação da denúncia.
+import '../modelos/denuncia.dart';
 // Arquivo dono.dart: número do WhatsApp a partir do telefone.
 import '../modelos/dono.dart';
 // Arquivo ong.dart: modelo da ONG, dos membros, pedidos e avisos.
@@ -49,7 +53,9 @@ Future<void> avisarNovaNotificacao() => HapticFeedback.vibrate();
 // - para quem pediu para entrar, o pedido aguardando resposta;
 // - os avisos de aprovação, recusa ou remoção, até serem dispensados;
 // - os animais perdidos na região e os avistamentos dos animais do
-//   usuário, até serem dispensados ou abertos.
+//   usuário, até serem dispensados ou abertos;
+// - as denúncias novas da organização e as mudanças de situação das
+//   denúncias feitas no aparelho.
 // Sem nenhuma notificação possível, o sino não é exibido.
 class SinoDeNotificacoes extends StatefulWidget {
   final String email;
@@ -117,14 +123,20 @@ class _SinoDeNotificacoesState extends State<SinoDeNotificacoes> {
     final pedida = estado.ongPedidaPor(widget.email);
     final avisos = estado.avisosPara(widget.email);
     final alertas = estado.alertasPara(widget.email);
-    if (ong == null && pedida == null && avisos.isEmpty && alertas.isEmpty) {
+    final deDenuncia = estado.avisosDeDenunciaPara(widget.email);
+    if (ong == null &&
+        pedida == null &&
+        avisos.isEmpty &&
+        alertas.isEmpty &&
+        deDenuncia.isEmpty) {
       return const SizedBox.shrink();
     }
     final quantos =
         (ong?.pedidos.length ?? 0) +
         (pedida != null ? 1 : 0) +
         avisos.length +
-        alertas.length;
+        alertas.length +
+        deDenuncia.length;
     return IconButton(
       tooltip: quantos == 0
           ? 'Notificações'
@@ -374,6 +386,10 @@ class _ListaDePedidosState extends State<_ListaDePedidos> {
           // Animais perdidos na região e avistamentos dos animais do usuário
           for (final alerta in estado.alertasPara(widget.email))
             (alerta.em, _notificacaoDoAlerta(estado, alerta, agora)),
+          // Denúncias novas da organização e mudanças de situação das
+          // denúncias feitas neste aparelho
+          for (final aviso in estado.avisosDeDenunciaPara(widget.email))
+            (aviso.em, _notificacaoDaDenuncia(estado, aviso, agora)),
           if (pedida != null)
             (
               meuPedido?.em,
@@ -551,6 +567,64 @@ class _ListaDePedidosState extends State<_ListaDePedidos> {
         navegador
           ..pop()
           ..pushNamed(AppRoutes.mapa, arguments: animal);
+      },
+      acoes: [
+        const Spacer(),
+        TextButton(
+          onPressed: dispensar,
+          style: _estiloDoTexto(context.cores.principal),
+          child: const Text('Entendi'),
+        ),
+      ],
+    );
+  }
+
+  // Notificação de denúncia: denúncia nova, para a organização, ou mudança
+  // de situação, para quem denunciou. Tocar abre os detalhes da denúncia e
+  // tira a notificação do sino; "Entendi" apenas a tira
+  Widget _notificacaoDaDenuncia(
+    EstadoPataAmiga estado,
+    AvisoDeDenuncia aviso,
+    DateTime agora,
+  ) {
+    final denuncia = aviso.denuncia;
+    Future<void> dispensar() =>
+        estado.dispensarNotificacao(widget.email, aviso.chave);
+    final nova = aviso.tipo == TipoDeAvisoDeDenuncia.nova;
+    return _Notificacao(
+      icone: Icons.shield_outlined,
+      quando: aviso.em,
+      agora: agora,
+      texto: Text.rich(
+        TextSpan(
+          children: nova
+              ? [
+                  const TextSpan(text: 'Nova denúncia de '),
+                  TextSpan(
+                    text: denuncia.tipo.rotulo.toLowerCase(),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  TextSpan(text: ' no bairro ${denuncia.bairro}.'),
+                ]
+              : [
+                  const TextSpan(text: 'Sua denúncia '),
+                  TextSpan(
+                    text: denuncia.protocolo,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  TextSpan(text: ' está ${denuncia.situacao.rotulo}.'),
+                ],
+        ),
+      ),
+      detalhe: nova
+          ? 'Protocolo ${denuncia.protocolo}. Toque para ver os detalhes.'
+          : denuncia.historico.last.observacao,
+      aoTocar: () {
+        final navegador = Navigator.of(context);
+        dispensar();
+        navegador
+          ..pop()
+          ..pushNamed(AppRoutes.detalhesDenuncia, arguments: denuncia);
       },
       acoes: [
         const Spacer(),

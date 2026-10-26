@@ -9,27 +9,32 @@ import 'package:flutter/material.dart';
 // Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
 
-// Exibe a foto do animal com altura e cantos configuráveis. Sem caminho, ou
-// se a imagem não puder ser carregada, mostra um fundo claro com uma patinha
+// Exibe a foto do animal com altura e cantos configuráveis. Por padrão a
+// foto preenche o espaço, cortando as sobras; com [inteira], aparece toda,
+// com o fundo nas sobras. Sem caminho, ou se a imagem não puder ser
+// carregada, mostra um fundo claro com uma patinha
 class FotoAnimal extends StatelessWidget {
   final String caminho;
   final double altura;
   final BorderRadius raio;
+  final bool inteira;
 
   const FotoAnimal({
     super.key,
     required this.caminho,
     this.altura = 200,
     this.raio = const BorderRadius.all(Radius.circular(12)),
+    this.inteira = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: raio,
-      child: SizedBox(
+      child: Container(
         height: altura,
         width: double.infinity,
+        color: inteira ? context.cores.principalClara : null,
         child: caminho.isEmpty ? _patinha(context) : _imagem(context),
       ),
     );
@@ -40,14 +45,15 @@ class FotoAnimal extends StatelessWidget {
   // galeria) e o restante é tratado como asset do app
   Widget _imagem(BuildContext context) {
     Widget erro(BuildContext _, Object _, StackTrace? _) => _patinha(context);
+    final ajuste = inteira ? BoxFit.contain : BoxFit.cover;
     if (caminho.startsWith('http')) {
-      return Image.network(caminho, fit: BoxFit.cover, errorBuilder: erro);
+      return Image.network(caminho, fit: ajuste, errorBuilder: erro);
     }
     if (!kIsWeb && caminho.startsWith('/')) {
-      return Image.file(File(caminho), fit: BoxFit.cover, errorBuilder: erro);
+      return Image.file(File(caminho), fit: ajuste, errorBuilder: erro);
     }
     // Asset ausente cai no errorBuilder e mostra a patinha
-    return Image.asset(caminho, fit: BoxFit.cover, errorBuilder: erro);
+    return Image.asset(caminho, fit: ajuste, errorBuilder: erro);
   }
 
   // Marcador usado quando não há foto

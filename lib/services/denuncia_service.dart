@@ -97,4 +97,48 @@ class DenunciaService {
     return encontradas.expand((lista) => lista).toList()
       ..sort((a, b) => b.registradaEm.compareTo(a.registradaEm));
   }
+
+  // As denúncias enviadas à organização, da mais nova para a mais antiga;
+  // lança exceção se a resposta não for 200
+  Future<List<Denuncia>> daOrganizacao(String ongId) async {
+    final resposta = await http
+        .get(
+          Uri.parse(
+            '$enderecoDaApi/denuncias',
+          ).replace(queryParameters: {'ongId': ongId}),
+        )
+        .timeout(const Duration(seconds: 8));
+    if (resposta.statusCode != 200) {
+      throw Exception('Erro ${resposta.statusCode}');
+    }
+    return itensValidos(
+        jsonDecode(utf8.decode(resposta.bodyBytes)) as List,
+        Denuncia.fromJson,
+      ).where((denuncia) => denuncia.ongId == ongId).toList()
+      ..sort((a, b) => b.registradaEm.compareTo(a.registradaEm));
+  }
+
+  // Grava na API a nova situação e o histórico da denúncia e devolve a
+  // denúncia como a API gravou
+  Future<Denuncia> atualizarSituacao(Denuncia denuncia) async {
+    final id = denuncia.id;
+    if (id == null) throw Exception('Denúncia sem id');
+    final json = denuncia.toJson();
+    final resposta = await http
+        .patch(
+          Uri.parse('$enderecoDaApi/denuncias/$id'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'situacao': json['situacao'],
+            'historico': json['historico'],
+          }),
+        )
+        .timeout(const Duration(seconds: 8));
+    if (resposta.statusCode != 200) {
+      throw Exception('Erro ${resposta.statusCode}');
+    }
+    return Denuncia.fromJson(
+      jsonDecode(utf8.decode(resposta.bodyBytes)) as Map<String, dynamic>,
+    );
+  }
 }

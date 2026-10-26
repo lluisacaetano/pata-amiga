@@ -1,6 +1,8 @@
 // Biblioteca dart:math: Random, para sortear o número do protocolo.
 import 'dart:math';
 
+// Arquivo etapa_do_historico.dart: as mudanças de situação da denúncia.
+import 'etapa_do_historico.dart';
 // Arquivo json_da_api.dart: leitura e gravação do id da API.
 import 'json_da_api.dart';
 
@@ -27,8 +29,9 @@ extension RotuloDaSituacao on SituacaoDaDenuncia {
   };
 }
 
-// Uma denúncia de maus-tratos, abandono ou negligência. Na anônima, o nome e
-// o contato de quem denunciou não são enviados à API
+// Uma denúncia de maus-tratos, abandono ou negligência, enviada a uma
+// organização que recebe denúncias ([ongId]). Na anônima, o nome e o contato
+// de quem denunciou não são enviados à API
 class Denuncia {
   // O id gerado pela API, sempre em texto
   final String? id;
@@ -48,6 +51,11 @@ class Denuncia {
   final String denuncianteEmail;
   final SituacaoDaDenuncia situacao;
   final DateTime registradaEm;
+  // A organização que recebe a denúncia; nula nas registradas antes do envio
+  // pelo app
+  final String? ongId;
+  // As mudanças de situação, da primeira para a mais recente
+  final List<EtapaDoHistorico> historico;
 
   const Denuncia({
     this.id,
@@ -66,6 +74,29 @@ class Denuncia {
     this.denuncianteEmail = '',
     this.situacao = SituacaoDaDenuncia.recebida,
     required this.registradaEm,
+    this.ongId,
+    this.historico = const [],
+  });
+
+  // Uma cópia com a nova situação e a etapa correspondente no histórico; o
+  // objeto original não muda
+  Denuncia comSituacao(
+    SituacaoDaDenuncia nova, {
+    required String observacao,
+    required String autor,
+    DateTime? em,
+  }) => Denuncia.fromJson({
+    ...toJson(),
+    'situacao': nova.name,
+    'historico': [
+      for (final etapa in historico) etapa.toJson(),
+      EtapaDoHistorico(
+        situacao: nova.name,
+        observacao: observacao.trim(),
+        em: em ?? DateTime.now(),
+        autor: autor.trim(),
+      ).toJson(),
+    ],
   });
 
   // Gera o protocolo no aparelho: a data do registro e quatro dígitos
@@ -108,6 +139,8 @@ class Denuncia {
     registradaEm:
         DateTime.tryParse(json['registradaEm'] as String? ?? '') ??
         DateTime.fromMillisecondsSinceEpoch(0),
+    ongId: idDaApi(json['ongId']),
+    historico: EtapaDoHistorico.lista(json['historico']),
   );
 
   // Converte a denúncia no JSON enviado à API
@@ -129,6 +162,8 @@ class Denuncia {
     'denuncianteEmail': anonima ? '' : denuncianteEmail,
     'situacao': situacao.name,
     'registradaEm': registradaEm.toIso8601String(),
+    if (ongId != null) 'ongId': idParaApi(ongId!),
+    'historico': [for (final etapa in historico) etapa.toJson()],
   };
 
   // O texto enviado ao canal de denúncia pelo compartilhamento do aparelho,

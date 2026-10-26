@@ -4,13 +4,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 // Pacote image_picker: abre a câmera ou a galeria para escolher fotos.
 import 'package:image_picker/image_picker.dart';
+// Pacote provider: compartilha estado entre as telas e as reconstrói.
+import 'package:provider/provider.dart';
 // Pacote share_plus: abre o compartilhamento do sistema (WhatsApp etc.).
 import 'package:share_plus/share_plus.dart';
 
-// Arquivo canais_de_denuncia.dart: nome e telefone do canal de denúncia.
-import '../dados/canais_de_denuncia.dart';
+// Arquivo estado_pata_amiga.dart: ONGs carregadas, para a escolha do destino.
+import '../estado/estado_pata_amiga.dart';
 // Arquivo denuncia.dart: modelo da denúncia, tipo e protocolo.
 import '../modelos/denuncia.dart';
+// Arquivo etapa_do_historico.dart: primeira etapa do histórico da denúncia.
+import '../modelos/etapa_do_historico.dart';
+// Arquivo ong.dart: a organização que recebe a denúncia.
+import '../modelos/ong.dart';
+// Arquivo usuario_provider.dart: dados de quem denuncia, na identificada.
+import '../provider/usuario_provider.dart';
 // Arquivo denuncia_service.dart: serviço que registra a denúncia na API.
 import '../services/denuncia_service.dart';
 // Arquivo cores.dart: paleta de cores do tema claro e escuro.
@@ -21,15 +29,20 @@ import '../widgets/barra_inferior.dart';
 import '../widgets/foto_animal.dart';
 // Arquivo mapa_de_local.dart: centro de Formiga, ponto inicial do mapa.
 import '../widgets/mapa_de_local.dart';
+// Arquivo mascaras.dart: telefone da organização formatado.
+import '../widgets/mascaras.dart';
 // Arquivo proteger_alteracoes.dart: aviso ao sair sem salvar.
 import '../widgets/proteger_alteracoes.dart';
 // Arquivo seletor_de_local.dart: escolha do local no mapa.
 import '../widgets/seletor_de_local.dart';
+// Arquivo minhas_denuncias.dart: lista das denúncias recebidas.
+import 'minhas_denuncias.dart';
 
-// Formulário de denúncia de maus-tratos. Mostra o que diz a lei e pede o
-// tipo, a descrição, o local, a data (opcional) e as fotos. A denúncia é
-// sempre anônima. Ao registrar, exibe o protocolo e oferece o envio ao canal
-// de denúncia pelo compartilhamento do aparelho (WhatsApp).
+// Formulário de denúncia de maus-tratos. Mostra o que diz a lei e pede a
+// organização que recebe a denúncia, se ela é anônima, o tipo, a descrição,
+// o local, a data (opcional) e as fotos. A denúncia chega à organização pelo
+// app; ao registrar, exibe o protocolo e oferece também o envio pelo
+// WhatsApp da organização.
 //
 // [servico] permite injetar um serviço falso nos testes.
 class ReportarScreen extends StatefulWidget {
@@ -39,6 +52,23 @@ class ReportarScreen extends StatefulWidget {
 
   @override
   State<ReportarScreen> createState() => _ReportarScreenState();
+}
+
+// Aba Reportar da barra inferior. Para quem faz parte de uma organização que
+// recebe denúncias, mostra a lista das denúncias recebidas, com o botão "+"
+// para registrar uma nova; para os demais, abre direto o formulário
+class AbaReportar extends StatelessWidget {
+  const AbaReportar({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final email = context.watch<UsuarioProvider?>()?.usuario.email ?? '';
+    final ong = PataAmigaScope.ouvindo(context)?.ongDe(email);
+    if (ong != null && ong.recebeDenuncias) {
+      return MinhasDenuncias(organizacao: ong);
+    }
+    return const ReportarScreen();
+  }
 }
 
 // Limite de fotos por denúncia
@@ -56,6 +86,23 @@ class _ReportarScreenState extends State<ReportarScreen> {
   LocalEscolhido _local = (ponto: centroDeFormiga, rua: '', bairro: '');
   bool _tentou = false;
   bool _enviando = false;
+  // Organização escolhida em "Enviar para"; nula até a escolha
+  Ong? _escolhida;
+  // Anônima: a organização não recebe nome, telefone nem e-mail de quem
+  // denuncia
+  bool _anonima = true;
+
+  // As organizações que recebem denúncias, em ordem alfabética
+  List<Ong> _organizacoes(BuildContext context) =>
+      (PataAmigaScope.ouvindo(context)?.ongs ?? const <Ong>[])
+          .where((ong) => ong.recebeDenuncias)
+          .toList()
+        ..sort((a, b) => a.nome.compareTo(b.nome));
+
+  // A organização de destino: a escolhida ou, quando só uma recebe
+  // denúncias, essa
+  Ong? _destino(List<Ong> organizacoes) =>
+      _escolhida ?? (organizacoes.length == 1 ? organizacoes.single : null);
 
   @override
   void dispose() {
@@ -75,6 +122,7 @@ class _ReportarScreenState extends State<ReportarScreen> {
 
   // Todos os campos obrigatórios preenchidos (a data é opcional)
   bool get _completo =>
+      _destino(_organizacoes(context)) != null &&
       _tipo != null &&
       _descricao.text.trim().isNotEmpty &&
       _local.rua.trim().isNotEmpty &&
@@ -136,9 +184,12 @@ class _ReportarScreenState extends State<ReportarScreen> {
     }
     setState(() => _enviando = true);
     final agora = DateTime.now();
+    final destino = _destino(_organizacoes(context))!;
+    final usuario = context.read<UsuarioProvider?>()?.usuario;
     try {
       final registrada = await _servico.registrar(
         Denuncia(
+          ongId: destino.id,
           protocolo: Denuncia.novoProtocolo(agora),
           tipo: _tipo!,
           descricao: _descricao.text.trim(),
@@ -148,10 +199,20 @@ class _ReportarScreenState extends State<ReportarScreen> {
           longitude: _local.ponto.longitude,
           ocorridaEm: _data,
           fotos: [for (final foto in _fotos) foto.path],
-          // Toda denúncia é anônima: nem o registro nem a mensagem levam
-          // dados de quem denunciou
-          anonima: true,
+          // Na anônima, nem o registro nem a mensagem levam dados de quem
+          // denunciou
+          anonima: _anonima,
+          denuncianteNome: usuario?.nome ?? '',
+          denuncianteTelefone: usuario?.telefone ?? '',
+          denuncianteEmail: usuario?.email ?? '',
           registradaEm: agora,
+          historico: [
+            EtapaDoHistorico(
+              situacao: SituacaoDaDenuncia.recebida.name,
+              observacao: 'Denúncia registrada pelo app.',
+              em: agora,
+            ),
+          ],
         ),
       );
       if (!mounted) return;
@@ -165,7 +226,8 @@ class _ReportarScreenState extends State<ReportarScreen> {
         isScrollControlled: true,
         backgroundColor: context.cores.cartao,
         showDragHandle: true,
-        builder: (_) => _DenunciaRegistrada(denuncia: registrada),
+        builder: (_) =>
+            _DenunciaRegistrada(denuncia: registrada, organizacao: destino),
       );
       // Denúncia registrada: a tela fecha sem o aviso de alterações
       navegador.pop();
@@ -180,6 +242,9 @@ class _ReportarScreenState extends State<ReportarScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final organizacoes = _organizacoes(context);
+    final destino = _destino(organizacoes);
+    final semDestino = _tentou && destino == null;
     final semTipo = _tentou && _tipo == null;
     final semDescricao = _tentou && _descricao.text.trim().isEmpty;
     final semLocal =
@@ -216,6 +281,86 @@ class _ReportarScreenState extends State<ReportarScreen> {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           children: [
             const _OQueDizALei(),
+            _Cartao(
+              icone: Icons.send_outlined,
+              titulo: 'Envio',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const _Rotulo('Enviar para'),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<Ong>(
+                    initialValue: destino,
+                    isDense: true,
+                    isExpanded: true,
+                    decoration: _caixa(context, null, comErro: semDestino),
+                    hint: Text(
+                      organizacoes.isEmpty
+                          ? 'Nenhuma organização disponível'
+                          : 'Escolher a organização',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: context.cores.textoFraco,
+                      ),
+                    ),
+                    icon: Icon(
+                      Icons.keyboard_arrow_down,
+                      color: context.cores.textoFraco,
+                    ),
+                    dropdownColor: context.cores.cartao,
+                    style: TextStyle(fontSize: 15, color: context.cores.texto),
+                    items: [
+                      for (final ong in organizacoes)
+                        DropdownMenuItem(
+                          value: ong,
+                          child: Text(
+                            ong.nome,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                    onChanged: (ong) => setState(() => _escolhida = ong),
+                  ),
+                  if (semDestino)
+                    const _Recado('Campo obrigatório', erro: true)
+                  else if (organizacoes.isEmpty)
+                    const _Recado(
+                      'Nenhuma organização recebe denúncias pelo app no '
+                      'momento.',
+                    ),
+                  const SizedBox(height: 10),
+                  // Sobre o cartão colorido, a chave precisa de um Material
+                  // próprio para pintar o efeito do toque
+                  Material(
+                    type: MaterialType.transparency,
+                    child: SwitchListTile(
+                      value: _anonima,
+                      onChanged: (valor) => setState(() => _anonima = valor),
+                      contentPadding: EdgeInsets.zero,
+                      activeThumbColor: context.cores.principal,
+                      title: const Text(
+                        'Denunciar de forma anônima',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      subtitle: Text(
+                        _anonima
+                            ? 'A organização não recebe seu nome nem seu '
+                                  'telefone.'
+                            : 'A organização recebe seu nome, telefone e '
+                                  'e-mail para falar com você.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: context.cores.textoFraco,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             _Cartao(
               icone: Icons.report_outlined,
               titulo: 'O que aconteceu',
@@ -500,13 +645,18 @@ Future<void> encaminharDenuncia(Denuncia denuncia) async {
   );
 }
 
-// Folha exibida após o registro: protocolo em destaque com botão de copiar,
-// dados do canal de denúncia, aviso de anonimato e o botão que encaminha a
-// denúncia com as fotos
+// Folha exibida após o registro: confirma que a denúncia chegou à
+// organização pelo app, mostra o protocolo com o botão de copiar, diz se a
+// denúncia foi anônima e oferece, de forma discreta, o envio também pelo
+// WhatsApp da organização, com as fotos
 class _DenunciaRegistrada extends StatelessWidget {
-  const _DenunciaRegistrada({required this.denuncia});
+  const _DenunciaRegistrada({
+    required this.denuncia,
+    required this.organizacao,
+  });
 
   final Denuncia denuncia;
+  final Ong organizacao;
 
   @override
   Widget build(BuildContext context) {
@@ -524,13 +674,14 @@ class _DenunciaRegistrada extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Denúncia registrada',
+              'Denúncia enviada',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 4),
             Text(
-              'Guarde o protocolo para acompanhar em Minhas denúncias.',
+              '${organizacao.nome} já recebeu a denúncia pelo app. Acompanhe '
+              'a situação em Minhas denúncias.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: context.cores.textoFraco),
             ),
@@ -589,69 +740,8 @@ class _DenunciaRegistrada extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 14),
-            // Destinatário da denúncia, com o número em destaque para a
-            // pessoa localizar a conversa no WhatsApp
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: context.cores.fundo,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: context.cores.principalClara,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.pets,
-                      size: 18,
-                      color: context.cores.principal,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          nomeDoCanalDeDenuncia,
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: context.cores.texto,
-                          ),
-                        ),
-                        Text(
-                          'Associação Protetora dos Animais de Formiga',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: context.cores.textoFraco,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'WhatsApp $telefoneDoCanalDeDenuncia',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: context.cores.principal,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
             const SizedBox(height: 12),
-            // Aviso de anonimato. O registro e a mensagem não identificam
-            // quem denuncia, mas o WhatsApp mostra ao canal o número de quem
-            // envia; o texto deixa isso claro
+            // Se a organização recebeu ou não os dados de quem denunciou
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(12, 2, 4, 2),
@@ -666,13 +756,17 @@ class _DenunciaRegistrada extends StatelessWidget {
                   Row(
                     children: [
                       Icon(
-                        Icons.shield_outlined,
+                        denuncia.anonima
+                            ? Icons.shield_outlined
+                            : Icons.person_outline,
                         size: 16,
                         color: context.cores.principal,
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'Denúncia anônima',
+                        denuncia.anonima
+                            ? 'Denúncia anônima'
+                            : 'Denúncia identificada',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
@@ -683,9 +777,11 @@ class _DenunciaRegistrada extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'O registro e a mensagem não incluem seu nome nem seu '
-                    'telefone. Pelo WhatsApp, a $nomeDoCanalDeDenuncia vê o '
-                    'número utilizado e o mantém em sigilo.',
+                    denuncia.anonima
+                        ? '${organizacao.nome} não recebeu seu nome nem seu '
+                              'telefone.'
+                        : '${organizacao.nome} recebeu seu nome e seu '
+                              'telefone para falar com você.',
                     style: TextStyle(
                       fontSize: 13,
                       height: 1.45,
@@ -695,36 +791,61 @@ class _DenunciaRegistrada extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 12),
-            Text(
-              'No compartilhamento, selecione o WhatsApp e a conversa com '
-              'esse número.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: context.cores.textoFraco),
+            const SizedBox(height: 14),
+            // Envio opcional também pelo WhatsApp da organização
+            Container(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+              decoration: BoxDecoration(
+                color: context.cores.fundo,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Prefere falar também pelo WhatsApp?',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: context.cores.texto,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${organizacao.nome}: '
+                    '${formatarTelefone(organizacao.telefone)}. '
+                    'Pelo WhatsApp, a organização vê o número utilizado.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.4,
+                      color: context.cores.textoFraco,
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => encaminharDenuncia(denuncia),
+                    icon: const Icon(Icons.share_outlined, size: 18),
+                    label: const Text('Enviar pelo WhatsApp com as fotos'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: context.cores.principal,
+                      padding: EdgeInsets.zero,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             SizedBox(
               height: 50,
-              child: ElevatedButton.icon(
-                onPressed: () => encaminharDenuncia(denuncia),
-                icon: const Icon(Icons.share_outlined),
-                label: Text('Enviar à $nomeDoCanalDeDenuncia com as fotos'),
-                style: ElevatedButton.styleFrom(
+              child: FilledButton(
+                onPressed: () => Navigator.pop(context),
+                style: FilledButton.styleFrom(
                   backgroundColor: context.cores.principal,
-                  foregroundColor: context.sobrePrincipal,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
                   ),
                 ),
+                child: const Text('Concluir'),
               ),
-            ),
-            const SizedBox(height: 6),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              style: TextButton.styleFrom(
-                foregroundColor: context.cores.textoFraco,
-              ),
-              child: const Text('Concluir'),
             ),
           ],
         ),

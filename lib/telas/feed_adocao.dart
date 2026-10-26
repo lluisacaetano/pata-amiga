@@ -48,12 +48,16 @@ import '../routes/app_router.dart';
 import '../services/alimentacao_service.dart';
 // Arquivo animal_service.dart: busca e cadastro de animais na API.
 import '../services/animal_service.dart';
+// Arquivo denuncia.dart: lista vazia de denúncias, sem organização.
+import '../modelos/denuncia.dart';
 // Arquivo avistamento.dart: último avistamento, que ordena os perdidos.
 import '../modelos/avistamento.dart';
 // Arquivo avistamento_service.dart: avistamentos na API.
 import '../services/avistamento_service.dart';
 // Arquivo cache_service.dart: cache local dos animais do feed.
 import '../services/cache_service.dart';
+// Arquivo denuncia_service.dart: denúncias para as notificações.
+import '../services/denuncia_service.dart';
 // Arquivo localizacao_service.dart: posição do aparelho para as notificações.
 import '../services/localizacao_service.dart';
 // Arquivo ong_service.dart: ONGs na API.
@@ -78,6 +82,7 @@ class FeedAdocao extends StatefulWidget {
   final AlimentacaoService? alimentacao;
   final OngService? ongs;
   final LocalizacaoService? localizacao;
+  final DenunciaService? denuncias;
 
   const FeedAdocao({
     super.key,
@@ -87,6 +92,7 @@ class FeedAdocao extends StatefulWidget {
     this.alimentacao,
     this.ongs,
     this.localizacao,
+    this.denuncias,
   });
 
   @override
@@ -114,6 +120,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
   late final _alimentacao = widget.alimentacao ?? AlimentacaoService();
   late final _ongs = widget.ongs ?? OngService();
   late final _localizacao = widget.localizacao ?? const LocalizacaoService();
+  late final _denuncias = widget.denuncias ?? DenunciaService();
 
   // Animais recebidos da API ou lidos do cache
   List<Animal> _animaisApi = [];
@@ -219,9 +226,29 @@ class _FeedAdocaoState extends State<FeedAdocao> {
     PataAmigaScope.of(context).atualizarPosicao(posicao);
   }
 
+  // Busca as denúncias recebidas pela organização de quem está logado (se
+  // ela recebe denúncias) e as feitas neste aparelho, para as notificações
+  Future<void> _carregarDenuncias() async {
+    try {
+      final email = context.read<UsuarioProvider?>()?.usuario.email ?? '';
+      final organizacao = PataAmigaScope.of(context).ongDe(email);
+      final recebidas = organizacao?.id != null && organizacao!.recebeDenuncias
+          ? await _denuncias.daOrganizacao(organizacao.id!)
+          : const <Denuncia>[];
+      final minhas = await _denuncias.minhasDenuncias();
+      if (!mounted) return;
+      PataAmigaScope.of(
+        context,
+      ).atualizarDenuncias(daOrganizacao: recebidas, minhas: minhas);
+    } on Exception {
+      // Falha ignorada: mantém as denúncias já carregadas
+    }
+  }
+
   // Busca tudo o que pode gerar notificação e confere se chegou alguma nova
   Future<void> _verificarNovidades() async {
     await Future.wait([
+      _carregarDenuncias(),
       _carregarOngs(),
       _carregarAvistamentos(),
       _atualizarAnimais(),
@@ -240,6 +267,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
     final atuais = {
       ...notificacoesPara(estado.ongs, email),
       for (final alerta in estado.alertasPara(email)) alerta.chave,
+      for (final aviso in estado.avisosDeDenunciaPara(email)) aviso.chave,
     };
     final conhecidas = _notificacoesConhecidas;
     _notificacoesConhecidas = atuais;
@@ -280,7 +308,7 @@ class _FeedAdocaoState extends State<FeedAdocao> {
     // primeira conferência, ao fim de todas, só define a base
     final notificacoes = Future.wait([
       _carregarAvistamentos(),
-      _carregarOngs(),
+      _carregarOngs().then((_) => _carregarDenuncias()),
       _atualizarPosicao(),
     ]);
     unawaited(_carregarAlimentacao());

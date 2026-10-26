@@ -4,33 +4,105 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 // Pacote latlong2: coordenadas (latitude e longitude) e cálculo de distâncias.
 import 'package:latlong2/latlong.dart';
+// Pacote provider: compartilha estado entre as telas e as reconstrói.
+import 'package:provider/provider.dart';
 // Pacote url_launcher: abre WhatsApp, telefone e links no navegador.
 import 'package:url_launcher/url_launcher.dart';
 
-// Arquivo canais_de_denuncia.dart: nome do canal de denúncia.
-import '../dados/canais_de_denuncia.dart';
+// Arquivo estado_pata_amiga.dart: ONGs carregadas, para achar a organização.
+import '../estado/estado_pata_amiga.dart';
 // Arquivo denuncia.dart: modelo da denúncia e data relativa.
 import '../modelos/denuncia.dart';
+// Arquivo ong.dart: a organização que recebeu a denúncia.
+import '../modelos/ong.dart';
+// Arquivo usuario_provider.dart: quem está vendo e quem muda a situação.
+import '../provider/usuario_provider.dart';
+// Arquivo denuncia_service.dart: gravação da nova situação na API.
+import '../services/denuncia_service.dart';
 // Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
 // Arquivo etiqueta.dart: etiqueta arredondada usada para a situação.
 import '../widgets/etiqueta.dart';
 // Arquivo galeria_animal.dart: galeria de fotos deslizável.
 import '../widgets/galeria_animal.dart';
+// Arquivo historico_de_situacoes.dart: linha do tempo das situações.
+import '../widgets/historico_de_situacoes.dart';
 // Arquivo mapa_de_local.dart: prévia do mapa com o ponto da denúncia.
 import '../widgets/mapa_de_local.dart';
 // Arquivo mascaras.dart: formatação do telefone para exibição.
 import '../widgets/mascaras.dart';
+// Arquivo painel_de_observacao.dart: nova situação com observação.
+import '../widgets/painel_de_observacao.dart';
 // Arquivo reportar.dart: envio da denúncia pelo compartilhamento.
 import 'reportar.dart';
 
 // Detalhes de uma denúncia, no mesmo layout da ficha do animal: galeria de
-// fotos, tipo e situação, protocolo, datas, local, relato e denunciante. O
-// botão inferior reenvia a denúncia ao canal de denúncia
-class DetalhesDenuncia extends StatelessWidget {
-  const DetalhesDenuncia({super.key, required this.denuncia});
+// fotos, tipo e situação, protocolo, datas, organização, local, relato,
+// denunciante e o histórico das situações. Para as pessoas da organização
+// que recebeu a denúncia, o botão inferior atualiza a situação; para quem
+// denunciou, envia a denúncia também pelo WhatsApp da organização
+class DetalhesDenuncia extends StatefulWidget {
+  const DetalhesDenuncia({super.key, required this.denuncia, this.servico});
 
   final Denuncia denuncia;
+  // Serviço injetável para os testes; sem ele, usa o padrão
+  final DenunciaService? servico;
+
+  @override
+  State<DetalhesDenuncia> createState() => _DetalhesDenunciaState();
+}
+
+class _DetalhesDenunciaState extends State<DetalhesDenuncia> {
+  late final _servico = widget.servico ?? DenunciaService();
+  // A versão exibida, atualizada depois de cada mudança de situação
+  late Denuncia denuncia = widget.denuncia;
+  bool _salvando = false;
+
+  // A organização que recebeu a denúncia, se estiver carregada
+  Ong? _organizacao(BuildContext context) =>
+      PataAmigaScope.ouvindo(context)?.ongs
+          .where((ong) => ong.id == denuncia.ongId)
+          .firstOrNull;
+
+  // Pede a nova situação e a observação e grava a mudança na API
+  Future<void> _atualizarSituacao() async {
+    final mensageiro = ScaffoldMessenger.of(context);
+    final autor = context.read<UsuarioProvider?>()?.usuario.nome ?? '';
+    final escolhida = await pedirObservacao<SituacaoDaDenuncia>(
+      context,
+      titulo: 'Atualizar situação',
+      texto:
+          'Quem denunciou vê a nova situação e a observação em Minhas '
+          'denúncias.',
+      rotuloPrincipal: 'Salvar',
+      opcoes: [
+        for (final situacao in SituacaoDaDenuncia.values)
+          if (situacao != denuncia.situacao) (situacao, situacao.rotulo),
+      ],
+    );
+    final nova = escolhida?.escolha;
+    if (escolhida == null || nova == null || !mounted) return;
+    setState(() => _salvando = true);
+    String aviso;
+    try {
+      final gravada = await _servico.atualizarSituacao(
+        denuncia.comSituacao(
+          nova,
+          observacao: escolhida.observacao,
+          autor: autor,
+        ),
+      );
+      if (!mounted) return;
+      setState(() => denuncia = gravada);
+      aviso = 'Situação atualizada para ${nova.rotulo}.';
+    } on Exception {
+      aviso = 'Não foi possível atualizar agora. Tente de novo.';
+    }
+    if (mounted) setState(() => _salvando = false);
+    mensageiro
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(aviso)));
+  }
 
   // Abre o ponto da denúncia no app de mapas, já que denúncias não aparecem
   // no mapa do app. Usa o link do Google Maps, que abre no app de mapas ou no
@@ -61,6 +133,9 @@ class DetalhesDenuncia extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final organizacao = _organizacao(context);
+    final email = context.watch<UsuarioProvider?>()?.usuario.email ?? '';
+    final daOrganizacao = organizacao?.fazParte(email) ?? false;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: context.cores.fundo,
@@ -91,45 +166,69 @@ class DetalhesDenuncia extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (denuncia.fotos.isNotEmpty) ...[
-              GaleriaAnimal(fotos: denuncia.fotos, altura: 280),
+              // A foto da denúncia aparece inteira: um detalhe cortado
+              // pode ser justamente a prova do que aconteceu
+              GaleriaAnimal(fotos: denuncia.fotos, altura: 280, inteira: true),
               const SizedBox(height: 12),
             ],
             _Ficha(
               denuncia: denuncia,
+              organizacao: organizacao,
               aoAbrirMapa: () => _abrirNoMapa(context),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton.icon(
-              onPressed: () => encaminharDenuncia(denuncia),
-              icon: const Icon(Icons.share_outlined),
-              label: Text('Enviar à $nomeDoCanalDeDenuncia com as fotos'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: context.cores.principal,
-                foregroundColor: context.sobrePrincipal,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
+      bottomNavigationBar: !daOrganizacao && organizacao == null
+          ? null
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: daOrganizacao
+                      ? FilledButton.icon(
+                          onPressed: _salvando ? null : _atualizarSituacao,
+                          icon: const Icon(Icons.edit_note),
+                          label: const Text('Atualizar situação'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: context.cores.principal,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                          ),
+                        )
+                      : OutlinedButton.icon(
+                          onPressed: () => encaminharDenuncia(denuncia),
+                          icon: const Icon(Icons.share_outlined),
+                          label: const Text(
+                            'Enviar pelo WhatsApp com as fotos',
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: context.cores.principal,
+                            side: BorderSide(color: context.cores.principal),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                          ),
+                        ),
                 ),
               ),
             ),
-          ),
-        ),
-      ),
     );
   }
 }
 
 class _Ficha extends StatelessWidget {
-  const _Ficha({required this.denuncia, required this.aoAbrirMapa});
+  const _Ficha({
+    required this.denuncia,
+    required this.organizacao,
+    required this.aoAbrirMapa,
+  });
 
   final Denuncia denuncia;
+  final Ong? organizacao;
   final VoidCallback aoAbrirMapa;
 
   @override
@@ -215,6 +314,11 @@ class _Ficha extends StatelessWidget {
             ],
           ),
 
+          if (organizacao != null) ...[
+            const SizedBox(height: 8),
+            _Painel(dados: [('Enviada para', organizacao!.nome)]),
+          ],
+
           const _Divisoria(),
           const _Rotulo('Onde aconteceu'),
           const SizedBox(height: 4),
@@ -238,8 +342,8 @@ class _Ficha extends StatelessWidget {
           const _Divisoria(),
           const _Rotulo('Quem denunciou'),
           const SizedBox(height: 4),
-          // O app grava toda denúncia como anônima. O painel com nome e
-          // telefone atende registros antigos, feitos com identificação
+          // Na identificada, a organização vê o nome e o telefone para entrar
+          // em contato
           if (denuncia.anonima)
             Text(
               'Denúncia anônima: o registro não inclui o nome nem o telefone de quem denunciou.',
@@ -256,6 +360,21 @@ class _Ficha extends StatelessWidget {
                 ('Telefone', formatarTelefone(denuncia.denuncianteTelefone)),
               ],
             ),
+
+          if (denuncia.historico.isNotEmpty) ...[
+            const _Divisoria(),
+            const _Rotulo('Histórico'),
+            const SizedBox(height: 4),
+            HistoricoDeSituacoes(
+              etapas: denuncia.historico,
+              rotuloDe: (nome) =>
+                  SituacaoDaDenuncia.values
+                      .where((situacao) => situacao.name == nome)
+                      .firstOrNull
+                      ?.rotulo ??
+                  nome,
+            ),
+          ],
         ],
       ),
     );
