@@ -25,6 +25,8 @@ import 'package:pata_amiga/telas/minhas_denuncias.dart';
 import 'package:pata_amiga/telas/reportar.dart';
 // Arquivo barra_inferior.dart: barra de navegação com a opção Reportar.
 import 'package:pata_amiga/widgets/barra_inferior.dart';
+// Arquivo painel_de_filtros_de_denuncia.dart: painel com os filtros da lista.
+import 'package:pata_amiga/widgets/painel_de_filtros_de_denuncia.dart';
 
 // Serviço de denúncias falso: grava na memória, como a API, e guarda o
 // protocolo no aparelho
@@ -134,10 +136,10 @@ void main() {
     await tester.tap(find.text('Registrar denúncia'));
     await tester.pumpAndSettle();
 
-    // O erro aparece nos campos (organização, tipo e descrição), sem
-    // SnackBar
+    // O erro aparece nos campos (organização, espécie, porte, sexo, tipo e
+    // descrição), sem SnackBar
     expect(find.byType(SnackBar), findsNothing);
-    expect(find.text('Campo obrigatório'), findsNWidgets(3));
+    expect(find.text('Campo obrigatório'), findsNWidgets(6));
     expect(find.text('Adicione pelo menos uma foto.'), findsOneWidget);
     expect(servico.gravadas, isEmpty);
 
@@ -251,7 +253,58 @@ void main() {
 
     await tester.enterText(find.byType(TextField), '9999');
     await tester.pumpAndSettle();
-    expect(find.text('Nenhuma denúncia com esse protocolo.'), findsOneWidget);
+    expect(find.text('Nenhuma denúncia encontrada.'), findsOneWidget);
+
+    // A busca também procura na descrição, sem ligar para acentos
+    await tester.enterText(find.byType(TextField), 'relato');
+    await tester.pumpAndSettle();
+    expect(find.text('Protocolo PA-20261022-0042'), findsOneWidget);
+    expect(find.text('Protocolo PA-20261022-7777'), findsOneWidget);
+  });
+
+  // O filtro do painel deixa só as denúncias do tipo e da espécie marcados,
+  // e o número de filtros aparece no botão
+  testWidgets('o filtro deixa só as denúncias que combinam', (tester) async {
+    final servico = _DenunciasFalsas();
+    for (final (protocolo, tipo, especie) in [
+      ('PA-20261022-0001', TipoDeDenuncia.mausTratos, 'Cachorro'),
+      ('PA-20261022-0002', TipoDeDenuncia.mausTratos, 'Gato'),
+      ('PA-20261022-0003', TipoDeDenuncia.abandono, 'Cachorro'),
+    ]) {
+      await servico.registrar(
+        Denuncia(
+          protocolo: protocolo,
+          tipo: tipo,
+          descricao: 'Relato.',
+          especie: especie,
+          porte: 'médio',
+          sexo: 'não sei',
+          rua: 'Rua Pará de Minas',
+          bairro: 'Centro',
+          registradaEm: DateTime.now(),
+        ),
+      );
+    }
+    await _abrir(tester, MinhasDenuncias(servico: servico));
+
+    await tester.tap(find.byTooltip('Filtros'));
+    await tester.pumpAndSettle();
+    // No painel, as opções ficam dentro das abas
+    final painel = find.byType(PainelDeFiltrosDeDenuncia);
+    await tester.tap(
+      find.descendant(of: painel, matching: find.text('Maus-tratos')),
+    );
+    await tester.tap(
+      find.descendant(of: painel, matching: find.text('Cachorro')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mostrar 1 denúncia'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Protocolo PA-20261022-0001'), findsOneWidget);
+    expect(find.text('Protocolo PA-20261022-0002'), findsNothing);
+    expect(find.text('Protocolo PA-20261022-0003'), findsNothing);
+    expect(find.text('2'), findsOneWidget);
   });
 
   // Tocar na denúncia abre os detalhes com o relato e o aviso de anonimato
