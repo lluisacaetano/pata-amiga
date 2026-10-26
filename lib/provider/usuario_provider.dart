@@ -17,7 +17,12 @@ import '../modelos/usuario.dart';
 enum ResultadoDoLogin { entrou, semConta, senhaIncorreta }
 
 // Resultado da redefinição de senha pelo e-mail e telefone da conta
-enum ResultadoDaRedefinicao { redefinida, semConta, telefoneDiferente }
+enum ResultadoDaRedefinicao {
+  redefinida,
+  semConta,
+  telefoneDiferente,
+  mesmaSenha,
+}
 
 // Perfil de quem está logado. O perfil fica salvo no aparelho, um por
 // e-mail, e a sessão é o e-mail gravado em [_chaveSessao]. A senha nunca é
@@ -76,8 +81,9 @@ class UsuarioProvider extends ChangeNotifier {
   }
 
   // Define uma senha nova para a conta do e-mail, desde que o telefone
-  // informado seja o mesmo do perfil (comparando só os dígitos). Não abre a
-  // sessão: a pessoa entra depois com a senha nova
+  // informado seja o mesmo do perfil (comparando só os dígitos) e a senha
+  // nova seja diferente da atual. Não abre a sessão: a pessoa entra depois
+  // com a senha nova
   Future<ResultadoDaRedefinicao> redefinirSenha({
     required String email,
     required String telefone,
@@ -91,6 +97,10 @@ class UsuarioProvider extends ChangeNotifier {
     final doPerfil = digitos(Usuario.fromProfileJson(salvo).telefone);
     if (doPerfil.isEmpty || doPerfil != digitos(telefone)) {
       return ResultadoDaRedefinicao.telefoneDiferente;
+    }
+    final guardada = armazenamento.getString('$_chaveSenha$normalizado');
+    if (guardada != null && _confere(senha, guardada)) {
+      return ResultadoDaRedefinicao.mesmaSenha;
     }
     await _guardarSenha(normalizado, senha);
     return ResultadoDaRedefinicao.redefinida;

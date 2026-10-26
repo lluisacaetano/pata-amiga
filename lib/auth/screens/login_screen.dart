@@ -18,7 +18,8 @@ import '../../provider/usuario_provider.dart';
 
 // Tela de login. Confere o e-mail e a senha com a conta salva neste
 // aparelho; o erro aparece no próprio campo (conta inexistente no e-mail,
-// senha incorreta na senha). Com tudo certo, segue para o app
+// senha incorreta na senha). Com tudo certo, segue para o app. Aberta depois
+// da recuperação de senha, já traz o e-mail e o aviso da senha nova
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -35,6 +36,23 @@ class _LoginScreenState extends State<LoginScreen> {
   // Erros que só se sabe depois de consultar a conta salva
   String? _erroDoEmail;
   String? _erroDaSenha;
+  // Verdadeiro quando o login foi aberto logo depois de redefinir a senha
+  bool _senhaRedefinida = false;
+  bool _leuArgumento = false;
+
+  // Vindo da recuperação de senha, a rota traz o e-mail da conta: o campo é
+  // preenchido e o aviso da senha nova aparece acima dele
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_leuArgumento) return;
+    _leuArgumento = true;
+    final email = ModalRoute.of(context)?.settings.arguments;
+    if (email is String && email.isNotEmpty) {
+      _emailController.text = email;
+      _senhaRedefinida = true;
+    }
+  }
 
   Future<void> _entrar() async {
     setState(() {
@@ -91,6 +109,41 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 22),
+              if (_senhaRedefinida) ...[
+                Semantics(
+                  liveRegion: true,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: context.cores.principalClara,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.check_circle_outline,
+                          color: context.cores.principal,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Senha redefinida. Entre com a senha nova.',
+                            style: TextStyle(
+                              fontFamily: 'Roboto',
+                              fontSize: 14,
+                              color: context.cores.texto,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
               AuthField(
                 label: 'E-mail',
                 hint: 'Digite seu e-mail',

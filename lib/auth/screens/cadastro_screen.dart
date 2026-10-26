@@ -339,7 +339,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     await navegarAposAutenticacao(context);
   }
 
-  // Texto sublinhado que abre os Termos de Uso ou a Política de Privacidade
+  // Texto em destaque que abre os Termos de Uso ou a Política de Privacidade
   Widget _linkDocumento(BuildContext context, String texto, String rota) {
     return InkWell(
       onTap: () => Navigator.of(context).pushNamed(rota),
@@ -348,8 +348,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         style: TextStyle(
           fontFamily: 'Roboto',
           fontSize: 14,
+          fontWeight: FontWeight.w600,
           color: context.cores.principal,
-          decoration: TextDecoration.underline,
         ),
       ),
     );

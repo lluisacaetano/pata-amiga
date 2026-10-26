@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 // Arquivo auth_components.dart: fundo, logotipo, campos e botões das telas de
 // entrada.
 import 'auth_components.dart';
+// Arquivo route_names.dart: rota do login, aberta depois de redefinir.
+import '../../routes/route_names.dart';
 // Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../../tema/cores.dart';
 // Arquivo mascaras.dart: máscaras e validador de e-mail e telefone.
@@ -15,8 +17,8 @@ import '../../provider/usuario_provider.dart';
 
 // Tela de "Esqueci a senha". A conta existe só neste aparelho e o app não
 // tem servidor de e-mail, então a confirmação é feita pelo e-mail e pelo
-// telefone cadastrados. Conferidos os dois, a senha nova é gravada e a
-// pessoa volta ao login para entrar com ela
+// telefone cadastrados. Conferidos os dois, a senha nova (diferente da atual)
+// é gravada e o login abre com o e-mail preenchido e o aviso da mudança
 class RecoverPasswordScreen extends StatefulWidget {
   const RecoverPasswordScreen({super.key});
 
@@ -36,6 +38,7 @@ class _RecoverPasswordScreenState extends State<RecoverPasswordScreen> {
   // Erros que só se sabe depois de consultar a conta salva
   String? _erroDoEmail;
   String? _erroDoTelefone;
+  String? _erroDaSenha;
 
   // Confere e-mail e telefone com a conta salva e, se baterem, grava a
   // senha nova, avisa e volta ao login
@@ -43,6 +46,7 @@ class _RecoverPasswordScreenState extends State<RecoverPasswordScreen> {
     setState(() {
       _erroDoEmail = null;
       _erroDoTelefone = null;
+      _erroDaSenha = null;
     });
     if (!_formKey.currentState!.validate()) return;
     setState(() => _salvando = true);
@@ -57,15 +61,15 @@ class _RecoverPasswordScreenState extends State<RecoverPasswordScreen> {
         _erroDoEmail = 'Nenhuma conta com este e-mail neste aparelho.';
       case ResultadoDaRedefinicao.telefoneDiferente:
         _erroDoTelefone = 'O telefone não confere com o da conta.';
+      case ResultadoDaRedefinicao.mesmaSenha:
+        _erroDaSenha = 'A senha nova é igual à atual. Escolha outra.';
       case ResultadoDaRedefinicao.redefinida:
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            const SnackBar(
-              content: Text('Senha redefinida. Entre com a senha nova.'),
-            ),
-          );
-        Navigator.of(context).pop();
+        // Abre o login no lugar desta tela, com o e-mail preenchido e o
+        // aviso de que a senha mudou
+        Navigator.of(context).pushReplacementNamed(
+          AppRoutes.login,
+          arguments: UsuarioProvider.normalizarEmail(_emailController.text),
+        );
         return;
     }
     setState(() => _salvando = false);
@@ -141,7 +145,7 @@ class _RecoverPasswordScreenState extends State<RecoverPasswordScreen> {
                   if (value.length < 8) {
                     return 'A senha deve ter pelo menos 8 caracteres.';
                   }
-                  return null;
+                  return _erroDaSenha;
                 },
                 obscureText: !_mostrarSenha,
                 suffixIcon: _mostrarSenha
