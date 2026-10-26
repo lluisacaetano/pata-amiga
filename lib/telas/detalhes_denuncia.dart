@@ -15,6 +15,8 @@ import '../estado/estado_pata_amiga.dart';
 import '../modelos/denuncia.dart';
 // Arquivo ong.dart: a organização que recebeu a denúncia.
 import '../modelos/ong.dart';
+// Arquivo texto.dart: comMaiuscula, para o porte e o sexo do animal.
+import '../modelos/texto.dart';
 // Arquivo usuario_provider.dart: quem está vendo e quem muda a situação.
 import '../provider/usuario_provider.dart';
 // Arquivo denuncia_service.dart: gravação da nova situação na API.
@@ -317,6 +319,29 @@ class _Ficha extends StatelessWidget {
           if (organizacao != null) ...[
             const SizedBox(height: 8),
             _Painel(dados: [('Enviada para', organizacao!.nome)]),
+          ],
+
+          // O animal, nas denúncias registradas com esses campos
+          if (denuncia.especie.isNotEmpty) ...[
+            const _Divisoria(),
+            const _Rotulo('O animal'),
+            const SizedBox(height: 4),
+            _Painel(
+              dados: [
+                ('Espécie', denuncia.especie),
+                ('Porte', comMaiuscula(denuncia.porte)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _Painel(
+              dados: [
+                ('Sexo', comMaiuscula(denuncia.sexo)),
+                (
+                  'Raça',
+                  denuncia.raca.isEmpty ? 'Não informada' : denuncia.raca,
+                ),
+              ],
+            ),
           ],
 
           const _Divisoria(),

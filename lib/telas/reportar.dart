@@ -9,6 +9,8 @@ import 'package:provider/provider.dart';
 // Pacote share_plus: abre o compartilhamento do sistema (WhatsApp etc.).
 import 'package:share_plus/share_plus.dart';
 
+// Arquivo racas.dart: raças de cachorro e de gato e a busca na lista.
+import '../dados/racas.dart';
 // Arquivo estado_pata_amiga.dart: ONGs carregadas, para a escolha do destino.
 import '../estado/estado_pata_amiga.dart';
 // Arquivo denuncia.dart: modelo da denúncia, tipo e protocolo.
@@ -17,6 +19,8 @@ import '../modelos/denuncia.dart';
 import '../modelos/etapa_do_historico.dart';
 // Arquivo ong.dart: a organização que recebe a denúncia.
 import '../modelos/ong.dart';
+// Arquivo texto.dart: comMaiuscula, para as opções das escolhas.
+import '../modelos/texto.dart';
 // Arquivo usuario_provider.dart: dados de quem denuncia, na identificada.
 import '../provider/usuario_provider.dart';
 // Arquivo denuncia_service.dart: serviço que registra a denúncia na API.
@@ -33,13 +37,16 @@ import '../widgets/mapa_de_local.dart';
 import '../widgets/mascaras.dart';
 // Arquivo proteger_alteracoes.dart: aviso ao sair sem salvar.
 import '../widgets/proteger_alteracoes.dart';
+// Arquivo selecao_com_busca.dart: seleção da raça com campo de busca.
+import '../widgets/selecao_com_busca.dart';
 // Arquivo seletor_de_local.dart: escolha do local no mapa.
 import '../widgets/seletor_de_local.dart';
 // Arquivo minhas_denuncias.dart: lista das denúncias recebidas.
 import 'minhas_denuncias.dart';
 
 // Formulário de denúncia de maus-tratos. Mostra o que diz a lei e pede a
-// organização que recebe a denúncia, se ela é anônima, o tipo, a descrição,
+// organização que recebe a denúncia, se ela é anônima, o animal (espécie,
+// porte, sexo e, se souber, a raça), o tipo, a descrição,
 // o local, a data (opcional) e as fotos. A denúncia chega à organização pelo
 // app; ao registrar, exibe o protocolo e oferece também o envio pelo
 // WhatsApp da organização.
@@ -81,6 +88,12 @@ class _ReportarScreenState extends State<ReportarScreen> {
   final _rolagem = ScrollController();
 
   TipoDeDenuncia? _tipo;
+  // O animal: espécie, porte e sexo obrigatórios; a raça é opcional
+  String? _especie;
+  String? _porte;
+  String? _sexo;
+  String? _raca;
+  final _buscaDaRaca = TextEditingController();
   DateTime? _data;
   final List<XFile> _fotos = [];
   LocalEscolhido _local = (ponto: centroDeFormiga, rua: '', bairro: '');
@@ -107,6 +120,7 @@ class _ReportarScreenState extends State<ReportarScreen> {
   @override
   void dispose() {
     _descricao.dispose();
+    _buscaDaRaca.dispose();
     _rolagem.dispose();
     super.dispose();
   }
@@ -116,6 +130,9 @@ class _ReportarScreenState extends State<ReportarScreen> {
   bool get _alterado =>
       !_enviando &&
       (_tipo != null ||
+          _especie != null ||
+          _porte != null ||
+          _sexo != null ||
           _descricao.text.trim().isNotEmpty ||
           _fotos.isNotEmpty ||
           _data != null);
@@ -123,6 +140,9 @@ class _ReportarScreenState extends State<ReportarScreen> {
   // Todos os campos obrigatórios preenchidos (a data é opcional)
   bool get _completo =>
       _destino(_organizacoes(context)) != null &&
+      _especie != null &&
+      _porte != null &&
+      _sexo != null &&
       _tipo != null &&
       _descricao.text.trim().isNotEmpty &&
       _local.rua.trim().isNotEmpty &&
@@ -193,6 +213,10 @@ class _ReportarScreenState extends State<ReportarScreen> {
           protocolo: Denuncia.novoProtocolo(agora),
           tipo: _tipo!,
           descricao: _descricao.text.trim(),
+          especie: _especie!,
+          porte: _porte!,
+          sexo: _sexo!,
+          raca: _raca ?? '',
           rua: _local.rua,
           bairro: _local.bairro,
           latitude: _local.ponto.latitude,
@@ -246,6 +270,9 @@ class _ReportarScreenState extends State<ReportarScreen> {
     final destino = _destino(organizacoes);
     final semDestino = _tentou && destino == null;
     final semTipo = _tentou && _tipo == null;
+    final semEspecie = _tentou && _especie == null;
+    final semPorte = _tentou && _porte == null;
+    final semSexo = _tentou && _sexo == null;
     final semDescricao = _tentou && _descricao.text.trim().isEmpty;
     final semLocal =
         _tentou && (_local.rua.trim().isEmpty || _local.bairro.trim().isEmpty);
@@ -357,6 +384,76 @@ class _ReportarScreenState extends State<ReportarScreen> {
                         ),
                       ),
                     ),
+                  ),
+                ],
+              ),
+            ),
+            _Cartao(
+              icone: Icons.pets_outlined,
+              titulo: 'Sobre o animal',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _Selecao(
+                          rotulo: 'Espécie',
+                          opcoes: especiesDaDenuncia,
+                          valor: _especie,
+                          comErro: semEspecie,
+                          aoEscolher: (especie) => setState(() {
+                            // A raça escolhida é de uma espécie só
+                            if (especie != _especie) {
+                              _raca = null;
+                              _buscaDaRaca.clear();
+                            }
+                            _especie = especie;
+                          }),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _Selecao(
+                          rotulo: 'Porte',
+                          opcoes: portesDaDenuncia,
+                          valor: _porte,
+                          comErro: semPorte,
+                          aoEscolher: (porte) => setState(() => _porte = porte),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  _Selecao(
+                    rotulo: 'Sexo',
+                    opcoes: sexosDaDenuncia,
+                    valor: _sexo,
+                    comErro: semSexo,
+                    aoEscolher: (sexo) => setState(() => _sexo = sexo),
+                  ),
+                  const SizedBox(height: 14),
+                  SelecaoComBusca(
+                    // A chave recria o campo quando a espécie muda
+                    key: ValueKey(_especie),
+                    rotulo: 'Raça',
+                    dica: _especie == null
+                        ? 'Escolha a espécie primeiro'
+                        : 'Digite para buscar a raça',
+                    habilitada: _especie != null,
+                    controlador: _buscaDaRaca,
+                    opcoes: (digitado) => filtrarRacas(_especie, digitado),
+                    daLista: (texto) => racaDaLista(_especie, texto),
+                    rodape: const [
+                      (valor: semRacaDefinida, texto: semRacaDefinida),
+                    ],
+                    limpavel: true,
+                    aoEscolher: (raca) => setState(() => _raca = raca),
+                  ),
+                  const _Recado(
+                    'Raça opcional. Se não souber o porte ou o sexo, escolha '
+                    '"Não sei".',
                   ),
                 ],
               ),
@@ -941,6 +1038,57 @@ class _Recado extends StatelessWidget {
 
 // Decoração padrão dos campos de texto, igual à do cadastro de animal. Com
 // [comErro], a borda fica na cor de destaque
+// Campo de escolha com rótulo em cima, no visual dos campos do formulário.
+// As opções aparecem com a primeira letra maiúscula
+class _Selecao extends StatelessWidget {
+  const _Selecao({
+    required this.rotulo,
+    required this.opcoes,
+    required this.valor,
+    required this.aoEscolher,
+    this.comErro = false,
+  });
+
+  final String rotulo;
+  final List<String> opcoes;
+  final String? valor;
+  final bool comErro;
+  final ValueChanged<String?> aoEscolher;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _Rotulo(rotulo),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String>(
+          initialValue: valor,
+          isDense: true,
+          isExpanded: true,
+          decoration: _caixa(context, null, comErro: comErro),
+          hint: Text(
+            'Escolher',
+            style: TextStyle(fontSize: 14, color: context.cores.textoFraco),
+          ),
+          icon: Icon(
+            Icons.keyboard_arrow_down,
+            color: context.cores.textoFraco,
+          ),
+          dropdownColor: context.cores.cartao,
+          style: TextStyle(fontSize: 15, color: context.cores.texto),
+          items: [
+            for (final opcao in opcoes)
+              DropdownMenuItem(value: opcao, child: Text(comMaiuscula(opcao))),
+          ],
+          onChanged: aoEscolher,
+        ),
+        if (comErro) const _Recado('Campo obrigatório', erro: true),
+      ],
+    );
+  }
+}
+
 InputDecoration _caixa(
   BuildContext context,
   String? dica, {
