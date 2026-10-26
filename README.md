@@ -100,6 +100,274 @@ avistamento dos perdidos, os resgates e os comedouros públicos, e o perfil das
 ONGs, com o que cada uma faz, a chave Pix, a política de adoção e os animais
 publicados por ela.
 
+## Telas
+
+As capturas abaixo foram feitas no emulador Android, com a API local e uma
+conta de demonstração. Cada legenda traz o nome da tela, a rota em que ela
+aparece e o que ela permite fazer. Painéis abertos sobre outra tela, como o
+pino do mapa e o filtro, levam a rota da tela de baixo. Os arquivos ficam em
+`documentacao/capturas/`.
+
+### Entrada e conta
+
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/01-boas-vindas.png" alt="Boas-vindas" width="240"><br>
+      <strong>Boas-vindas</strong><br>
+      <code>/</code><br>
+      Apresenta o aplicativo e leva ao login ou à criação de conta.
+    </td>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/02-onboarding-1.png" alt="Onboarding, página 1" width="240"><br>
+      <strong>Onboarding, página 1</strong><br>
+      <code>/onboarding</code><br>
+      Abre o tutorial da primeira entrada com a proposta do aplicativo.
+    </td>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/03-onboarding-2.png" alt="Onboarding, página 2" width="240"><br>
+      <strong>Onboarding, página 2</strong><br>
+      <code>/onboarding</code><br>
+      Explica o cadastro de animais resgatados, com fotos e informações.
+    </td>
+  </tr>
+  <tr>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/04-onboarding-3.png" alt="Onboarding, página 3" width="240"><br>
+      <strong>Onboarding, página 3</strong><br>
+      <code>/onboarding</code><br>
+      Explica a adoção e o contato com o responsável pelo WhatsApp.
+    </td>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/05-login.png" alt="Login" width="240"><br>
+      <strong>Login</strong><br>
+      <code>/login</code><br>
+      Autentica a conta pelo e-mail e pela senha e dá acesso à recuperação de senha.
+    </td>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/06-criar-conta.png" alt="Criar conta" width="240"><br>
+      <strong>Criar conta</strong><br>
+      <code>/cadastro</code><br>
+      Cadastra nome, e-mail, telefone e senha, pergunta se a pessoa faz parte de uma ONG e exige o aceite dos termos.
+    </td>
+  </tr>
+  <tr>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/07-recuperar-senha.png" alt="Recuperar senha" width="240"><br>
+      <strong>Recuperar senha</strong><br>
+      <code>/recuperacao</code><br>
+      Redefine a senha depois de confirmar o e-mail e o telefone da conta.
+    </td>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/08-termos-de-uso.png" alt="Termos de Uso" width="240"><br>
+      <strong>Termos de Uso</strong><br>
+      <code>/termos-de-uso</code><br>
+      Apresenta as regras de uso do aplicativo, divididas em seções.
+    </td>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/09-politica-de-privacidade.png" alt="Política de Privacidade" width="240"><br>
+      <strong>Política de Privacidade</strong><br>
+      <code>/politica-de-privacidade</code><br>
+      Informa quais dados o aplicativo trata, onde eles ficam guardados e como solicitar alterações.
+    </td>
+  </tr>
+</table>
+
+### Adoção
+
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/10-feed.png" alt="Feed" width="240"><br>
+      <strong>Feed</strong><br>
+      <code>/feed</code><br>
+      Lista os animais em rolagem contínua, separados em adoção, perdidos e resgate, com busca e filtros.
+    </td>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/11-ficha-do-animal.png" alt="Ficha do animal" width="240"><br>
+      <strong>Ficha do animal</strong><br>
+      <code>/detalhes-animal</code><br>
+      Mostra as fotos, as características e os cuidados de saúde do animal e abre a conversa com o responsável pelo WhatsApp.
+    </td>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/12-cadastro-de-animal.png" alt="Cadastro de animal" width="240"><br>
+      <strong>Cadastro de animal</strong><br>
+      <code>/cadastro-animal</code><br>
+      Publica um animal para adoção, perdido ou em resgate, com até cinco fotos e o local no mapa.
+    </td>
+  </tr>
+</table>
+
+### Perdidos e mapa
+
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/13-mapa.png" alt="Mapa" width="240"><br>
+      <strong>Mapa</strong><br>
+      <code>/mapa</code><br>
+      Exibe em camadas os perdidos, os resgates e os pontos de alimentação, com a posição de quem usa o aplicativo.
+    </td>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/14-mapa-animal-perdido.png" alt="Pino de animal perdido" width="240"><br>
+      <strong>Pino de animal perdido</strong><br>
+      <code>/mapa</code><br>
+      Abre o resumo do animal com o último avistamento registrado.
+    </td>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/15-ficha-do-animal-perdido.png" alt="Ficha do animal perdido" width="240"><br>
+      <strong>Ficha do animal perdido</strong><br>
+      <code>/detalhes-animal</code><br>
+      Acrescenta à ficha o registro de avistamento, usado por quem viu o animal.
+    </td>
+  </tr>
+  <tr>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/16-registrar-avistamento.png" alt="Registrar avistamento" width="240"><br>
+      <strong>Registrar avistamento</strong><br>
+      <code>/registrar-avistamento</code><br>
+      Registra quando e onde o animal foi visto, com foto opcional, e avisa o tutor.
+    </td>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/17-mapa-ponto-de-alimentacao.png" alt="Pino de ponto de alimentação" width="240"><br>
+      <strong>Pino de ponto de alimentação</strong><br>
+      <code>/mapa</code><br>
+      Mostra a situação do comedouro ou bebedouro e o último abastecimento.
+    </td>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/18-registrar-abastecimento.png" alt="Registrar abastecimento" width="240"><br>
+      <strong>Registrar abastecimento</strong><br>
+      <code>/registrar-abastecimento</code><br>
+      Confirma o abastecimento do ponto, aceito só a até 150 m dele e uma vez por dia.
+    </td>
+  </tr>
+  <tr>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/19-cadastrar-ponto.png" alt="Cadastrar ponto" width="240"><br>
+      <strong>Cadastrar ponto</strong><br>
+      <code>/cadastrar-ponto</code><br>
+      Cadastra um comedouro ou bebedouro novo, com o endereço e a posição no mapa.
+    </td>
+  </tr>
+</table>
+
+### Denúncias
+
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/20-denuncia.png" alt="Denúncia de maus-tratos" width="240"><br>
+      <strong>Denúncia de maus-tratos</strong><br>
+      <code>/reportar</code><br>
+      Registra a denúncia com a organização de destino, a opção de anonimato, os dados do animal, o relato e as fotos.
+    </td>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/21-minhas-denuncias.png" alt="Minhas denúncias" width="240"><br>
+      <strong>Minhas denúncias</strong><br>
+      <code>/minhas-denuncias</code><br>
+      Lista as denúncias feitas no aparelho, com protocolo e situação, e busca por protocolo, local ou descrição.
+    </td>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/22-filtro-de-denuncias.png" alt="Filtro de denúncias" width="240"><br>
+      <strong>Filtro de denúncias</strong><br>
+      <code>/minhas-denuncias</code><br>
+      Filtra por tipo, situação, espécie, porte, sexo, bairro e data e mostra quantas denúncias vão aparecer antes de aplicar.
+    </td>
+  </tr>
+  <tr>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/23-ficha-da-denuncia.png" alt="Ficha da denúncia" width="240"><br>
+      <strong>Ficha da denúncia</strong><br>
+      <code>/detalhes-denuncia</code><br>
+      Mostra o tipo, o protocolo, a situação, a organização de destino e os dados do animal.
+    </td>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/24-ficha-da-denuncia-historico.png" alt="Histórico da denúncia" width="240"><br>
+      <strong>Histórico da denúncia</strong><br>
+      <code>/detalhes-denuncia</code><br>
+      Completa a ficha com o local no mapa, o relato, o denunciante e cada mudança de situação.
+    </td>
+  </tr>
+</table>
+
+### ONGs
+
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/25-ongs.png" alt="ONGs e abrigos" width="240"><br>
+      <strong>ONGs e abrigos</strong><br>
+      <code>/ongs</code><br>
+      Lista as organizações da cidade, com bairro, finalidades e animais em aberto, e busca pelo nome.
+    </td>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/26-perfil-de-ong.png" alt="Perfil de ONG" width="240"><br>
+      <strong>Perfil de ONG</strong><br>
+      <code>/perfil-ong</code><br>
+      Apresenta a organização, o contato pelo WhatsApp, a chave Pix e os animais publicados por ela.
+    </td>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/27-perfil-de-ong-apaf.png" alt="Perfil de ONG que recebe denúncias" width="240"><br>
+      <strong>Perfil de ONG que recebe denúncias</strong><br>
+      <code>/perfil-ong</code><br>
+      Exibe a finalidade de receber denúncias e o aviso de quando a organização ainda não publicou animais.
+    </td>
+  </tr>
+  <tr>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/28-cadastro-de-ong.png" alt="Cadastro de ONG" width="240"><br>
+      <strong>Cadastro de ONG</strong><br>
+      <code>/cadastro-ong</code><br>
+      Cria o perfil da organização com nome, descrição, política de adoção, telefone e chave Pix.
+    </td>
+  </tr>
+</table>
+
+### Perfil e configurações
+
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/29-meu-perfil.png" alt="Meu perfil" width="240"><br>
+      <strong>Meu perfil</strong><br>
+      <code>/perfil-usuario</code><br>
+      Reúne os dados da conta e os animais curtidos.
+    </td>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/30-meus-registros.png" alt="Meus registros" width="240"><br>
+      <strong>Meus registros</strong><br>
+      <code>/perfil-usuario</code><br>
+      Lista os animais publicados pela conta e a situação de cada um.
+    </td>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/31-editar-perfil.png" alt="Editar perfil" width="240"><br>
+      <strong>Editar perfil</strong><br>
+      <code>/editar-perfil</code><br>
+      Altera nome, telefone e foto e dá acesso à criação do perfil de uma ONG.
+    </td>
+  </tr>
+  <tr>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/32-notificacoes.png" alt="Notificações" width="240"><br>
+      <strong>Notificações</strong><br>
+      <code>/perfil-usuario</code><br>
+      Avisa sobre animais perdidos a até 3 km, avistamentos e mudanças nas denúncias.
+    </td>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/33-aparencia.png" alt="Aparência" width="240"><br>
+      <strong>Aparência</strong><br>
+      <code>/configuracoes-aparencia</code><br>
+      Define o modo claro, o escuro ou o que acompanha o sistema.
+    </td>
+    <td width="33%" valign="top">
+      <img src="documentacao/capturas/34-acessibilidade.png" alt="Acessibilidade" width="240"><br>
+      <strong>Acessibilidade</strong><br>
+      <code>/configuracoes-acessibilidade</code><br>
+      Ajusta o tamanho do texto do aplicativo inteiro, com um exemplo que muda na hora.
+    </td>
+  </tr>
+</table>
+
 ## O que o aplicativo não faz
 
 Algumas ausências são deliberadas e foram decididas na Sprint 0, não são
@@ -211,7 +479,8 @@ documento de entrega da Sprint 0 traz a ata de formação do squad, o conceito d
 produto, o elevator pitch, o backlog completo com os critérios de aceite e o
 levantamento do ambiente de cada integrante. Os wireframes de baixa fidelidade
 estão em `documentacao/wireframes/`, uma imagem por tela, e são a referência
-visual que as telas implementadas devem seguir.
+visual que as telas implementadas devem seguir. As capturas do aplicativo
+pronto estão em `documentacao/capturas/` e aparecem na seção Telas.
 
 ## Tecnologia
 
