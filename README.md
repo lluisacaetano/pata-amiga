@@ -498,9 +498,10 @@ abastecimentos, ONGs e denúncias. As chamadas ficam nos serviços de
 permite continuar mostrando os animais sem internet e avisar na tela se o dado
 veio do cache ou acabou de ser atualizado.
 
-O estado compartilhado fica em dois `ChangeNotifier`: o do usuário logado,
-exposto pelo `provider`, e o `EstadoPataAmiga`, com os animais, as curtidas, as
-ONGs e as notificações, exposto por um `InheritedNotifier`. A navegação passa
+O estado compartilhado fica em três `ChangeNotifier`: o do usuário logado e o
+das preferências, expostos pelo `provider`, e o `EstadoPataAmiga`, com os
+animais, as curtidas, as ONGs e as notificações, exposto por um
+`InheritedNotifier`. A navegação passa
 por um arquivo único de rotas, em `lib/routes/`. O mapa usa o `flutter_map` com
 os mapas públicos do OpenStreetMap, a localização do aparelho vem do
 `geolocator`, e o encaminhamento de uma denúncia com as fotos, pelo
@@ -512,6 +513,90 @@ que descrevem a arquitetura real do app para o agente estão em
 ao agente rodar o `flutter analyze` e os testes por conta própria, está
 configurado em `.github/mcp.json`. Parte das entregas também foi feita com o
 Claude Code, e cada Merge Request informa qual agente foi usado.
+
+## Arquitetura
+
+O código fica em `lib/`, separado pelo papel de cada arquivo:
+
+```
+lib/
+├── main.dart    inicia o app, restaura a sessão e registra o estado
+├── auth/        entrada no app: boas-vindas, login, cadastro, recuperação
+│                de senha e documentos legais
+├── telas/       telas usadas depois do login
+├── widgets/     componentes reaproveitados entre as telas
+├── estado/      EstadoPataAmiga, o estado compartilhado dos dados do app
+├── provider/    usuário logado e preferências de aparência e de texto
+├── services/    acesso à API, ao cache, ao GPS e à busca de endereço
+├── modelos/     classes de dados e regras sem tela, como filtros e alertas
+├── dados/       listas fixas, como os bairros de Formiga e as raças
+├── routes/      nomes das rotas e a tabela que liga cada nome à sua tela
+└── tema/        cores do tema claro e do escuro
+```
+
+O projeto não usa os nomes ViewModel e Repository, mas separa as mesmas
+responsabilidades em quatro camadas:
+
+- **Interface (`auth/`, `telas/` e `widgets/`).** Desenha a tela, recebe as
+  ações de quem usa o app e mostra os estados de carregamento, de erro e de
+  lista vazia.
+- **Estado (`estado/` e `provider/`), no papel do ViewModel.** Três
+  `ChangeNotifier` guardam o que mais de uma tela precisa ler: o
+  `UsuarioProvider`, com quem está logado; o `PreferenciasAplicativoProvider`,
+  com o tema e o tamanho do texto; e o `EstadoPataAmiga`, com os animais, as
+  curtidas, as ONGs, os avistamentos, os pontos de alimentação e as
+  notificações. Quando um deles muda, as telas que o escutam são reconstruídas.
+- **Serviços (`services/`), no papel do Repository.** Cada serviço conversa com
+  uma fonte de dados: a API, pelo pacote `http`; o armazenamento do aparelho;
+  o GPS; ou a busca de endereço. As telas recebem o serviço pelo construtor, o
+  que permite trocar a API por uma versão falsa nos testes.
+- **Modelos (`modelos/`).** As classes de dados, a conversão de e para JSON e
+  as regras que não dependem de tela, como os filtros do feed e das denúncias e
+  o cálculo de quem recebe o aviso de animal perdido. Por não depender de tela,
+  essa camada é testada isoladamente, em `test/modelos/`.
+
+O fluxo de um dado segue sempre o mesmo caminho. A tela pede ao serviço, o
+serviço busca na API e devolve modelos, a tela entrega o resultado ao estado, e
+toda tela que escuta aquele estado se atualiza. Uma curtida feita no feed, por
+exemplo, aparece na mesma hora no perfil, sem que uma tela precise avisar a
+outra.
+
+**Navegação.** As rotas têm nome, definido em `lib/routes/route_names.dart`, e
+a tabela que liga cada nome à sua tela fica em `lib/routes/app_router.dart`.
+Quando uma tela precisa de um dado para abrir, como a ficha de um animal, ele
+vai como argumento da rota. Depois do login, a barra inferior leva às cinco
+áreas principais: Início, Mapa, Reportar, ONGs e Perfil.
+
+**Persistência.** O que pertence ao aparelho fica no `shared_preferences`: a
+sessão, o perfil, as curtidas, a cópia dos animais para uso sem internet, o
+tema e o tamanho do texto, o tutorial já visto, os protocolos das denúncias
+feitas e as notificações dispensadas. A senha nunca é gravada: o aparelho
+guarda só um resumo SHA-256 dela, calculado com um sal sorteado. O que precisa
+ser visto por outras pessoas, como os animais publicados, os avistamentos e as
+denúncias, vai para a API.
+
+## Pacotes utilizados
+
+| Pacote | Uso no aplicativo |
+|---|---|
+| `provider` | Expõe o usuário logado e as preferências às telas. |
+| `http` | Faz as chamadas à API. |
+| `shared_preferences` | Guarda no aparelho a sessão, o perfil, as preferências e o cache do feed. |
+| `crypto` | Calcula o resumo SHA-256 da senha. |
+| `flutter_map` | Mostra o mapa com as camadas e o mapa de local nos formulários. |
+| `latlong2` | Representa as coordenadas usadas pelo mapa. |
+| `geolocator` | Obtém a posição do aparelho, com o pedido de permissão. |
+| `geocoding` | Converte endereço em coordenada e coordenada em endereço. |
+| `image_picker` | Escolhe fotos da galeria ou tira pela câmera. |
+| `share_plus` | Compartilha um animal e encaminha a denúncia com as fotos. |
+| `url_launcher` | Abre a conversa no WhatsApp com o responsável pelo animal ou com a organização. |
+| `flutter_localizations` | Traduz para o português os componentes do Flutter, como o calendário. |
+| `flutter_native_splash` | Gera a tela de abertura do Android e do iOS. |
+
+Nos testes, entram também o `flutter_test`, o `flutter_lints`, que define as
+regras do `flutter analyze`, e as interfaces de plataforma do `image_picker`,
+do `geocoding` e do `plugin_platform_interface`, usadas para trocar a galeria,
+o GPS e a busca de endereço por versões falsas.
 
 ## Como rodar
 
