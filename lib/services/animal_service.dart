@@ -42,8 +42,9 @@ class AnimalService {
     }
   }
 
-  // Altera apenas o status do animal na API. Animal sem id existe só no
-  // aparelho e não é enviado
+  // Altera o status do animal na API e grava o histórico de [animal], que já
+  // deve trazer a etapa da mudança. Animal sem id existe só no aparelho e não
+  // é enviado
   Future<void> atualizarStatus(Animal animal, StatusAnimal novo) async {
     final id = animal.id;
     if (id == null) return;
@@ -51,7 +52,10 @@ class AnimalService {
         .patch(
           Uri.parse('$enderecoDaApi/animais/$id'),
           headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'status': novo.name}),
+          body: jsonEncode({
+            'status': novo.name,
+            'historico': [for (final etapa in animal.historico) etapa.toJson()],
+          }),
         )
         .timeout(const Duration(seconds: 8));
     if (resp.statusCode != 200) {

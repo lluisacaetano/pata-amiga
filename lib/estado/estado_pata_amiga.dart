@@ -8,22 +8,30 @@ import 'package:flutter/material.dart';
 // Pacote shared_preferences: guarda dados simples no aparelho (chave e valor).
 import 'package:shared_preferences/shared_preferences.dart';
 
+// Arquivo alertas_de_animais.dart: notificações de perdidos e avistamentos.
+import '../modelos/alertas_de_animais.dart';
 // Arquivo animal.dart: modelo do animal.
 import '../modelos/animal.dart';
+// Arquivo avisos_de_denuncia.dart: notificações de denúncias.
+import '../modelos/avisos_de_denuncia.dart';
 // Arquivo avistamento.dart: modelo do avistamento de animal perdido.
 import '../modelos/avistamento.dart';
+// Arquivo denuncia.dart: denúncias usadas nas notificações.
+import '../modelos/denuncia.dart';
 // Arquivo ong.dart: modelo da ONG e dos avisos aos membros.
 import '../modelos/ong.dart';
 // Arquivo ponto_de_alimentacao.dart: pontos e abastecimentos.
 import '../modelos/ponto_de_alimentacao.dart';
 
 // Estado compartilhado entre as telas: animais do feed, curtidas, cadastros
-// feitos neste aparelho, avistamentos, pontos de alimentação e ONGs. As
-// curtidas e os cadastros locais ficam salvos no aparelho
+// feitos neste aparelho, avistamentos, pontos de alimentação, ONGs e as
+// notificações de animais. As curtidas, os cadastros locais e as
+// notificações dispensadas ficam salvos no aparelho
 class EstadoPataAmiga extends ChangeNotifier {
   // Chaves de gravação no aparelho
   static const _chaveCurtidos = 'curtidos';
   static const _chaveMeusCadastros = 'meus_cadastros';
+  static const _chaveAlertasDispensados = 'alertas_dispensados';
 
   // Chaves dos animais curtidos ([Animal.chave]: o id ou, no animal só
   // local, o nome)
@@ -39,6 +47,77 @@ class EstadoPataAmiga extends ChangeNotifier {
 
   // Animais carregados pelo feed, compartilhados com as outras telas
   List<Animal> get animais => _animais;
+
+  // Última posição conhecida do aparelho, usada para notificar os animais
+  // perdidos na região; nula enquanto não houver permissão de localização
+  ({double latitude, double longitude})? _posicao;
+  ({double latitude, double longitude})? get posicao => _posicao;
+
+  void atualizarPosicao(({double latitude, double longitude}) posicao) {
+    _posicao = posicao;
+    notifyListeners();
+  }
+
+  // Notificações de animais dispensadas, no formato "e-mail|chave", para
+  // cada conta do aparelho ter as suas
+  final Set<String> _alertasDispensados = {};
+
+  // Notificações de animais ainda não dispensadas pelo e-mail
+  List<AlertaDeAnimal> alertasPara(String email) => alertasDeAnimais(
+    animais: [..._animais, ..._meusCadastros],
+    avistamentos: _avistamentos,
+    email: email,
+    posicao: _posicao,
+    dispensadas: _dispensadasPor(email),
+    agora: DateTime.now(),
+  );
+
+  // As chaves das notificações que o e-mail já dispensou
+  Set<String> _dispensadasPor(String email) {
+    final prefixo = '${email.trim().toLowerCase()}|';
+    return {
+      for (final item in _alertasDispensados)
+        if (item.startsWith(prefixo)) item.substring(prefixo.length),
+    };
+  }
+
+  // Denúncias recebidas pela organização de quem está logado e denúncias
+  // feitas neste aparelho, buscadas pelo feed para as notificações
+  List<Denuncia> _denunciasDaOrganizacao = [];
+  List<Denuncia> _minhasDenuncias = [];
+
+  void atualizarDenuncias({
+    required List<Denuncia> daOrganizacao,
+    required List<Denuncia> minhas,
+  }) {
+    _denunciasDaOrganizacao = List.of(daOrganizacao);
+    _minhasDenuncias = List.of(minhas);
+    notifyListeners();
+  }
+
+  // Notificações de denúncias ainda não dispensadas pelo e-mail
+  List<AvisoDeDenuncia> avisosDeDenunciaPara(String email) => avisosDeDenuncia(
+    daOrganizacao: _denunciasDaOrganizacao,
+    minhas: _minhasDenuncias,
+    dispensadas: _dispensadasPor(email),
+    agora: DateTime.now(),
+  );
+
+  // Tira a notificação de animal do sino do e-mail
+  Future<void> dispensarAlerta(String email, AlertaDeAnimal alerta) =>
+      dispensarNotificacao(email, alerta.chave);
+
+  // Tira a notificação da [chave] do sino do e-mail e salva a escolha no
+  // aparelho
+  Future<void> dispensarNotificacao(String email, String chave) async {
+    _alertasDispensados.add('${email.trim().toLowerCase()}|$chave');
+    notifyListeners();
+    final armazenamento = await SharedPreferences.getInstance();
+    await armazenamento.setStringList(
+      _chaveAlertasDispensados,
+      _alertasDispensados.toList(),
+    );
+  }
 
   // Avistamentos de animais perdidos; o mais recente define o pino no mapa
   List<Avistamento> _avistamentos = [];
@@ -209,6 +288,25 @@ class EstadoPataAmiga extends ChangeNotifier {
       ..sort((a, b) => b.publicadoEm.compareTo(a.publicadoEm));
   }
 
+  // Troca o telefone de contato em todos os cadastros do e-mail (os mesmos
+  // de [cadastrosDe]), para o número novo do perfil valer nos anúncios já
+  // publicados. Devolve os animais alterados, para serem gravados na API
+  Future<List<Animal>> trocarTelefoneDosCadastros(
+    String email,
+    String telefone,
+  ) async {
+    final digitos = telefone.replaceAll(RegExp(r'\D'), '');
+    final alterados = [
+      for (final animal in cadastrosDe(email))
+        if (animal.dono.telefone.replaceAll(RegExp(r'\D'), '') != digitos)
+          animal.comTelefoneDoDono(digitos),
+    ];
+    for (final animal in alterados) {
+      await substituirAnimal(animal);
+    }
+    return alterados;
+  }
+
   // Diz se o e-mail pode alterar o status do animal:
   // - animal de ONG: qualquer pessoa que faça parte dela hoje;
   // - animal com responsável registrado: só esse responsável;
@@ -222,14 +320,20 @@ class EstadoPataAmiga extends ChangeNotifier {
         _meusCadastros.any((item) => item.chave == animal.chave);
   }
 
-  // Lê do aparelho as curtidas e os cadastros locais. Se os cadastros
-  // salvos estiverem corrompidos, a lista local é zerada
+  // Lê do aparelho as curtidas, os cadastros locais e as notificações
+  // dispensadas. Se os cadastros salvos estiverem corrompidos, a lista local
+  // é zerada
   Future<void> carregarCurtidos() async {
     final armazenamento = await SharedPreferences.getInstance();
     if (_descartado) return;
     _curtidos
       ..clear()
       ..addAll(armazenamento.getStringList(_chaveCurtidos) ?? const []);
+    _alertasDispensados
+      ..clear()
+      ..addAll(
+        armazenamento.getStringList(_chaveAlertasDispensados) ?? const [],
+      );
     final registrosSalvos = armazenamento.getString(_chaveMeusCadastros);
     if (registrosSalvos != null) {
       try {
@@ -298,6 +402,11 @@ class PataAmigaScope extends InheritedNotifier<EstadoPataAmiga> {
   // callbacks). Devolve null quando não há escopo acima
   static EstadoPataAmiga? talvez(BuildContext context) =>
       context.getInheritedWidgetOfExactType<PataAmigaScope>()?.notifier;
+
+  // Lê o estado e reconstrói o widget quando ele mudar, como [of], mas
+  // devolve null quando não há escopo acima (telas montadas sozinhas)
+  static EstadoPataAmiga? ouvindo(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<PataAmigaScope>()?.notifier;
 
   // Lê o estado e reconstrói o widget sempre que ele mudar
   static EstadoPataAmiga of(BuildContext context) {

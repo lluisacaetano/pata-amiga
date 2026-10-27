@@ -6,7 +6,7 @@
     
     <application
         android:usesCleartextTraffic="true"
-        android:label="pata_amiga"
+        android:label="Pata Amiga"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

@@ -92,10 +92,19 @@ class _PainelDeFiltrosState extends State<PainelDeFiltros> {
   }
 
   // ONGs com pelo menos um animal no feed, em ordem alfabética. As demais
-  // ficam de fora porque não trariam nenhum resultado
+  // ficam de fora porque não trariam nenhum resultado, e as que só recebem
+  // denúncias também, porque não publicam animais
   List<Ong> get _ongsDisponiveis {
     final comAnimais = opcoesDe(GrupoDeFiltro.ong, widget.animais).toSet();
-    return widget.ongs.where((ong) => comAnimais.contains('${ong.id}')).toList()
+    return widget.ongs
+        .where(
+          (ong) =>
+              comAnimais.contains('${ong.id}') &&
+              ong.finalidades.any(
+                (finalidade) => finalidade != FinalidadeDaOng.denuncias,
+              ),
+        )
+        .toList()
       ..sort(
         (a, b) =>
             Ong.nomeComparavel(a.nome).compareTo(Ong.nomeComparavel(b.nome)),
@@ -194,15 +203,15 @@ class _PainelDeFiltrosState extends State<PainelDeFiltros> {
             Flexible(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-                child: _Cartao(
+                child: CartaoDeFiltros(
                   children: [
                     for (final grupo in [
                       GrupoDeFiltro.especie,
                       GrupoDeFiltro.porte,
                       GrupoDeFiltro.sexo,
                     ]) ...[
-                      _Rotulo(grupo.titulo),
-                      _Abas(
+                      RotuloDeFiltro(grupo.titulo),
+                      AbasDeFiltro(
                         opcoes: opcoesDe(grupo, const []),
                         marcadas: _filtros.de(grupo),
                         aoMudar: (opcoes) => _mudarAba(grupo, opcoes),
@@ -275,8 +284,8 @@ class _PainelDeFiltrosState extends State<PainelDeFiltros> {
                         },
                         aoEscolher: _alternarOng,
                       ),
-                    const _Rotulo('Saúde'),
-                    _Abas(
+                    const RotuloDeFiltro('Saúde'),
+                    AbasDeFiltro(
                       opcoes: opcoesDe(GrupoDeFiltro.saude, const []),
                       marcadas: _filtros.de(GrupoDeFiltro.saude),
                       aoMudar: (opcoes) => setState(
@@ -331,8 +340,8 @@ class _PainelDeFiltrosState extends State<PainelDeFiltros> {
 }
 
 // Cartão que agrupa os filtros, no mesmo estilo do cartão do cadastro
-class _Cartao extends StatelessWidget {
-  const _Cartao({required this.children});
+class CartaoDeFiltros extends StatelessWidget {
+  const CartaoDeFiltros({super.key, required this.children});
 
   final List<Widget> children;
 
@@ -356,8 +365,8 @@ class _Cartao extends StatelessWidget {
 }
 
 // Rótulo pequeno exibido acima de cada grupo de filtro
-class _Rotulo extends StatelessWidget {
-  const _Rotulo(this.texto);
+class RotuloDeFiltro extends StatelessWidget {
+  const RotuloDeFiltro(this.texto, {super.key});
 
   final String texto;
 
@@ -375,8 +384,9 @@ class _Rotulo extends StatelessWidget {
 
 // Abas para os grupos curtos (espécie, porte, sexo e saúde). Permitem marcar
 // várias opções ou nenhuma
-class _Abas extends StatelessWidget {
-  const _Abas({
+class AbasDeFiltro extends StatelessWidget {
+  const AbasDeFiltro({
+    super.key,
     required this.opcoes,
     required this.marcadas,
     required this.aoMudar,

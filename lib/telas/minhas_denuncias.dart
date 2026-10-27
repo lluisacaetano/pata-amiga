@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 
 // Arquivo denuncia.dart: modelo da denúncia e data relativa.
 import '../modelos/denuncia.dart';
+// Arquivo filtros_de_denuncia.dart: filtros e busca da lista de denúncias.
+import '../modelos/filtros_de_denuncia.dart';
+// Arquivo ong.dart: a organização cujas denúncias recebidas são listadas.
+import '../modelos/ong.dart';
 // Arquivo route_names.dart: nomes das rotas de navegação.
 import '../routes/route_names.dart';
 // Arquivo denuncia_service.dart: busca as denúncias deste aparelho.
@@ -11,21 +15,29 @@ import '../services/denuncia_service.dart';
 import '../tema/cores.dart';
 // Arquivo aviso_no_centro.dart: aviso centralizado de lista vazia ou erro.
 import '../widgets/aviso_no_centro.dart';
+// Arquivo barra_inferior.dart: barra inferior, na aba Reportar.
+import '../widgets/barra_inferior.dart';
 // Arquivo campo_de_busca.dart: campo de busca arredondado do topo da lista.
 import '../widgets/campo_de_busca.dart';
 // Arquivo foto_animal.dart: exibição da primeira foto da denúncia.
 import '../widgets/foto_animal.dart';
+// Arquivo painel_de_filtros_de_denuncia.dart: painel com os filtros da lista.
+import '../widgets/painel_de_filtros_de_denuncia.dart';
 
-// Lista das denúncias registradas neste aparelho (os protocolos ficam
-// salvos localmente), com a situação atual de cada uma buscada na API.
-// Permite buscar pelo protocolo e atualizar puxando a lista para baixo ou
-// pelo botão "Tentar de novo" quando falta conexão.
+// Lista de denúncias com a situação atual de cada uma buscada na API. Sem
+// [organizacao], mostra as registradas neste aparelho (os protocolos ficam
+// salvos localmente). Com [organizacao], mostra as denúncias recebidas por
+// ela, na aba Reportar, com o botão "+" para registrar uma nova. Permite
+// buscar pelo protocolo, pela descrição ou pelo local, filtrar como no feed
+// (tipo, situação, animal, bairro e data) e atualizar puxando a lista para baixo ou pelo
+// botão "Tentar de novo" quando falta conexão.
 //
 // [servico] permite injetar um serviço falso nos testes.
 class MinhasDenuncias extends StatefulWidget {
   final DenunciaService? servico;
+  final Ong? organizacao;
 
-  const MinhasDenuncias({super.key, this.servico});
+  const MinhasDenuncias({super.key, this.servico, this.organizacao});
 
   @override
   State<MinhasDenuncias> createState() => _MinhasDenunciasState();
@@ -37,6 +49,7 @@ class _MinhasDenunciasState extends State<MinhasDenuncias> {
   bool _semConexao = false;
   final _pesquisa = TextEditingController();
   String _busca = '';
+  FiltrosDeDenuncia _filtros = const FiltrosDeDenuncia();
 
   @override
   void dispose() {
@@ -44,15 +57,42 @@ class _MinhasDenunciasState extends State<MinhasDenuncias> {
     super.dispose();
   }
 
-  // Normaliza o protocolo para a busca: maiúsculas, sem hífen nem espaço.
-  // Assim, "pa 2026" encontra "PA-20261022-9204"
-  static String _comparavel(String texto) =>
-      texto.toUpperCase().replaceAll(RegExp('[^A-Z0-9]'), '');
+  // As denúncias que atendem à busca e aos filtros
+  List<Denuncia> _visiveis(List<Denuncia> todas, FiltrosDeDenuncia filtros) {
+    final agora = DateTime.now();
+    return [
+      for (final denuncia in todas)
+        if (denunciaContem(denuncia, _busca) &&
+            filtros.combina(denuncia, agora))
+          denuncia,
+    ];
+  }
 
-  // Se a denúncia corresponde ao texto da busca (busca vazia aceita todas)
-  bool _combina(Denuncia denuncia) {
-    final busca = _comparavel(_busca);
-    return busca.isEmpty || _comparavel(denuncia.protocolo).contains(busca);
+  // Abre o painel de filtros e aplica o que ele devolver. O painel recebe a
+  // contagem para mostrar quantas denúncias vão aparecer
+  Future<void> _abrirFiltros(List<Denuncia> todas) async {
+    final escolhidos = await showModalBottomSheet<FiltrosDeDenuncia>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: context.cores.fundo,
+      builder: (_) => PainelDeFiltrosDeDenuncia(
+        inicial: _filtros,
+        denuncias: todas,
+        contar: (filtros) => _visiveis(todas, filtros).length,
+      ),
+    );
+    if (escolhidos == null || !mounted) return;
+    setState(() => _filtros = escolhidos);
+  }
+
+  // Tira a busca e os filtros, voltando a mostrar todas as denúncias
+  void _limparBusca() {
+    _pesquisa.clear();
+    setState(() {
+      _busca = '';
+      _filtros = const FiltrosDeDenuncia();
+    });
   }
 
   @override
@@ -65,7 +105,10 @@ class _MinhasDenunciasState extends State<MinhasDenuncias> {
   // e exibe o aviso
   Future<void> _carregar() async {
     try {
-      final denuncias = await _servico.minhasDenuncias();
+      final organizacao = widget.organizacao;
+      final denuncias = organizacao?.id == null
+          ? await _servico.minhasDenuncias()
+          : await _servico.daOrganizacao(organizacao!.id!);
       if (!mounted) return;
       setState(() {
         _denuncias = denuncias;
@@ -83,8 +126,8 @@ class _MinhasDenunciasState extends State<MinhasDenuncias> {
   @override
   Widget build(BuildContext context) {
     final todas = _denuncias;
-    final denuncias = todas?.where(_combina).toList();
-    final buscando = _busca.trim().isNotEmpty;
+    final denuncias = todas == null ? null : _visiveis(todas, _filtros);
+    final buscando = _busca.trim().isNotEmpty || !_filtros.vazio;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: context.cores.fundo,
@@ -100,7 +143,9 @@ class _MinhasDenunciasState extends State<MinhasDenuncias> {
         ),
         centerTitle: true,
         title: Text(
-          'MINHAS DENÚNCIAS',
+          widget.organizacao == null
+              ? 'MINHAS DENÚNCIAS'
+              : 'DENÚNCIAS RECEBIDAS',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
@@ -115,10 +160,30 @@ class _MinhasDenunciasState extends State<MinhasDenuncias> {
         child: ListaComAviso(
           topo: [
             if (todas != null && todas.isNotEmpty) ...[
-              CampoDeBusca(
-                controller: _pesquisa,
-                dica: 'Buscar pelo protocolo',
-                aoMudar: (texto) => setState(() => _busca = texto),
+              // Busca e, ao lado, o botão dos filtros com o número de
+              // filtros marcados, como no feed
+              Row(
+                children: [
+                  Expanded(
+                    child: CampoDeBusca(
+                      controller: _pesquisa,
+                      dica: 'Buscar protocolo, local ou descrição',
+                      aoMudar: (texto) => setState(() => _busca = texto),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    onPressed: () => _abrirFiltros(todas),
+                    tooltip: 'Filtros',
+                    color: context.cores.principal,
+                    icon: Badge(
+                      isLabelVisible: !_filtros.vazio,
+                      label: Text('${_filtros.quantos}'),
+                      backgroundColor: context.cores.principal,
+                      child: const Icon(Icons.tune),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               // Sem conexão, mas com a lista anterior: aviso discreto
@@ -156,10 +221,12 @@ class _MinhasDenunciasState extends State<MinhasDenuncias> {
                   ),
                 )
               : denuncias.isEmpty && buscando
-              ? const AvisoNoCentro(
+              ? AvisoNoCentro(
                   icone: Icons.search_off,
-                  titulo: 'Nenhuma denúncia com esse protocolo.',
-                  texto: 'Confira o número ou busque só por uma parte dele.',
+                  titulo: 'Nenhuma denúncia encontrada.',
+                  texto: 'Confira o que digitou ou tire algum filtro.',
+                  acao: 'Limpar busca e filtros',
+                  aoAgir: _limparBusca,
                 )
               : denuncias.isEmpty && _semConexao
               ? AvisoNoCentro(
@@ -172,6 +239,14 @@ class _MinhasDenunciasState extends State<MinhasDenuncias> {
                   aoAgir: _carregar,
                   acaoEmDestaque: true,
                 )
+              : denuncias.isEmpty && widget.organizacao != null
+              ? AvisoNoCentro(
+                  icone: Icons.shield_outlined,
+                  titulo: 'Nenhuma denúncia recebida.',
+                  texto:
+                      'As denúncias enviadas a ${widget.organizacao!.nome} '
+                      'pelo app aparecem aqui.',
+                )
               : denuncias.isEmpty
               ? const AvisoNoCentro(
                   icone: Icons.shield_outlined,
@@ -183,20 +258,39 @@ class _MinhasDenunciasState extends State<MinhasDenuncias> {
               : null,
           itens: [
             for (final denuncia in denuncias ?? const <Denuncia>[])
-              _CartaoDaDenuncia(denuncia: denuncia),
+              _CartaoDaDenuncia(denuncia: denuncia, aoVoltar: _carregar),
           ],
         ),
       ),
+      // Na aba Reportar da organização, o "+" abre o formulário, como o de
+      // cadastro no feed, e a lista é atualizada na volta
+      floatingActionButton: widget.organizacao == null
+          ? null
+          : FloatingActionButton(
+              onPressed: () async {
+                await Navigator.pushNamed(context, AppRoutes.novaDenuncia);
+                _carregar();
+              },
+              backgroundColor: context.cores.principal,
+              foregroundColor: context.sobrePrincipal,
+              tooltip: 'Registrar denúncia',
+              child: const Icon(Icons.add),
+            ),
+      bottomNavigationBar: widget.organizacao == null
+          ? null
+          : const BarraInferior(atual: 2),
     );
   }
 }
 
 // Cartão de uma denúncia na lista: primeira foto, tipo, situação, protocolo,
-// quando foi registrada e o bairro. Ao tocar, abre os detalhes
+// quando foi registrada e o bairro. Ao tocar, abre os detalhes e, na volta,
+// executa [aoVoltar] para mostrar a situação atualizada
 class _CartaoDaDenuncia extends StatelessWidget {
-  const _CartaoDaDenuncia({required this.denuncia});
+  const _CartaoDaDenuncia({required this.denuncia, required this.aoVoltar});
 
   final Denuncia denuncia;
+  final VoidCallback aoVoltar;
 
   @override
   Widget build(BuildContext context) {
@@ -214,11 +308,14 @@ class _CartaoDaDenuncia extends StatelessWidget {
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: () => Navigator.pushNamed(
-            context,
-            AppRoutes.detalhesDenuncia,
-            arguments: denuncia,
-          ),
+          onTap: () async {
+            await Navigator.pushNamed(
+              context,
+              AppRoutes.detalhesDenuncia,
+              arguments: denuncia,
+            );
+            aoVoltar();
+          },
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Row(

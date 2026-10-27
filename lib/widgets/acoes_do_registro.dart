@@ -1,5 +1,7 @@
 // Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote provider: compartilha estado entre as telas e as reconstrói.
+import 'package:provider/provider.dart';
 
 // Arquivo estado_pata_amiga.dart: estado global com a lista de animais.
 import '../estado/estado_pata_amiga.dart';
@@ -7,6 +9,8 @@ import '../estado/estado_pata_amiga.dart';
 import '../modelos/animal.dart';
 // Arquivo ong.dart: modelo da ONG.
 import '../modelos/ong.dart';
+// Arquivo usuario_provider.dart: nome de quem muda a situação.
+import '../provider/usuario_provider.dart';
 // Arquivo route_names.dart: nomes das rotas de navegação.
 import '../routes/route_names.dart';
 // Arquivo animal_service.dart: serviço que grava os animais na API.
@@ -15,6 +19,8 @@ import '../services/animal_service.dart';
 import '../tema/cores.dart';
 // Arquivo painel_de_confirmacao.dart: painel inferior de confirmação.
 import 'painel_de_confirmacao.dart';
+// Arquivo painel_de_observacao.dart: confirmação com observação obrigatória.
+import 'painel_de_observacao.dart';
 
 // Ações do dono sobre o próprio registro: encerrar ou reabrir, editar,
 // transferir para uma ONG e, após um resgate, publicar para adoção. São
@@ -29,8 +35,9 @@ class EdicaoDoRegistro {
 }
 
 // Alterna o status do animal entre disponível e o desfecho do tipo
-// (adotado, encontrado ou resgatado), após confirmação, porque a mudança tira
-// ou devolve o animal ao feed e ao mapa. Grava na API, atualiza o estado
+// (adotado, encontrado ou resgatado), após confirmação com observação
+// obrigatória, porque a mudança tira ou devolve o animal ao feed e ao mapa.
+// A observação entra no histórico do animal. Grava na API, atualiza o estado
 // local e, num resgate concluído, oferece publicar para adoção
 Future<void> mudarStatus(
   BuildContext context,
@@ -40,30 +47,29 @@ Future<void> mudarStatus(
   final novo = atual.finalizado ? StatusAnimal.disponivel : atual.desfecho;
   final voltando = novo == StatusAnimal.disponivel;
   final textoNovo = atual.comStatus(novo).rotuloDoStatus;
-  final confirmou = await showModalBottomSheet<bool>(
-    context: context,
-    backgroundColor: context.cores.cartao,
-    showDragHandle: true,
-    builder: (painel) => PainelDeConfirmacao(
-      titulo: voltando
-          ? 'Retornar ${atual.nome} para "$textoNovo"?'
-          : 'Marcar ${atual.nome} como $textoNovo?',
-      texto: voltando
-          ? 'O animal voltará a ser exibido no feed e no mapa.'
-          : 'O animal deixará de ser exibido no feed e no mapa. A alteração '
-                'pode ser revertida a qualquer momento.',
-      rotuloPrincipal: 'Confirmar',
-      aoPrincipal: () => Navigator.pop(painel, true),
-      rotuloSecundario: 'Cancelar',
-      aoSecundario: () => Navigator.pop(painel, false),
-    ),
+  final autor = context.read<UsuarioProvider?>()?.usuario.nome ?? '';
+  final confirmou = await pedirObservacao<void>(
+    context,
+    titulo: voltando
+        ? 'Retornar ${atual.nome} para "$textoNovo"?'
+        : 'Marcar ${atual.nome} como $textoNovo?',
+    texto: voltando
+        ? 'O animal voltará a ser exibido no feed e no mapa.'
+        : 'O animal deixará de ser exibido no feed e no mapa. A alteração '
+              'pode ser revertida a qualquer momento.',
+    rotuloPrincipal: 'Confirmar',
   );
-  if (confirmou != true || !context.mounted) return;
+  if (confirmou == null || !context.mounted) return;
 
   final estado = PataAmigaScope.of(context);
   final mensageiro = ScaffoldMessenger.of(context);
+  final atualizado = atual.comStatusObservado(
+    novo,
+    observacao: confirmou.observacao,
+    autor: autor,
+  );
   try {
-    await (api ?? AnimalService()).atualizarStatus(atual, novo);
+    await (api ?? AnimalService()).atualizarStatus(atualizado, novo);
   } on Exception {
     mensageiro
       ..hideCurrentSnackBar()
@@ -74,7 +80,7 @@ Future<void> mudarStatus(
       );
     return;
   }
-  await estado.substituirAnimal(atual.comStatus(novo));
+  await estado.substituirAnimal(atualizado);
   if (novo == StatusAnimal.resgatado && context.mounted) {
     await _oferecerAdocao(context, atual, api);
   }

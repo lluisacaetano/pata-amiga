@@ -53,6 +53,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _salvando = false;
   // ONG escolhida no cadastro; ao criar a conta, vira um pedido de entrada
   Ong? _ong;
+  // Erro do e-mail que só se sabe ao tentar criar a conta: o e-mail já
+  // pertence a outra conta neste aparelho
+  String? _erroDoEmail;
 
   // Envia o pedido de entrada para o administrador da ONG aprovar e avisa o
   // resultado. Se a API falhar, a conta é criada mesmo assim e o pedido
@@ -129,8 +132,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 keyboardType: TextInputType.emailAddress,
                 inputFormatters: [MascaraDeEmail()],
                 prefixIcon: Icons.mail_outline,
-                validator: validarEmail,
+                validator: (value) => validarEmail(value) ?? _erroDoEmail,
               ),
+              // Com o e-mail já cadastrado, oferece a recuperação da senha
+              if (_erroDoEmail != null)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () =>
+                        Navigator.of(context)
+                            .pushNamed(AppRoutes.recoverPassword),
+                    child: const Text('Esqueci a senha'),
+                  ),
+                ),
               const SizedBox(height: 12),
               AuthField(
                 label: 'Telefone/WhatsApp',
@@ -296,26 +310,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   // Valida os campos e o aceite dos termos, salva o perfil com a senha,
-  // envia o pedido à ONG (se houver) e segue para o app
+  // envia o pedido à ONG (se houver) e segue para o app. Se o e-mail já
+  // tiver conta, nada é salvo e o erro aparece no campo de e-mail
   Future<void> _criarConta() async {
+    setState(() => _erroDoEmail = null);
     final camposValidos = _formKey.currentState!.validate();
     setState(() => _mostrarErroTermos = !_aceitouTermos);
     if (!camposValidos || !_aceitouTermos) return;
     setState(() => _salvando = true);
-    await context.read<UsuarioProvider>().registrarUsuario(
+    final criada = await context.read<UsuarioProvider>().registrarUsuario(
       nome: _nomeController.text,
       email: _emailController.text,
       telefone: _telefoneController.text,
       senha: _senhaController.text,
     );
     if (!mounted) return;
+    if (!criada) {
+      setState(() {
+        _salvando = false;
+        _erroDoEmail = 'Já existe uma conta com este e-mail.';
+      });
+      _formKey.currentState!.validate();
+      return;
+    }
     final ong = _ong;
     if (ong != null) await _pedirEntrada(ong);
     if (!mounted) return;
     await navegarAposAutenticacao(context);
   }
 
-  // Texto sublinhado que abre os Termos de Uso ou a Política de Privacidade
+  // Texto em destaque que abre os Termos de Uso ou a Política de Privacidade
   Widget _linkDocumento(BuildContext context, String texto, String rota) {
     return InkWell(
       onTap: () => Navigator.of(context).pushNamed(rota),
@@ -324,8 +348,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         style: TextStyle(
           fontFamily: 'Roboto',
           fontSize: 14,
+          fontWeight: FontWeight.w600,
           color: context.cores.principal,
-          decoration: TextDecoration.underline,
         ),
       ),
     );

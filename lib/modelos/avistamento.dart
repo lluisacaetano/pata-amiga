@@ -22,6 +22,9 @@ class Avistamento {
   final String bairro;
   final String foto;
   final String registradoPor;
+  // E-mail de quem registrou, para o responsável pelo animal não ser
+  // notificado do próprio avistamento
+  final String email;
   final DateTime registradoEm;
 
   Avistamento({
@@ -34,6 +37,7 @@ class Avistamento {
     this.bairro = '',
     this.foto = '',
     this.registradoPor = '',
+    this.email = '',
     required this.registradoEm,
   });
 
@@ -50,6 +54,7 @@ class Avistamento {
     bairro: json['bairro'] as String? ?? '',
     foto: json['foto'] as String? ?? '',
     registradoPor: json['registradoPor'] as String? ?? '',
+    email: json['email'] as String? ?? '',
     registradoEm: DateTime.parse(json['registradoEm'] as String),
   );
 
@@ -63,6 +68,7 @@ class Avistamento {
     'bairro': bairro,
     'foto': foto,
     'registradoPor': registradoPor,
+    'email': email,
     'registradoEm': registradoEm.toIso8601String(),
   };
 

@@ -1,5 +1,7 @@
 // Arquivo dono.dart: modelo do responsável pelo animal.
 import 'dono.dart';
+// Arquivo etapa_do_historico.dart: as mudanças de situação do animal.
+import 'etapa_do_historico.dart';
 // Arquivo json_da_api.dart: leitura e gravação do id da API.
 import 'json_da_api.dart';
 // Arquivo texto.dart: primeira letra maiúscula e "há N dias".
@@ -89,6 +91,9 @@ class Animal {
   final String? ongId;
   final List<String> fotos;
   final DateTime publicadoEm;
+  // As mudanças de situação, com a observação de quem mudou; visível só para
+  // quem cadastrou e para as pessoas da ONG do animal
+  final List<EtapaDoHistorico> historico;
   // As coordenadas do animal, preenchidas quando o cadastro usou a
   // localização ou o mapa. Ficam nulas quando o endereço foi só digitado
   final double? latitude;
@@ -119,6 +124,7 @@ class Animal {
     this.ongId,
     this.fotos = const [],
     required this.publicadoEm,
+    this.historico = const [],
     this.latitude,
     this.longitude,
   });
@@ -160,6 +166,7 @@ class Animal {
     fotos: List<String>.from(json['fotos'] as List? ?? []),
     // A data é gravada como texto no formato ISO 8601
     publicadoEm: DateTime.parse(json['publicadoEm'] as String),
+    historico: EtapaDoHistorico.lista(json['historico']),
     // `num?` aceita inteiro, decimal ou nulo
     latitude: (json['latitude'] as num?)?.toDouble(),
     longitude: (json['longitude'] as num?)?.toDouble(),
@@ -192,6 +199,7 @@ class Animal {
     if (ongId != null) 'ongId': idParaApi(ongId!),
     'fotos': fotos,
     'publicadoEm': publicadoEm.toIso8601String(),
+    'historico': [for (final etapa in historico) etapa.toJson()],
     'latitude': latitude,
     'longitude': longitude,
   };
@@ -234,6 +242,34 @@ class Animal {
   // Uma cópia do animal com outro status; o objeto original não muda
   Animal comStatus(StatusAnimal novo) =>
       Animal.fromJson({...toJson(), 'status': novo.name});
+
+  // Uma cópia com o novo status e a etapa correspondente no histórico,
+  // com a observação de quem fez a mudança; o objeto original não muda
+  Animal comStatusObservado(
+    StatusAnimal novo, {
+    required String observacao,
+    required String autor,
+    DateTime? em,
+  }) => Animal.fromJson({
+    ...toJson(),
+    'status': novo.name,
+    'historico': [
+      for (final etapa in historico) etapa.toJson(),
+      EtapaDoHistorico(
+        situacao: novo.name,
+        observacao: observacao.trim(),
+        em: em ?? DateTime.now(),
+        autor: autor.trim(),
+      ).toJson(),
+    ],
+  });
+
+  // Uma cópia do animal com outro telefone de contato do responsável; o
+  // objeto original não muda
+  Animal comTelefoneDoDono(String telefone) => Animal.fromJson({
+    ...toJson(),
+    'dono': Dono(nome: dono.nome, telefone: telefone).toJson(),
+  });
 
   // Sexo, porte e idade, exibidos abaixo do nome no card do feed
   String get resumo =>

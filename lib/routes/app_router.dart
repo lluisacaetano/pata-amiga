@@ -155,7 +155,11 @@ class AppRoutesConfig {
       return RegistrarAvistamento(animal: animal);
     },
 
-    AppRoutes.reportar: (_) => const ReportarScreen(),
+    // A aba Reportar mostra a lista das denúncias recebidas a quem faz parte
+    // de uma organização que recebe denúncias, e o formulário aos demais
+    AppRoutes.reportar: (_) => const AbaReportar(),
+
+    AppRoutes.novaDenuncia: (_) => const ReportarScreen(),
 
     AppRoutes.minhasDenuncias: (_) => const MinhasDenuncias(),
 

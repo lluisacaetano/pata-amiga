@@ -35,6 +35,8 @@ import '../widgets/barra_inferior.dart';
 import '../widgets/cuidado.dart';
 // Arquivo escolha_de_tipo.dart: nome do tipo do registro no singular.
 import '../widgets/escolha_de_tipo.dart';
+// Arquivo historico_de_situacoes.dart: linha do tempo das situações.
+import '../widgets/historico_de_situacoes.dart';
 // Arquivo galeria_animal.dart: galeria de fotos do animal.
 import '../widgets/galeria_animal.dart';
 // Arquivo etiqueta.dart: etiqueta de tipo e status.
@@ -188,6 +190,12 @@ class DetalhesAnimal extends StatelessWidget {
                     ? null
                     : () => enviarParaOng(context, animal, minhaOng, api: api),
               ),
+              // As observações das mudanças de situação, só para quem
+              // cadastrou e para as pessoas da ONG do animal
+              if (animal.historico.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _HistoricoDoAnimal(animal: animal),
+              ],
             ],
             if (perdido) ...[
               const SizedBox(height: 12),
@@ -892,6 +900,8 @@ class _ControleDoStatus extends StatelessWidget {
     final textoDoBotao = finalizado
         ? 'Voltar para ${animal.comStatus(StatusAnimal.disponivel).rotuloDoStatus}'
         : 'Marcar como ${animal.comStatus(animal.desfecho).rotuloDoStatus}';
+    final resgatado = animal.status == StatusAnimal.resgatado;
+    final ong = ongParaTransferir;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -903,6 +913,7 @@ class _ControleDoStatus extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Título e, à direita, a situação atual do animal
           Row(
             children: [
               Icon(
@@ -911,25 +922,24 @@ class _ControleDoStatus extends StatelessWidget {
                 color: context.cores.principal,
               ),
               const SizedBox(width: 8),
-              Text(
-                // Em animal de ONG, quem cuida pode não ser quem cadastrou
-                animal.ongId != null
-                    ? 'Animal da sua ONG'
-                    : 'Você cadastrou este animal',
-                style: TextStyle(
-                  color: context.cores.principal,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
+              Expanded(
+                child: Text(
+                  // Em animal de ONG, quem cuida pode não ser quem cadastrou
+                  animal.ongId != null
+                      ? 'Animal da sua ONG'
+                      : 'Você cadastrou este animal',
+                  style: TextStyle(
+                    color: context.cores.principal,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
+              Etiqueta(animal.rotuloDoStatus),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            'Situação: ${comMaiuscula(animal.rotuloDoStatus)}',
-            style: TextStyle(fontSize: 14, color: context.cores.textoFraco),
-          ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           OutlinedButton.icon(
             onPressed: aoMudar,
             icon: Icon(
@@ -940,52 +950,158 @@ class _ControleDoStatus extends StatelessWidget {
             style: OutlinedButton.styleFrom(
               foregroundColor: context.cores.principal,
               side: BorderSide(color: context.cores.principal),
-              minimumSize: const Size.fromHeight(44),
+              minimumSize: const Size.fromHeight(46),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
           ),
-          const SizedBox(height: 4),
-          TextButton.icon(
-            onPressed: aoEditar,
-            icon: const Icon(Icons.edit_outlined, size: 18),
-            label: const Text('Editar registro'),
-            style: TextButton.styleFrom(
-              foregroundColor: context.cores.principal,
-              minimumSize: const Size.fromHeight(44),
+          const SizedBox(height: 8),
+          // Ações de manutenção lado a lado, com o mesmo peso e a mesma altura
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _AcaoDoCartao(
+                    icone: Icons.edit_outlined,
+                    texto: 'Editar registro',
+                    aoTocar: aoEditar,
+                  ),
+                ),
+                if (ong != null) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _AcaoDoCartao(
+                      icone: Icons.volunteer_activism_outlined,
+                      texto: 'Transferir para ${ong.nome}',
+                      aoTocar: aoTransferir,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-          if (ongParaTransferir case final ong?) ...[
-            TextButton.icon(
-              onPressed: aoTransferir,
-              icon: const Icon(Icons.volunteer_activism_outlined, size: 18),
-              label: Text(
-                'Transferir para ${ong.nome}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              style: TextButton.styleFrom(
-                foregroundColor: context.cores.principal,
-                minimumSize: const Size.fromHeight(44),
-              ),
-            ),
-          ],
-          if (animal.status == StatusAnimal.resgatado) ...[
-            const SizedBox(height: 4),
+          if (resgatado) ...[
+            const SizedBox(height: 12),
             FilledButton.icon(
               onPressed: aoPublicar,
               icon: const Icon(Icons.favorite_border, size: 18),
               label: const Text('Publicar para adoção'),
               style: FilledButton.styleFrom(
                 backgroundColor: context.cores.principal,
-                minimumSize: const Size.fromHeight(44),
+                minimumSize: const Size.fromHeight(46),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+// Ação secundária do cartão de quem cadastrou: bloco de fundo verde claro,
+// com o ícone e o texto (até duas linhas) centralizados
+class _AcaoDoCartao extends StatelessWidget {
+  const _AcaoDoCartao({
+    required this.icone,
+    required this.texto,
+    required this.aoTocar,
+  });
+
+  final IconData icone;
+  final String texto;
+  final VoidCallback? aoTocar;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: context.cores.principalClara,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: aoTocar,
+        borderRadius: BorderRadius.circular(12),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 46),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icone, size: 18, color: context.cores.principal),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    texto,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: context.cores.principal,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Cartão "Histórico" da ficha: a linha do tempo das mudanças de situação do
+// animal, com as observações de quem mudou
+class _HistoricoDoAnimal extends StatelessWidget {
+  const _HistoricoDoAnimal({required this.animal});
+
+  final Animal animal;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.cores.cartao,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.cores.borda),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.history, size: 18, color: context.cores.principal),
+              const SizedBox(width: 8),
+              Text(
+                'Histórico',
+                style: TextStyle(
+                  color: context.cores.principal,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          HistoricoDeSituacoes(
+            etapas: animal.historico,
+            // O rótulo segue o tipo do registro: "Adotado", "Encontrado"...
+            rotuloDe: (nome) {
+              final status = StatusAnimal.values
+                  .where((status) => status.name == nome)
+                  .firstOrNull;
+              return status == null
+                  ? nome
+                  : comMaiuscula(animal.comStatus(status).rotuloDoStatus);
+            },
+          ),
         ],
       ),
     );

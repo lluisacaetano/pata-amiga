@@ -1,6 +1,8 @@
 // Biblioteca dart:math: Random, para sortear o número do protocolo.
 import 'dart:math';
 
+// Arquivo etapa_do_historico.dart: as mudanças de situação da denúncia.
+import 'etapa_do_historico.dart';
 // Arquivo json_da_api.dart: leitura e gravação do id da API.
 import 'json_da_api.dart';
 
@@ -27,14 +29,30 @@ extension RotuloDaSituacao on SituacaoDaDenuncia {
   };
 }
 
-// Uma denúncia de maus-tratos, abandono ou negligência. Na anônima, o nome e
-// o contato de quem denunciou não são enviados à API
+// A resposta de quem viu o animal de longe e não sabe o porte ou o sexo
+const naoSei = 'não sei';
+
+// As opções do animal da denúncia, iguais às do cadastro de animal, com
+// "não sei" no porte e no sexo
+const especiesDaDenuncia = ['Cachorro', 'Gato'];
+const portesDaDenuncia = ['pequeno', 'médio', 'grande', naoSei];
+const sexosDaDenuncia = ['macho', 'fêmea', naoSei];
+
+// Uma denúncia de maus-tratos, abandono ou negligência, enviada a uma
+// organização que recebe denúncias ([ongId]). Na anônima, o nome e o contato
+// de quem denunciou não são enviados à API
 class Denuncia {
   // O id gerado pela API, sempre em texto
   final String? id;
   final String protocolo;
   final TipoDeDenuncia tipo;
   final String descricao;
+  // O animal da denúncia: espécie, porte e sexo obrigatórios nas novas, e a
+  // raça opcional. Vazios nas registradas antes desses campos
+  final String especie;
+  final String porte;
+  final String sexo;
+  final String raca;
   final String rua;
   final String bairro;
   final double? latitude;
@@ -48,12 +66,21 @@ class Denuncia {
   final String denuncianteEmail;
   final SituacaoDaDenuncia situacao;
   final DateTime registradaEm;
+  // A organização que recebe a denúncia; nula nas registradas antes do envio
+  // pelo app
+  final String? ongId;
+  // As mudanças de situação, da primeira para a mais recente
+  final List<EtapaDoHistorico> historico;
 
   const Denuncia({
     this.id,
     required this.protocolo,
     required this.tipo,
     required this.descricao,
+    this.especie = '',
+    this.porte = '',
+    this.sexo = '',
+    this.raca = '',
     required this.rua,
     required this.bairro,
     this.latitude,
@@ -66,6 +93,29 @@ class Denuncia {
     this.denuncianteEmail = '',
     this.situacao = SituacaoDaDenuncia.recebida,
     required this.registradaEm,
+    this.ongId,
+    this.historico = const [],
+  });
+
+  // Uma cópia com a nova situação e a etapa correspondente no histórico; o
+  // objeto original não muda
+  Denuncia comSituacao(
+    SituacaoDaDenuncia nova, {
+    required String observacao,
+    required String autor,
+    DateTime? em,
+  }) => Denuncia.fromJson({
+    ...toJson(),
+    'situacao': nova.name,
+    'historico': [
+      for (final etapa in historico) etapa.toJson(),
+      EtapaDoHistorico(
+        situacao: nova.name,
+        observacao: observacao.trim(),
+        em: em ?? DateTime.now(),
+        autor: autor.trim(),
+      ).toJson(),
+    ],
   });
 
   // Gera o protocolo no aparelho: a data do registro e quatro dígitos
@@ -90,6 +140,10 @@ class Denuncia {
             .firstOrNull ??
         TipoDeDenuncia.outros,
     descricao: json['descricao'] as String? ?? '',
+    especie: json['especie'] as String? ?? '',
+    porte: json['porte'] as String? ?? '',
+    sexo: json['sexo'] as String? ?? '',
+    raca: json['raca'] as String? ?? '',
     rua: json['rua'] as String? ?? '',
     bairro: json['bairro'] as String? ?? '',
     latitude: (json['latitude'] as num?)?.toDouble(),
@@ -108,6 +162,8 @@ class Denuncia {
     registradaEm:
         DateTime.tryParse(json['registradaEm'] as String? ?? '') ??
         DateTime.fromMillisecondsSinceEpoch(0),
+    ongId: idDaApi(json['ongId']),
+    historico: EtapaDoHistorico.lista(json['historico']),
   );
 
   // Converte a denúncia no JSON enviado à API
@@ -116,6 +172,10 @@ class Denuncia {
     'protocolo': protocolo,
     'tipo': tipo.name,
     'descricao': descricao,
+    'especie': especie,
+    'porte': porte,
+    'sexo': sexo,
+    'raca': raca,
     'rua': rua,
     'bairro': bairro,
     'latitude': latitude,
@@ -129,7 +189,18 @@ class Denuncia {
     'denuncianteEmail': anonima ? '' : denuncianteEmail,
     'situacao': situacao.name,
     'registradaEm': registradaEm.toIso8601String(),
+    if (ongId != null) 'ongId': idParaApi(ongId!),
+    'historico': [for (final etapa in historico) etapa.toJson()],
   };
+
+  // O animal em uma linha, só com o que foi informado (ex.: "Cachorro,
+  // porte médio, macho, Sem raça definida"); "não sei" fica de fora
+  String get resumoDoAnimal => [
+    especie,
+    if (porte.isNotEmpty && porte != naoSei) 'porte $porte',
+    if (sexo != naoSei) sexo,
+    raca,
+  ].where((parte) => parte.trim().isNotEmpty).join(', ');
 
   // O texto enviado ao canal de denúncia pelo compartilhamento do aparelho,
   // junto com as fotos
@@ -149,6 +220,7 @@ class Denuncia {
       'Denúncia registrada no Pata Amiga',
       'Protocolo: $protocolo',
       'Tipo: ${tipo.rotulo}',
+      if (resumoDoAnimal.isNotEmpty) 'Animal: $resumoDoAnimal',
       'Local: $local',
       if (quando != null) 'Quando: $quando',
       'O que aconteceu: $descricao',

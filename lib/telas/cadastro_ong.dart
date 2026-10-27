@@ -11,8 +11,10 @@ import 'package:provider/provider.dart';
 
 // Arquivo estado_pata_amiga.dart: estado compartilhado com as ONGs.
 import '../estado/estado_pata_amiga.dart';
-// Arquivo ong.dart: modelo da ONG.
+// Arquivo ong.dart: modelo da ONG e as finalidades.
 import '../modelos/ong.dart';
+// Arquivo texto.dart: comparação sem acentos na busca das finalidades.
+import '../modelos/texto.dart';
 // Arquivo usuario_provider.dart: usuário logado.
 import '../provider/usuario_provider.dart';
 // Arquivo ong_service.dart: leitura e gravação das ONGs na API.
@@ -27,6 +29,8 @@ import '../widgets/avatar_da_ong.dart';
 import '../widgets/mapa_de_local.dart';
 // Arquivo mascaras.dart: máscara e formatação do telefone.
 import '../widgets/mascaras.dart';
+// Arquivo selecao_com_busca.dart: select de múltipla escolha.
+import '../widgets/selecao_com_busca.dart';
 // Arquivo seletor_de_local.dart: escolha do endereço no mapa.
 import '../widgets/seletor_de_local.dart';
 
@@ -53,6 +57,10 @@ class _CadastroOngState extends State<CadastroOng> {
   final _telefone = TextEditingController();
   final _chavePix = TextEditingController();
   final _politica = TextEditingController();
+  // Texto digitado no select das finalidades, usado só para filtrar a lista
+  final _buscaDaFinalidade = TextEditingController();
+  // Finalidades marcadas; vazio numa ONG nova, até a pessoa escolher
+  Set<FinalidadeDaOng> _finalidades = {};
   String _foto = '';
   LocalEscolhido _local = (ponto: centroDeFormiga, rua: '', bairro: '');
   bool _tentou = false;
@@ -67,6 +75,7 @@ class _CadastroOngState extends State<CadastroOng> {
     _telefone.text,
     _chavePix.text,
     _politica.text,
+    [for (final finalidade in _finalidades) finalidade.name].join(','),
     _foto,
     // A posição do pino também conta como alteração
     _local.ponto.latitude.toStringAsFixed(5),
@@ -120,16 +129,37 @@ class _CadastroOngState extends State<CadastroOng> {
     _telefone.text = formatarTelefone(ong.telefone);
     _chavePix.text = ong.chavePix;
     _politica.text = ong.politicaDeAdocao;
+    _finalidades = {...ong.finalidades};
     _foto = ong.foto;
   }
 
   @override
   void dispose() {
     _rolagem.dispose();
-    for (final campo in [_nome, _descricao, _telefone, _chavePix, _politica]) {
+    for (final campo in [
+      _nome,
+      _descricao,
+      _telefone,
+      _chavePix,
+      _politica,
+      _buscaDaFinalidade,
+    ]) {
       campo.dispose();
     }
     super.dispose();
+  }
+
+  // Marca ou desmarca a finalidade escolhida no select
+  void _alternarFinalidade(String? rotulo) {
+    final escolhida = FinalidadeDaOng.values
+        .where((finalidade) => finalidade.rotulo == rotulo)
+        .firstOrNull;
+    if (escolhida == null) return;
+    setState(() {
+      _finalidades = _finalidades.contains(escolhida)
+          ? (_finalidades.toSet()..remove(escolhida))
+          : {..._finalidades, escolhida};
+    });
   }
 
   // Campo obrigatório vazio, depois de uma tentativa de salvar
@@ -171,6 +201,7 @@ class _CadastroOngState extends State<CadastroOng> {
         _politica,
         _chavePix,
       ].every((campo) => campo.text.trim().isNotEmpty) &&
+      _finalidades.isNotEmpty &&
       _telefoneValido &&
       _local.rua.trim().isNotEmpty &&
       _local.bairro.trim().isNotEmpty;
@@ -273,8 +304,11 @@ class _CadastroOngState extends State<CadastroOng> {
           // Na edição, mantém o administrador registrado na API
           responsavelEmail: naApi?.responsavelEmail ?? email,
           criadaEm: antes?.criadaEm ?? DateTime.now(),
+          finalidades: _finalidades,
           membros: naApi?.membros ?? const [],
           pedidos: naApi?.pedidos ?? const [],
+          // Mantém os avisos ainda não dispensados pelos membros
+          avisos: naApi?.avisos ?? const [],
         ),
       );
       estado.salvarOng(salva);
@@ -473,6 +507,43 @@ class _CadastroOngState extends State<CadastroOng> {
                           aviso:
                               'A chave só aparece no perfil: a doação é feita pelo '
                               'aplicativo do banco de quem doa.',
+                        ),
+                      ],
+                    ),
+                  ),
+                  _Cartao(
+                    icone: Icons.checklist_outlined,
+                    titulo: 'O que a ONG faz',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Escolha múltipla: as marcadas viram etiquetas
+                        // abaixo do campo
+                        SelecaoComBusca(
+                          rotulo: 'Finalidades',
+                          dica: 'Escolha o que a ONG faz',
+                          controlador: _buscaDaFinalidade,
+                          opcoes: (digitado) => [
+                            for (final finalidade in FinalidadeDaOng.values)
+                              if (semAcento(
+                                finalidade.rotulo,
+                              ).contains(semAcento(digitado)))
+                                finalidade.rotulo,
+                          ],
+                          daLista: (texto) => FinalidadeDaOng.values
+                              .where(
+                                (finalidade) =>
+                                    semAcento(finalidade.rotulo) ==
+                                    semAcento(texto),
+                              )
+                              .firstOrNull
+                              ?.rotulo,
+                          comErro: _tentou && _finalidades.isEmpty,
+                          marcadas: {
+                            for (final finalidade in _finalidades)
+                              finalidade.rotulo,
+                          },
+                          aoEscolher: _alternarFinalidade,
                         ),
                       ],
                     ),

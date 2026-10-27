@@ -43,6 +43,42 @@ class LocalizacaoService {
     }
   }
 
+  // Posição atual sem pedir nada à pessoa: devolve nula se a localização
+  // estiver desligada, se a permissão ainda não tiver sido dada ou se a
+  // posição não puder ser lida. Serve às notificações da região, que não
+  // devem abrir o pedido de permissão
+  Future<({double latitude, double longitude})?> posicaoSemPedir() async {
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) return null;
+      final permissao = await Geolocator.checkPermission();
+      if (permissao != LocationPermission.whileInUse &&
+          permissao != LocationPermission.always) {
+        return null;
+      }
+      final posicao =
+          await Geolocator.getLastKnownPosition(
+            forceAndroidLocationManager: true,
+          ) ??
+          await Geolocator.getCurrentPosition(locationSettings: _ajustes());
+      return (latitude: posicao.latitude, longitude: posicao.longitude);
+    } catch (_) {
+      // Qualquer falha, inclusive a de plataforma sem suporte, só deixa a
+      // notificação da região sem posição
+      return null;
+    }
+  }
+
+  // Indica se a permissão de localização ainda pode ser pedida: nunca foi
+  // respondida ou foi negada sem "não perguntar de novo". Qualquer falha
+  // conta como não
+  Future<bool> podePedirPermissao() async {
+    try {
+      return await Geolocator.checkPermission() == LocationPermission.denied;
+    } catch (_) {
+      return false;
+    }
+  }
+
   // Prazo de 15 segundos para a posição. No Android, usa o LocationManager do
   // sistema em vez do provedor do Google, que exigiria a precisão do Google
   // ligada e um diálogo extra

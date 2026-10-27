@@ -16,6 +16,14 @@ import '../modelos/usuario.dart';
 // Resultado da tentativa de entrar com e-mail e senha
 enum ResultadoDoLogin { entrou, semConta, senhaIncorreta }
 
+// Resultado da redefinição de senha pelo e-mail e telefone da conta
+enum ResultadoDaRedefinicao {
+  redefinida,
+  semConta,
+  telefoneDiferente,
+  mesmaSenha,
+}
+
 // Perfil de quem está logado. O perfil fica salvo no aparelho, um por
 // e-mail, e a sessão é o e-mail gravado em [_chaveSessao]. A senha nunca é
 // guardada: só um resumo SHA-256 dela, com um sal sorteado por conta
@@ -43,14 +51,23 @@ class UsuarioProvider extends ChangeNotifier {
     await carregarUsuario(email);
   }
 
+  // Indica se já existe uma conta salva neste aparelho para o e-mail
+  Future<bool> contaExiste(String email) async {
+    final armazenamento = await SharedPreferences.getInstance();
+    return await _perfilSalvo(armazenamento, normalizarEmail(email)) != null;
+  }
+
   // Cria o perfil de uma conta nova, guarda o resumo da senha (quando
-  // informada) e já abre a sessão
-  Future<void> registrarUsuario({
+  // informada) e já abre a sessão. Devolve false, sem alterar nada, quando
+  // o e-mail já pertence a outra conta, para não sobrescrever o perfil e a
+  // senha dela
+  Future<bool> registrarUsuario({
     required String nome,
     required String email,
     required String telefone,
     String? senha,
   }) async {
+    if (await contaExiste(email)) return false;
     _usuario = Usuario(
       nome: nome.trim(),
       email: normalizarEmail(email),
@@ -60,6 +77,33 @@ class UsuarioProvider extends ChangeNotifier {
     notifyListeners();
     await _salvarPerfil();
     if (senha != null) await _guardarSenha(_usuario.email, senha);
+    return true;
+  }
+
+  // Define uma senha nova para a conta do e-mail, desde que o telefone
+  // informado seja o mesmo do perfil (comparando só os dígitos) e a senha
+  // nova seja diferente da atual. Não abre a sessão: a pessoa entra depois
+  // com a senha nova
+  Future<ResultadoDaRedefinicao> redefinirSenha({
+    required String email,
+    required String telefone,
+    required String senha,
+  }) async {
+    final armazenamento = await SharedPreferences.getInstance();
+    final normalizado = normalizarEmail(email);
+    final salvo = await _perfilSalvo(armazenamento, normalizado);
+    if (salvo == null) return ResultadoDaRedefinicao.semConta;
+    String digitos(String texto) => texto.replaceAll(RegExp(r'\D'), '');
+    final doPerfil = digitos(Usuario.fromProfileJson(salvo).telefone);
+    if (doPerfil.isEmpty || doPerfil != digitos(telefone)) {
+      return ResultadoDaRedefinicao.telefoneDiferente;
+    }
+    final guardada = armazenamento.getString('$_chaveSenha$normalizado');
+    if (guardada != null && _confere(senha, guardada)) {
+      return ResultadoDaRedefinicao.mesmaSenha;
+    }
+    await _guardarSenha(normalizado, senha);
+    return ResultadoDaRedefinicao.redefinida;
   }
 
   // Confere e-mail e senha com o perfil salvo no aparelho e, se baterem,

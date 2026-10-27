@@ -20,6 +20,10 @@ import '../modelos/ong.dart';
 import '../provider/usuario_provider.dart';
 // Arquivo route_names.dart: nomes das rotas de navegação.
 import '../routes/route_names.dart';
+// Arquivo animal.dart: modelo do animal.
+import '../modelos/animal.dart';
+// Arquivo animal_service.dart: grava na API os anúncios com o telefone novo.
+import '../services/animal_service.dart';
 // Arquivo ong_service.dart: serviço de ONGs da API.
 import '../services/ong_service.dart';
 // Arquivo cores.dart: paleta de cores do tema claro e escuro.
@@ -38,8 +42,11 @@ import '../widgets/proteger_alteracoes.dart';
 class EditarPerfil extends StatefulWidget {
   // Serviço injetável para os testes; sem ele, usa o OngService padrão
   final OngService? ongs;
+  // Serviço dos animais; quando nulo, usa o padrão (os testes passam um
+  // falso)
+  final AnimalService? animais;
 
-  const EditarPerfil({super.key, this.ongs});
+  const EditarPerfil({super.key, this.ongs, this.animais});
 
   @override
   State<EditarPerfil> createState() => _EditarPerfilState();
@@ -150,6 +157,24 @@ class _EditarPerfilState extends State<EditarPerfil> {
     }
     if (!mounted) return;
     var aviso = 'Alterações salvas.';
+    // O telefone novo passa a valer em todos os anúncios já publicados
+    final alterados =
+        await PataAmigaScope.talvez(context)?.trocarTelefoneDosCadastros(
+          provider.usuario.email,
+          provider.usuario.telefone,
+        ) ??
+        const <Animal>[];
+    try {
+      final servico = widget.animais ?? AnimalService();
+      for (final animal in alterados) {
+        await servico.atualizarAnimal(animal);
+      }
+    } on Exception {
+      aviso =
+          'Alterações salvas neste aparelho, mas o telefone dos seus '
+          'anúncios não foi atualizado para todos. Tente de novo.';
+    }
+    if (!mounted) return;
     final ong = _ong;
     if (ong != null) {
       final estado = PataAmigaScope.of(context);

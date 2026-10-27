@@ -5,14 +5,17 @@ import 'package:flutter/material.dart';
 import '../estado/estado_pata_amiga.dart';
 // Arquivo animal.dart: modelo do animal e o tipo do registro.
 import '../modelos/animal.dart';
+// Arquivo avistamento.dart: último avistamento de um animal perdido.
+import '../modelos/avistamento.dart';
 // Arquivo cores.dart: paleta de cores do tema claro e escuro.
 import '../tema/cores.dart';
 // Arquivo foto_animal.dart: foto do animal com a patinha de reserva.
 import 'foto_animal.dart';
 
 // Cartão de um animal no feed: foto, nome, resumo, local e tempo desde a
-// publicação, seguidos das ações curtir, WhatsApp e compartilhar. O toque
-// no cartão executa [aoTocar] (abrir os detalhes)
+// publicação, seguidos das ações curtir, WhatsApp e compartilhar. No animal
+// perdido com avistamento, o local e o tempo são os do último avistamento.
+// O toque no cartão executa [aoTocar] (abrir os detalhes)
 class CardAnimal extends StatelessWidget {
   final Animal animal;
   final VoidCallback aoCompartilhar;
@@ -31,6 +34,16 @@ class CardAnimal extends StatelessWidget {
   Widget build(BuildContext context) {
     final estado = PataAmigaScope.of(context);
     final curtido = estado.estaCurtido(animal.chave);
+    final agora = DateTime.now();
+    final visto = animal.tipo == TipoRegistro.perdido
+        ? ultimoAvistamento(animal, estado.avistamentos)
+        : null;
+    final bairro = visto != null && visto.bairro.trim().isNotEmpty
+        ? visto.bairro
+        : animal.bairro;
+    final quando = visto != null
+        ? 'visto ${visto.vistoHa(agora)}'
+        : animal.publicadoHa(agora);
 
     // Material com InkWell: o toque no cartão mostra a ondulação e é lido
     // como botão pelo leitor de tela
@@ -82,7 +95,7 @@ class CardAnimal extends StatelessWidget {
                     // O local encolhe com reticências para o tempo sempre caber
                     Flexible(
                       child: Text(
-                        '${animal.bairro}, ${animal.cidade}',
+                        '$bairro, ${animal.cidade}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -92,9 +105,10 @@ class CardAnimal extends StatelessWidget {
                         ),
                       ),
                     ),
-                    // Tempo desde a publicação, na mesma linha do local
+                    // Tempo desde a publicação ou desde o último
+                    // avistamento, na mesma linha do local
                     Text(
-                      ' · ${animal.publicadoHa(DateTime.now())}',
+                      ' · $quando',
                       style: TextStyle(
                         color: context.cores.textoFraco,
                         fontSize: 13,

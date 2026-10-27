@@ -1,9 +1,14 @@
+// Pacote flutter/material: componentes visuais do Material Design.
 import 'package:flutter/material.dart';
+// Pacote flutter_test: ferramentas de teste de widgets e de unidade do Flutter.
 import 'package:flutter_test/flutter_test.dart';
+// Arquivo cadastro_screen.dart: tela de criação de conta.
 import 'package:pata_amiga/auth/screens/cadastro_screen.dart';
+// Arquivo app_router.dart: rotas do app e seus nomes.
 import 'package:pata_amiga/routes/app_router.dart';
 
 void main() {
+  // O link do cadastro abre a Política de Privacidade com o texto completo
   testWidgets('cadastro abre a Política de Privacidade', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -24,13 +29,14 @@ void main() {
       scrollable: find.byType(Scrollable).last,
     );
 
-    expect(find.text('Política de Privacidade'), findsWidgets);
+    expect(find.text('POLÍTICA DE PRIVACIDADE'), findsOneWidget);
     expect(
       find.textContaining('O cadastro solicita nome, e-mail e telefone'),
       findsOneWidget,
     );
   });
 
+  // O link do cadastro abre os Termos de Uso com o texto completo
   testWidgets('cadastro abre os Termos de Uso', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -51,7 +57,7 @@ void main() {
       scrollable: find.byType(Scrollable).last,
     );
 
-    expect(find.text('Termos de Uso'), findsWidgets);
+    expect(find.text('TERMOS DE USO'), findsOneWidget);
     expect(
       find.textContaining('Você é responsável pela exatidão'),
       findsOneWidget,
